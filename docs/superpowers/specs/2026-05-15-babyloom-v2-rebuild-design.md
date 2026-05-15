@@ -104,7 +104,9 @@ babyloom/
 │   │   └── queries/              # 按领域分组的查询函数
 │   ├── auth/
 │   ├── permissions/              # withPermission 中间件
-│   ├── media/                    # Sharp、路径、存储抽象
+│   ├── media/                    # Sharp、路径、存储抽象、上传状态机
+│   ├── reconcile/                # 启动时 + 周期性清理孤儿/卡住状态
+│   ├── backup/                   # SQLite online backup + manifest
 │   ├── validation/               # Zod schemas
 │   ├── logger/                   # pino 配置
 │   └── config/                   # 配置文件加载
@@ -230,19 +232,26 @@ entry_milestones {
 
 // 媒体文件
 media {
-  id: text PK,               // uuid,同时作为文件名
-  entryId: text FK,          // NULLABLE,允许裸照片(暂未关联)
+  id: text PK,                  // uuid,同时作为文件名
+  entryId: text FK,             // NULLABLE,允许裸照片(暂未关联)
   babyId: text NOT NULL FK,
-  type: text NOT NULL,       // 'photo' | 'video'
-  filename: text NOT NULL,   // 用户原始文件名(展示用)
+  uploadedBy: text NOT NULL FK, // 上传者 userId,用于"editor 仅可删自己上传的"判定
+  type: text NOT NULL,          // 'photo' | 'video'
+  filename: text NOT NULL,      // 用户原始文件名(展示用)
   mimeType: text NOT NULL,
   sizeBytes: integer NOT NULL,
   width: integer,
   height: integer,
-  durationSec: integer,      // 仅视频
-  relativePath: text NOT NULL, // '<babyId>/<year>/<month>'
-  takenAt: integer,          // 从 EXIF,fallback createdAt
+  durationSec: integer,         // 仅视频
+  relativePath: text NOT NULL,  // '<babyId>/<year>/<month>'
+  contentHash: text NOT NULL,   // sha256(原文件),幂等键 + 重复检测
+  status: text NOT NULL,        // 'pending' | 'processing' | 'ready' | 'failed' | 'deleted'
+                                // 仅 ready 的对外可见;非 ready 由 reconcile job 清理
+  takenAt: integer,             // 从 EXIF,fallback createdAt
   createdAt: integer NOT NULL,
+  deletedAt: integer,           // soft delete 时间戳
+  deletedBy: text FK,           // 删除者 userId
+  // UNIQUE(babyId, contentHash) — 同一宝宝下同一文件不重复入库
 }
 
 // 会话(better-auth 自动管理)
@@ -252,6 +261,8 @@ sessions { id, userId, expiresAt, ipAddress, userAgent, ... }
 **索引**:
 - `entries`: `(babyId, occurredAt DESC)` 用于时间线
 - `media`: `(babyId, takenAt DESC)` 用于画廊
+- `media`: `(babyId, contentHash)` UNIQUE,幂等去重
+- `media`: `(status)` 用于 reconcile job 扫描
 - `family_members`: `(userId)` 用于权限查询
 - `baby_member_permissions`: `(familyMemberId)` 用于权限查询
 
@@ -345,33 +356,72 @@ app:
 `lib/permissions/with-permission.ts`:
 
 ```ts
-// 伪代码
-type Action = 'baby:read' | 'baby:write' | 'baby:delete'
-           | 'entry:read' | 'entry:write' | 'entry:delete'
-           | 'member:manage' | 'family:manage' | 'system:logs';
+// 完整 Action 集合 —— 任何新增受保护资源必须先加到这里
+type Action =
+  | 'baby:read'   | 'baby:write'   | 'baby:delete'
+  | 'entry:read'  | 'entry:write'  | 'entry:delete'
+  | 'media:read'  | 'media:write'  | 'media:delete'   // ← 媒体一等公民
+  | 'member:manage'
+  | 'family:manage'
+  | 'milestone:manage'
+  | 'system:logs'
+  | 'system:backup';
+
+interface PermissionResource {
+  babyId?: string;
+  entryId?: string;
+  mediaId?: string;
+  targetUserId?: string;  // member:manage 时的被操作者
+}
 
 async function assertPermission(
   userId: string,
   action: Action,
-  resource?: { babyId?: string; entryId?: string; ... }
+  resource?: PermissionResource
 ): Promise<void> {
   // 1. 查 user 在 family 的 role
   // 2. 若 action 涉及 babyId,查 baby_member_permissions 覆盖
-  // 3. 不通过 → throw ForbiddenError(自动被 server action wrapper 转 403)
-  // 4. 记 warn 日志(permission denied)
+  // 3. 所有权规则(见下方矩阵):
+  //    - entry:write|delete  → 非 owner 时,authorId 必须 === userId
+  //    - media:delete        → 非 owner 时,uploadedBy 必须 === userId
+  // 4. 不通过 → throw ForbiddenError(被统一异常处理转 403)
+  // 5. 记 warn 日志(action, userId, resource, reason)
 }
 ```
 
-所有 server action 起手调一次。
+**所有权规则矩阵**(细化原 5.2):
+
+| 资源 | viewer | editor | owner |
+|---|---|---|---|
+| `entry:write` | ✗ | 仅 `authorId === userId` | 任意 |
+| `entry:delete` | ✗ | 仅 `authorId === userId` | 任意 |
+| `media:write` | ✗ | 允许(对有 `media:write` 权限的 babyId) | 任意 |
+| `media:delete` | ✗ | 仅 `uploadedBy === userId` | 任意 |
+| `media:read` | 允许(有 `baby:read` 即可) | 同左 | 任意 |
+
+### 5.5 调用约定(关键 — 不只 server action)
+
+**所有受保护入口必须显式调用 `assertPermission`**,Codex review 指出"server action 走 wrapper、API route 漏检"是真实风险点,固化如下规则:
+
+- **Server Actions**:用高阶函数 `withPermission(action, resolveResource)(handler)` 包裹,handler 内可直接使用受信任的 `userId`
+- **API Routes**(`app/api/*/route.ts`):**必须**在 handler 起手调 `await assertPermission(userId, action, resource)`,且 lint 规则强制(自定义 ESLint rule `babyloom/api-route-must-assert`,扫描 `export async function (GET|POST|PUT|DELETE)` 内是否含 `assertPermission` 调用)
+- **统一异常处理**:在 `app/(family)/layout.tsx` 和每个 `route.ts` 都包一层 `try/catch` 把 `ForbiddenError` 转成 403 + 日志
+- **测试硬性要求**(见 §11.3):每个媒体 API endpoint 必须有"跨宝宝 viewer / 跨作者 editor 删除"的拒绝用例,否则视为该 endpoint 未完成
 
 ---
 
 ## 6. 媒体存储
 
-### 6.1 目录结构(按宝宝维度)
+### 6.1 目录结构(按宝宝维度 + staging)
 
 ```
 data/media/
+├── _staging/                       # 上传中转区,与最终区物理隔离
+│   └── <uploadId>/                 # 单次上传一个目录,失败时整目录可删
+│       ├── original.<ext>
+│       ├── large.webp
+│       ├── thumb.webp
+│       └── poster.webp             # 仅视频
 └── <babyId>/                       # 宝宝目录(uuid)
     └── <year>/<month>/             # 按拍摄/上传时间分
         ├── original/<mediaId>.<ext>      # 原始文件
@@ -383,30 +433,69 @@ data/media/
 - **`mediaId`** = DB 主键(uuid),保证文件名唯一
 - **DB 中存** `relativePath: '<babyId>/<year>/<month>'`,文件名用 `mediaId + 推导扩展名`
 - **删除宝宝** = soft delete + 后台 job 清理 `data/media/<babyId>/`(避免误删,delay 7 天)
+- **`_staging/`** 必须与 babyId 目录在同一文件系统挂载点 → 保证 `rename(2)` 原子
 
-### 6.2 上传流程
+### 6.2 上传流程(两阶段、原子、幂等)
 
-1. 客户端 `POST /api/media/upload` multipart:`babyId`、文件列表
-2. 服务端权限检查(`media:write` for babyId)
-3. 临时落盘到 `data/media/<babyId>/<year>/<month>/original/`
-4. Sharp 并行处理:
-   - 提取 EXIF DateTimeOriginal → `takenAt`
-   - 生成 `large/<id>.webp`(1024w, quality 85)
-   - 生成 `thumb/<id>.webp`(320w, quality 75)
-   - 视频:用 `ffmpeg-static` 抓首帧 → `poster/<id>.webp`
-5. 写 `media` 表
-6. 若提供 `entryId`,绑定关系
+**设计原则**:
+- DB 是真相源,文件系统是衍生品
+- 任何步骤失败后,reconcile job 总能根据 `media.status` 清理孤儿
+- 客户端可安全重试,服务端按 `contentHash` 去重
+
+**流程**:
+
+1. **客户端**:计算 `contentHash = sha256(file)` → `POST /api/media/upload` multipart:
+   - `babyId`, `contentHash`, `filename`, `mimeType`, `sizeBytes`,文件二进制
+   - 可选 `clientUploadId`(客户端生成的幂等 token,网络重试时透传)
+
+2. **服务端 — 准入**(在 staging 任何 IO 前):
+   - `assertPermission(userId, 'media:write', { babyId })` — 失败立即 403
+   - 查询 `media` 表 `(babyId, contentHash)`:命中已存在记录 → 直接返回该 `mediaId`(幂等,**不重新落盘**)
+
+3. **服务端 — Stage**:
+   - 在**事务内** insert media 行 `(id=uuid, status='pending', contentHash, uploadedBy, ...)`,违反 UNIQUE 约束则降级为"已存在"分支返回
+   - 流式写入 `data/media/_staging/<uploadId>/original.<ext>`,边写边算 sha256
+   - 写完后**校验 hash 与请求声明一致** — 不一致删 staging 目录、把 media 行更新为 `'failed'` 并 4xx 返回
+
+4. **服务端 — Process**(在 staging 内):
+   - 更新 `media.status = 'processing'`
+   - Sharp 并行生成 large/thumb;视频用 `ffmpeg-static` 抓 poster;提取 EXIF → `takenAt`
+   - 任一步失败 → 删除整个 `_staging/<uploadId>/` → 更新 `media.status = 'failed'` → 抛错
+
+5. **服务端 — Commit(原子移动)**:
+   - 确保目标目录 `data/media/<babyId>/<year>/<month>/{original,large,thumb,poster}/` 存在
+   - 用 `fs.rename` 把 staging 文件移到最终位置(同文件系统下是原子操作)
+   - **事务内**更新 `media.status = 'ready'`、`relativePath`、`width/height/durationSec/takenAt`
+   - 若提供 `entryId`,同事务内 update `media.entryId`
+
+6. **失败恢复 / Reconcile Job**(应用启动 + 每天一次):
+   - 扫描 `status IN ('pending','processing')` 且 `createdAt < now - 1h` 的 media 行
+   - 删除对应 staging 目录(若存在)
+   - 把状态标为 `'failed'`(保留行用于审计)
+   - 扫描 `_staging/` 下没有对应 DB 行的目录 → 删除
+
+7. **对外可见性**:所有查询(timeline / gallery / `GET /api/media/[id]`)默认 `WHERE status = 'ready'`,非 ready 的行对用户不可见
 
 ### 6.3 输出流程
 
 `GET /api/media/[id]?size=thumb|large|original`:
 
-1. 权限检查(`media:read`)
-2. 从 DB 读 `relativePath` + `type`,拼接绝对路径
-3. 流式输出文件,设置:
-   - `Cache-Control: private, max-age=31536000, immutable`(媒体不可变)
+1. **必须**起手调 `assertPermission(userId, 'media:read', { mediaId, babyId })`(API route lint 强制)
+2. 查 `media` 表:`status !== 'ready'` → 404
+3. 从 `relativePath` + `type` 拼绝对路径
+4. 流式输出:
+   - `Cache-Control: private, max-age=31536000, immutable`
    - `Content-Type` 从 mime
    - 支持 `Range` 请求(视频拖动)
+
+### 6.4 删除流程
+
+`DELETE /api/media/[id]`:
+
+1. `assertPermission(userId, 'media:delete', { mediaId, babyId, uploadedBy })`
+   — editor 角色时该函数内部校验 `uploadedBy === userId`
+2. 事务内:`media.status = 'deleted'` + 记 `deletedAt` + `deletedBy`
+3. **不立即删文件**,由 reconcile job delay 7 天后清理(允许"撤销删除")
 
 ### 6.4 视频策略
 
@@ -666,10 +755,38 @@ services:
 - 大文件上传支持(`client_max_body_size 200M`)
 - HTTP/2、gzip
 
-### 10.4 备份
+### 10.4 备份(一致性快照)
 
-- **手动**:Owner 在 `/profile/data` 点"导出全部" → 后端 zip(SQLite + media)→ 下载
-- **自动**(后续迭代):cron 定期 dump 到 `data/backups/`
+**关键风险**:直接 zip 运行中的 `babyloom.db` 会拿到损坏快照(WAL 未合并、读写中);DB 行已写但 media 文件未 commit 时打包会丢文件 → 必须用一致性方案。
+
+**SQLite 启停态**:启用 WAL 模式(`PRAGMA journal_mode=WAL`)。WAL 给读者快照隔离,允许在线备份。
+
+**备份流程**(Owner 在 `/profile/data` 点"导出全部"触发):
+
+1. **进入备份模式**:设置全局 `BACKUP_IN_PROGRESS` 标志
+   - 所有**新上传**返回 503 + Retry-After(短暂拒绝,5-30 秒,家用场景可接受)
+   - **进行中的上传**等待其完成(最多 30 秒,超时强杀并清 staging)
+   - 读流量(timeline / 媒体输出)不受影响
+2. **DB 快照**:调用 `better-sqlite3` 的 `db.backup(targetPath)`(底层是 SQLite Online Backup API,锁页拷贝,与并发读兼容,写入会被自然串行化)
+3. **WAL Checkpoint**:`PRAGMA wal_checkpoint(TRUNCATE)` 把 WAL 合并进主库,确保备份完整自包含
+4. **冻结媒体清单**:对快照库执行 `SELECT id, relativePath, contentHash, sizeBytes FROM media WHERE status = 'ready'` → 写 `manifest.json`,字段:
+   - `version`、`createdAt`、`appVersion`、`dbSha256`
+   - `media[]: { id, path, contentHash, sizeBytes }`(实际进归档的文件列表)
+5. **流式打包 zip**:`babyloom.db`(快照副本)+ `manifest.json` + `media/` 目录(只打包 manifest 列出的文件,跳过 staging、failed、deleted)
+6. **校验**:边打包边计算 zip 整体 sha256 → 写入 zip 注释 + 单独 `babyloom-backup-<ts>.sha256` 文件
+7. **解除备份模式**,标志清除
+8. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
+
+**还原流程**(后续迭代,先把"导出可还原"作为设计前提):
+1. 上传 zip → 校验整体 sha256
+2. 校验 `manifest.dbSha256` 与 zip 内 db 一致
+3. 校验每个 media 文件的 sha256 与 manifest 一致
+4. 任何不一致 → 拒绝还原并报告差异
+5. 通过后停服 → 替换 `babyloom.db` + `media/` → 启动 → reconcile job 自检
+
+**自动备份**(后续迭代):cron 调用同一备份流程,旋转保留 N 份。
+
+**关键不变量**:`manifest.json` 内列出的每个 media 文件**必须**出现在 zip 内;反过来 zip 内的 media 文件**必须**在 manifest 内 — 这是还原一致性的 invariant。
 
 ---
 
@@ -678,9 +795,12 @@ services:
 ### 11.1 单元 (Vitest)
 
 - `lib/*` 工具函数
-- 权限校验逻辑(矩阵全覆盖)
+- 权限校验逻辑(角色 × Action 矩阵全覆盖,包括 media:* 和所有权判定)
 - Zod schemas 正反例
 - Drizzle queries(用 in-memory SQLite)
+- **媒体上传状态机**:`pending → processing → ready` 与失败分支 `→ failed` 的所有转移路径
+- **Reconcile job**:孤儿目录、卡住状态行、过期 deleted 文件的清理逻辑
+- **备份 manifest**:正确反映 `status='ready'` 的子集、sha256 计算稳定
 
 ### 11.2 组件 (Vitest + RTL)
 
@@ -689,10 +809,26 @@ services:
 
 ### 11.3 E2E (Playwright)
 
-3 个核心流程:
+**核心正向流程**:
 1. **首次部署**:挂载 config.yaml → 启动 → 登录 → 添加宝宝 → 进入时光
 2. **创建记录**:登录 → 新建 entry → 上传 1 张照片 → 选 2 个里程碑 → 保存 → 时光线可见
 3. **成员协作**:owner 创建 editor 成员 → 切登录 → editor 创建一条记录 → 切回 owner → 看见 editor 的记录
+
+**安全 / 权限拒绝用例**(必须全部存在,缺一个视为该 endpoint 未完成):
+
+4. **跨宝宝媒体拒绝**:配置两个宝宝 A、B;给 viewer 用户单独配置 `baby_member_permissions` 只能看 A → viewer `GET /api/media/<B 的 mediaId>` 返回 403,且**响应体不泄露资源是否存在**(统一 403,不区分"无权"和"不存在")
+5. **跨作者媒体删除拒绝**:editor1 上传 mediaX → editor2 调用 `DELETE /api/media/<X>` 返回 403 → mediaX 仍 `status = 'ready'`
+6. **viewer 写入拒绝**:viewer 调用 `POST /api/media/upload` 返回 403
+7. **未认证拒绝**:无 cookie 直接 `GET /api/media/<id>` 返回 401
+8. **直接路径遍历拒绝**:`GET /api/media/../../config.yaml` 等异常 mediaId 一律 404,不暴露文件系统
+9. **配置文件改 owner 密码生效**:重写 config.yaml + 重启容器 → 旧密码登录失败、新密码成功
+10. **上传幂等**:同一文件(同 contentHash)上传两次 → 只一条 `ready` 记录、磁盘只一份原图
+
+**故障注入用例**(可用 mock 实现,不必真实崩 ffmpeg):
+
+11. **Sharp 失败 → 无孤儿**:mock Sharp 抛错 → staging 被清空、media 行 `status = 'failed'`、目标目录无文件
+12. **进程中途崩 → reconcile 清理**:手动建一条 `status='processing'` + 1h 前的脏行 + 一个 staging 目录 → 触发 reconcile → 行变 `failed`、目录被删
+13. **备份一致性**:并发上传中点击备份 → 上传被短暂拒绝(503)→ 备份完成 → zip 内 manifest 与文件一一对应、sha256 校验通过
 
 ### 11.4 视觉回归
 
@@ -735,9 +871,39 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | ffmpeg 镜像体积 | 用 `ffmpeg-static`(~70MB),可接受 |
 | RSC + Server Actions 心智模型学习曲线 | 单人项目可控,过程中按需查文档 |
 | 配置文件明文密码暴露 | 部署文档强调 `chmod 600`,owner 物理拥有 NAS 是前提 |
+| 媒体 API Route 漏写 `assertPermission` | 自定义 ESLint rule `babyloom/api-route-must-assert` 在 CI 拦截;E2E 测试覆盖跨权限拒绝 |
+| 上传过程崩溃产生孤儿文件/脏行 | 两阶段上传 + staging 隔离 + `status` 状态机 + reconcile job 兜底 |
+| 备份取到不一致快照(并发上传期间) | SQLite Online Backup API + 短暂上传冻结 + manifest 校验 + 还原前 sha256 验证 |
+| WAL 模式下意外丢失未 checkpoint 的写入 | 启动启用 `journal_mode=WAL` + `synchronous=NORMAL`,备份前显式 `wal_checkpoint(TRUNCATE)` |
 
 ---
 
-## 14. 下一步
+## 14. SQLite 启动 PRAGMA
+
+应用启动时(`lib/db/client.ts`)在打开 DB 后立即执行:
+
+```sql
+PRAGMA journal_mode = WAL;       -- 支持并发读 + 在线备份
+PRAGMA synchronous = NORMAL;     -- 在 NAS 上的合理耐久度/性能平衡
+PRAGMA foreign_keys = ON;        -- 强制外键约束
+PRAGMA busy_timeout = 5000;      -- 减少 SQLITE_BUSY
+PRAGMA temp_store = MEMORY;
+```
+
+---
+
+## 15. Codex Adversarial Review 回应
+
+本 spec 在 2026-05-15 经 Codex 评审,verdict 为 `needs-attention`,三个 high/medium 级发现已逐项修复:
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| 媒体授权链条不完整(无 `media:*` Action、API Route 未强制 wrapper、`media` 缺 `uploadedBy`) | high | §3 schema、§5.4 Action 集、§5.5 调用约定、§11.3 拒绝用例 |
+| 上传非原子、无清理无重试语义 | high | §6.1 staging 目录、§6.2 两阶段流程、§3 `status`/`contentHash`、§11 reconcile 测试 |
+| 备份可产生不一致快照 | medium | §10.4 SQLite Online Backup + 暂停窗口 + manifest、§14 PRAGMA WAL |
+
+---
+
+## 16. 下一步
 
 本设计经用户确认后,进入 `writing-plans` 阶段,产出可执行的实施计划(按模块/阶段拆解)。
