@@ -356,8 +356,8 @@ app:
 | 编辑/软删他人记录 | ✓ | ✗ | ✗ |
 | 上传媒体 | ✓ | ✓ | ✗ |
 | 软删媒体 | ✓ | 仅自己上传的 | ✗ |
-| **看垃圾桶** | 全部 | 自己软删的 | ✗ |
-| **还原**(trashed → active/ready) | ✓ | 自己软删的 | ✗ |
+| **看垃圾桶** | 全部 | 仅 `deletedBy === userId` | ✗ |
+| **还原**(trashed → active/ready) | ✓(任意) | 仅 `deletedBy === userId` 且自身是 author/uploader | ✗ |
 | **硬删**(trashed → purged) | ✓ | ✗ | ✗ |
 | 管理成员(增删/改角色/重置密码) | ✓ | ✗ | ✗ |
 | 管理宝宝(增删/改资料) | ✓ | ✗ | ✗ |
@@ -420,24 +420,50 @@ async function assertPermission(
 
 | Action | viewer | editor | owner |
 |---|---|---|---|
-| `entry:write` / `entry:trash` / `entry:restore` | ✗ | 仅 `authorId === userId` | 任意 |
+| `entry:write` / `entry:trash` | ✗ | 仅 `authorId === userId` | 任意 |
+| `entry:restore` | ✗ | 仅 `authorId === userId` **AND** `deletedBy === userId` | 任意 |
 | `entry:purge` | ✗ | ✗ | ✓ |
-| `media:write` | ✗ | 允许(对有 `media:write` 的 babyId) | 任意 |
-| `media:trash` / `media:restore` | ✗ | 仅 `uploadedBy === userId` | 任意 |
+| `media:write` | ✗ | 允许(对有 `media:write` 的目标 baby) | 任意 |
+| `media:trash` | ✗ | 仅 `uploadedBy === userId` | 任意 |
+| `media:restore` | ✗ | 仅 `uploadedBy === userId` **AND** `deletedBy === userId` | 任意 |
 | `media:purge` | ✗ | ✗ | ✓ |
 | `media:read` | 允许(有 `baby:read` 即可) | 同左 | 任意 |
 | `baby:trash` / `baby:restore` / `baby:purge` | ✗ | ✗ | ✓ |
-| `trash:view` | ✗ | 允许(过滤为自己软删的) | 全部 |
+| `trash:view` | ✗ | 允许(列表过滤为 `deletedBy === userId`) | 全部 |
+
+**关键**:`*:restore` 的 `deletedBy === userId` 是必备约束 — 防止 editor 通过直接 API 调用还原 owner 软删的内容(绕过 UI 过滤)。详见 §5.5.2。
 
 ### 5.5 调用约定(关键 — 不只 server action)
 
 **所有受保护入口必须显式调用 `assertPermission`**。固化规则:
 
 - **Server Actions**:用高阶函数 `withPermission(action, resolveResource)(handler)` 包裹,handler 内可直接使用受信任的 `userId`
-- **API Routes**(`app/api/*/route.ts`):**必须**走规范化路由模板(见 §5.7),起手调 `await assertPermission(userId, action, resource)`,且 lint 规则强制(自定义 ESLint rule `babyloom/api-route-must-assert`,扫描 `export async function (GET|POST|PUT|DELETE)` 内是否含 `assertPermission` 调用)
+- **API Routes**(`app/api/*/route.ts`):**必须**走规范化路由模板(见 §5.7),起手调 `await assertPermission(userId, action, resource)`,且 lint 规则强制(自定义 ESLint rule `babyloom/api-route-must-assert`)
 - **统一异常处理**:在 `app/(family)/layout.tsx` 和每个 `route.ts` 都包一层 `try/catch`,**`ForbiddenError` 和"资源不存在/非 ready/已软删"统一返回 404**(见 §5.6 — 防存在性泄露)
-- **服务端绝不接受客户端传入的 `babyId / authorId / uploadedBy / status`** — 任何 ownership/状态字段必须从 DB 读出,这些字段在请求 body/query 中出现一律忽略
 - **测试硬性要求**(见 §11.3):每个受保护 endpoint 必须有跨权限拒绝用例,否则视为该 endpoint 未完成
+
+### 5.5.1 字段分类:Ownership vs Target
+
+实现端最容易混淆的两类客户端字段必须明确区分:
+
+| 类型 | 例子 | 服务端处理 | 解释 |
+|---|---|---|---|
+| **Ownership 字段** | `authorId` / `uploadedBy` / `familyId` / `status` / `deletedBy` / `purgedBy` / `createdAt` / `updatedAt` | **绝不接受客户端输入**,在请求 body/query 中出现一律忽略,只从 session/DB 推导 | 这些字段是身份/状态,允许客户端写就是允许 spoof |
+| **Target 字段** | `babyId`(上传时选择哪个宝宝)、`entryId`(媒体绑定哪个 entry)、URL path 里的 `mediaId` | **必须接受客户端输入**(否则无法表达用户选择),但服务端**必须**用 DB loader 加载该资源,校验存在 + 状态 + 跨权限,然后用 DB 数据继续判断 | 这是用户的资源选择,不是身份属性 |
+
+**关键不变量**:Target 字段进入授权判断前必须经过 DB loader 反向加载,所有后续权限决策基于 DB row 字段而非客户端传入值。例如:`POST /api/media/upload` 接收 `babyId`,但服务端先 `SELECT * FROM babies WHERE id=?`,确认存在 + `status='active'` + 当前 user 在该 baby 的 family + 有 `media:write` 权限,**然后用加载到的 `baby.familyId` 等字段做后续判断**,绝不直接用 multipart 里的字段做权限以外的事。
+
+伪造的 target 字段(指向别人家庭的 baby)**统一走 §5.6 的 404 出口**,不区分"无权"和"不存在"。
+
+### 5.5.2 UI 过滤 ≠ API 授权
+
+**原则**:UI 列表的"看不到" **不等于** API 接口的"拒绝"。每条 UI 过滤逻辑必须在 API 层有等价的 `assertPermission` 校验。
+
+反例(Codex 抓到的真实漏洞):垃圾桶 UI 给 editor 过滤为"自己软删的",但 API `*:restore` 仅校验 `authorId/uploadedBy === userId`,没校验 `deletedBy === userId`。editor 知道 ID 就能直接还原 owner 软删的项,绕过 UI 隐藏。
+
+**强制要求**:
+- 编写每个 restore/delete/edit endpoint 时,先列出"UI 列表的过滤条件",授权矩阵**必须**包含所有这些条件
+- E2E 测试必须有"UI 列表外的资源 → 直接 API 调用 → 拒绝"用例
 
 ### 5.6 防存在性泄露:统一 404 响应
 
@@ -548,11 +574,30 @@ data/media/
 1. **客户端**:
    - 计算 `contentHash = sha256(file)`
    - 生成 `clientUploadId = uuidv4()`(本次上传任务的稳定 token,**网络层重试必须复用同一个**)
-   - `POST /api/media/upload` multipart:`babyId`, `contentHash`, `clientUploadId`, `filename`, `mimeType`, `sizeBytes`, 文件二进制
+   - `POST /api/media/upload` multipart:
+     - **Target 字段**(用户选择,必传):`babyId`(目标宝宝)、可选 `entryId`(若关联记录)
+     - **请求字段**:`contentHash`, `clientUploadId`, `filename`, `mimeType`, `sizeBytes`, 文件二进制
+     - **绝不接受**:`uploadedBy / authorId / familyId / status` 等 ownership 字段(出现一律忽略,见 §5.5.1)
 
-2. **服务端 — 准入**(任何 IO 前):
-   - 走 §5.7 规范化模板的认证 + 状态闸门 + `assertPermission(userId, 'media:write', { babyId })`
-   - **Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
+2. **服务端 — 准入**(任何 IO 前,严格按序):
+
+   **2.1 认证** → 无 session → 401(其余情况一律统一 404)
+
+   **2.2 Target 校验:DB loader 加载 `babyId`**(关键 — Codex 第三轮 finding #3 修法)
+   ```sql
+   SELECT id, familyId, status FROM babies WHERE id = ?
+   ```
+   - babyId 格式非 UUID → 404
+   - 不存在 → 404
+   - `status !== 'active'` → 404(trashed/purged 的宝宝不能再上传)
+   - **跨家庭校验**:用 session 的 userId 查 `family_members`,确认 `family_members.familyId === baby.familyId`。不匹配 → 404
+   - 至此 `baby` row 是可信数据源,后续判断都基于它
+
+   **2.3 权限校验**:`assertPermission(userId, 'media:write', { babyId: baby.id, familyId: baby.familyId })`
+   - 内部检查 `family_members.role` + `baby_member_permissions` 覆盖
+   - 失败 → 统一 404
+
+   **2.4 Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
    - 按命中行的状态分支:
 
    | 命中 row 状态 | 处理 |
@@ -705,18 +750,47 @@ V1 的核心 UX 不变量保留:**移动端常规删除走软删,真删隔离到
 - 对当前过滤条件下的所有 `trashed` 行执行硬删
 - 大批量时分批事务(每批 100 项),避免单事务过大
 
-### 6A.4 跨资源一致性
+### 6A.4 跨资源一致性 — 父链可见性不变量
+
+**核心不变量**:**资源在任何对外出口的可见性 = 自身 status 干净 AND 父链所有 status 干净**。
+父链定义:
+- `media` 的父 = `babies`(via `babyId`)
+- `entries` 的父 = `babies`(via `babyId`)
+- `babies` 无父
+
+**"对外出口"包括**(实现端逐一对账):
+- timeline / gallery / calendar 等业务查询
+- `GET /api/media/[id]` 媒体输出
+- **备份导出 manifest**(Codex 抓到的实际漏洞 — 之前只看自身 status)
+- 任何 entry/media 详情接口
+- 搜索(若后续添加)
+
+**实现要点**:每个查询都必须 join 父表过滤,不允许偷懒只看自身 status。SQL 模板:
+```sql
+SELECT m.* FROM media m
+JOIN babies b ON b.id = m.babyId
+WHERE m.status = 'ready' AND b.status = 'active';
+
+SELECT e.* FROM entries e
+JOIN babies b ON b.id = e.babyId
+WHERE e.status = 'active' AND b.status = 'active';
+```
 
 **软删 baby 时**:
 - baby 本身 `status='trashed'`
-- 其下所有 `status='ready'` media 和 `status='active'` entries **不**自动 trashed(独立软删生命周期)
-- 但业务查询(timeline/gallery)会因 baby 不可见而过滤掉这些 → **用户视角等同消失**
-- 还原 baby → 这些资源自然重新可见
+- 其下 entries/media **不**级联 trashed(独立生命周期,owner 可单独管理)
+- 由"父链可见性不变量"保证用户感知到的"消失"
+- 还原 baby → 子资源自然重新可见
 
 **软删 entry 时**:
 - entry `status='trashed'`
 - 其关联 media `entryId` **不**置 NULL(还原时需要恢复关系)
 - 若 entry 还原 → 关联 media 自动重新挂上
+
+**硬删 baby 时**(§6A.3 已说,这里强化):
+- 必须先确认该 baby 下所有 entries/media 已全部 trashed,否则拒绝(409)
+- 这是为了防止"硬删 baby 间接吞掉 N 张 ready 照片"
+- 实际硬删 baby 时,**不**级联硬删子资源(它们留在 trashed,owner 显式批量 purge)
 
 ### 6A.5 API 端点
 
@@ -1010,26 +1084,62 @@ services:
 
 ### 10.4 备份(一致性快照)
 
-**关键风险**:直接 zip 运行中的 `babyloom.db` 会拿到损坏快照(WAL 未合并、读写中);DB 行已写但 media 文件未 commit 时打包会丢文件 → 必须用一致性方案。
+**关键风险**:
+1. 直接 zip 运行中的 `babyloom.db` 会拿到损坏快照(WAL 未合并、读写中)
+2. DB 行已写但 media 文件未 commit 时打包会丢文件
+3. **备份期间 owner 的 trash/restore/purge 等媒体相关写**会让快照里 manifest 列出的文件在打包前消失(Codex 第三轮 finding #2)
+4. **软删 baby 后,该 baby 下 ready 状态的 media 仍会进入 manifest**(Codex 第三轮 finding #1)→ 违反"备份=干净数据"
 
 **SQLite 启停态**:启用 WAL 模式(`PRAGMA journal_mode=WAL`)。WAL 给读者快照隔离,允许在线备份。
 
 **备份流程**(Owner 在 `/profile/data` 点"导出全部"触发):
 
 1. **进入备份模式**:设置全局 `BACKUP_IN_PROGRESS` 标志
-   - 所有**新上传**返回 503 + Retry-After(短暂拒绝,5-30 秒,家用场景可接受)
-   - **进行中的上传**等待其完成(最多 30 秒,超时强杀并清 staging)
-   - 读流量(timeline / 媒体输出)不受影响
-2. **DB 快照**:调用 `better-sqlite3` 的 `db.backup(targetPath)`(底层是 SQLite Online Backup API,锁页拷贝,与并发读兼容,写入会被自然串行化)
-3. **WAL Checkpoint**:`PRAGMA wal_checkpoint(TRUNCATE)` 把 WAL 合并进主库,确保备份完整自包含
-4. **冻结媒体清单**:对快照库执行 `SELECT id, relativePath, contentHash, sizeBytes FROM media WHERE status = 'ready'` → 写 `manifest.json`,字段:
-   - `version`、`createdAt`、`appVersion`、`dbSha256`
-   - `media[]: { id, path, contentHash, sizeBytes }`(实际进归档的文件列表)
-   - **明确排除**:status ∈ {pending, processing, failed, trashed, purged} 的媒体不进备份
-5. **流式打包 zip**:`babyloom.db`(快照副本)+ `manifest.json` + `media/` 目录(**只打包 manifest 列出的 ready 文件**;跳过 staging、failed、trashed、purged)
-6. **校验**:边打包边计算 zip 整体 sha256 → 写入 zip 注释 + 单独 `babyloom-backup-<ts>.sha256` 文件
-7. **解除备份模式**,标志清除
-8. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
+   - **所有媒体相关写一律暂停**(返回 503 + Retry-After,5-30 秒):
+     - 媒体上传 commit
+     - `*:trash` / `*:restore` / `*:purge`(对 entries / media / babies 全部)
+     - 清空垃圾桶
+     - entry 创建/编辑(可能关联媒体)
+   - **进行中的写**等待其完成(最多 30 秒,超时强杀并清 staging)
+   - **读流量**(timeline / 媒体输出 / 垃圾桶浏览)不受影响
+
+2. **DB 快照**:调用 `better-sqlite3` 的 `db.backup(targetPath)`(底层 SQLite Online Backup API)
+
+3. **WAL Checkpoint**:`PRAGMA wal_checkpoint(TRUNCATE)` 把 WAL 合并进主库
+
+4. **生成 manifest(父链感知查询)** — 对快照库执行:
+   ```sql
+   SELECT m.id, m.relativePath, m.contentHash, m.sizeBytes, m.type
+   FROM media m
+   JOIN babies b ON b.id = m.babyId
+   WHERE m.status = 'ready' AND b.status = 'active';
+   ```
+   **关键**:`JOIN babies` 过滤 — 软删的 baby 下的 media **不进备份**,即使 media 自身 status 是 ready。entries 同理:
+   ```sql
+   SELECT e.* FROM entries e
+   JOIN babies b ON b.id = e.babyId
+   WHERE e.status = 'active' AND b.status = 'active';
+   ```
+   写 `manifest.json`:`version`、`createdAt`、`appVersion`、`dbSha256`、`media[]: { id, path, contentHash, sizeBytes }`
+
+5. **Hardlink staging(关键 — Codex 第三轮 finding #2 修法)**:
+   - 创建 `data/_backup_staging/<backupId>/media/` 目录
+   - 对 manifest 列出的**每个**文件执行 `fs.link(原路径, staging路径)`(POSIX hardlink)
+   - hardlink 几乎免费,NAS 同文件系统下毫秒级
+   - **即使后续生产文件被删,hardlink 副本仍存在**(inode 引用计数 > 0,文件不会被实际释放)
+   - 失败兜底:如 hardlink syscall 失败(跨文件系统、磁盘满)→ 回退为 copy;copy 也失败 → 中止备份并清理 staging,返回错误
+
+6. **释放写屏障**:`BACKUP_IN_PROGRESS = false`,后续 owner 的删改操作正常进行
+   - **写屏障窗口**:从步骤 1 到步骤 6,典型只持续数秒(取决于 hardlink 数量),家用场景几乎无感
+
+7. **流式打包 zip**:从 `_backup_staging/<backupId>/` 读文件 + 快照 db + manifest.json,流式输出
+   - 即使此时生产侧 owner 在硬删某些 media,staging 里 hardlink 不受影响
+
+8. **校验**:边打包边算 zip 整体 sha256 → 写 zip 注释 + 单独 `babyloom-backup-<ts>.sha256`
+
+9. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
+
+10. **清理**:打包完成或失败后,`rm -rf data/_backup_staging/<backupId>/`(只删 hardlink,生产文件 inode 不受影响)
 
 **还原流程**(后续迭代,先把"导出可还原"作为设计前提):
 1. 上传 zip → 校验整体 sha256
@@ -1054,7 +1164,9 @@ services:
 - Drizzle queries(用 in-memory SQLite)
 - **媒体上传状态机**:`pending → processing → ready` 与失败分支 `→ failed` 的所有转移路径
 - **Reconcile job**:孤儿目录、卡住状态行、过期 deleted 文件的清理逻辑
-- **备份 manifest**:正确反映 `status='ready'` 的子集、sha256 计算稳定
+- **备份 manifest**:join babies 后正确反映 `m.status='ready' AND b.status='active'` 的子集、sha256 计算稳定
+- **父链可见性查询**:每个对外出口的 SQL 都覆盖"自身干净 + 父链干净"的不变量
+- **Restore 授权**:`deletedBy === userId` 必备约束的正反例
 
 ### 11.2 组件 (Vitest + RTL)
 
@@ -1075,9 +1187,10 @@ services:
 6. **viewer 写入拒绝**:viewer 调用 `POST /api/media/upload` 返回 **404**(因为它无 `media:write`,统一走 404)
 7. **未认证 vs 已认证无权区分**:无 cookie → 401;有 cookie 但无权 → 404
 8. **路径遍历拒绝**:`GET /api/media/../../config.yaml` / `GET /api/media/xxx?path=...` 等异常一律 404,且**不会落到文件系统**
-9. **客户端伪造 babyId 被忽略**:editor 上传时 multipart 里塞错 babyId(填别人家庭的)→ 服务端**完全忽略**该字段,授权基于 session userId 自动推导;拒绝时统一 404
-10. **配置文件改 owner 密码生效**:重写 config.yaml + 重启 → 旧密码 401、新密码成功
-11. **GET /api/media/[id]/status 同样套模板**:无权访问的 mediaId 返回 404,不暴露状态信息
+9. **跨家庭 target babyId 拒绝**(Codex 第三轮修正):上传时 multipart `babyId` 指向**别人家庭的** baby → DB loader 加载 baby → 跨家庭检查失败 → 统一 404;`babyId` 指向已 `trashed` 的 baby → 同样 404;`babyId` 是非法 UUID → 404
+10. **客户端塞 ownership 字段被忽略**:multipart 里塞 `uploadedBy=<other-user-id>` / `status=ready` → 服务端**完全忽略**这些字段,`media.uploadedBy` 必等于 session userId
+11. **配置文件改 owner 密码生效**:重写 config.yaml + 重启 → 旧密码 401、新密码成功
+12. **GET /api/media/[id]/status 同样套模板**:无权访问的 mediaId 返回 404,不暴露状态信息
 
 **上传幂等 / 状态机用例**(Codex Finding #1 必须覆盖):
 
@@ -1105,6 +1218,24 @@ services:
 27. **还原冲突 409**:软删 mediaX(hash=H)→ 重传同 hash 文件成功创建新 ready → 试图还原 X → 409 Conflict
 28. **软删 baby 后内容不可见**:软删 babyA → timeline/gallery 中其 entries 和 media 都不再展示(但状态仍是 active/ready,DB 行未变)→ 还原 baby → 自动重新可见
 29. **备份排除 trashed**:垃圾桶里有 N 个 media → 触发备份 → manifest 不包含它们、zip 内无这些文件
+
+**Codex 第三轮新增 / 强化**:
+
+30. **备份排除"trashed baby 下的 ready media"**(Codex finding #1):软删 babyA → babyA 下仍有 M 张 status=ready 的 media → 触发备份 → manifest **不含**这 M 张、zip 内**无**这些文件 → 还原 babyA 后 timeline 重新看到它们(数据未丢)
+31. **备份期间 owner purge 不破坏 zip**(Codex finding #2):
+    - 触发备份,在写屏障期间另一 tab 尝试 `*:purge` → 503
+    - 写屏障释放(hardlink 完成)后,另一 tab purge mediaX 成功 → 生产侧 media 文件被删
+    - 备份打包继续 → zip 内**仍包含** mediaX(从 hardlink staging 读)→ sha256 校验通过
+32. **Hardlink 失败回退 copy**:mock `fs.link` 抛 EXDEV → 自动回退 `fs.copyFile` → 备份成功
+33. **Hardlink + copy 全失败**:mock 两者都抛错 → 备份失败、staging 被清理、写屏障被释放、返回错误,**不留半成品**
+34. **Editor 还原 owner 软删的内容被拒**(Codex finding #4):
+    - editor1 写了 entryX(authorId=editor1)
+    - owner 软删 entryX(deletedBy=owner)
+    - editor1 进 `/profile/trash` 看不到 entryX(过滤 deletedBy === self)
+    - editor1 直接 `POST /api/entries/X/restore` → **返回统一 404**(因为 `deletedBy !== userId`)
+    - entryX 仍在 trashed 状态
+35. **跨家庭 baby 上传被拒**(Codex finding #3):editor 在 multipart 塞别家庭的 babyId → 404,无 staging 副作用,无 DB 行写入
+36. **trashed baby 上传被拒**:multipart babyId 指向已 trashed 的 baby → 404
 
 ### 11.4 视觉回归
 
@@ -1158,6 +1289,10 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | WAL 模式下意外丢失未 checkpoint 的写入 | 启动启用 `journal_mode=WAL` + `synchronous=NORMAL`,备份前显式 `wal_checkpoint(TRUNCATE)` |
 | **editor 通过硬删销毁证据** | **硬删(`*:purge`)owner only,editor 即便对自己软删的也无法硬删;UI 不展示按钮 + 后端拒绝双重保险** |
 | **垃圾桶无限增长占满 NAS 磁盘** | owner 在 `/profile/trash` 可手动清空;`/profile/data` 显示存储占用;**不做自动清理**(显式选择) |
+| **软删 baby 后子资源仍泄露到备份** | §6A.4 父链可见性不变量;§10.4 备份查询 join babies 过滤;E2E 用例 #30 |
+| **备份期间并发 purge 让 zip 文件缺失** | §10.4 写屏障扩展为全媒体相关写 + Hardlink staging 解耦生产与打包;E2E 用例 #31-33 |
+| **Ownership 与 Target 字段混淆**(实现者错信客户端 babyId 或拒绝必要 target) | §5.5.1 字段分类表;§6.2 step 2.2 显式 DB loader;E2E 用例 #9, #35-36 |
+| **Editor 通过直接 API 还原 owner 软删的内容**(UI 过滤被绕过) | §5.4 矩阵 restore 加 `deletedBy === userId` 约束;§5.5.2 UI 过滤 ≠ API 授权原则;E2E 用例 #34 |
 
 ---
 
@@ -1197,6 +1332,15 @@ PRAGMA temp_store = MEMORY;
 | 增量 | 来源 | 落点 |
 |---|---|---|
 | 垃圾桶功能(继承 V1 设计哲学,owner-only 硬删,无自动清理) | 用户 | §3 status 字段统一、§5.2 矩阵更新、§6A 专章、§8 `/profile/trash`、§10.4 备份排除 trashed、§11 用例 #20-29 |
+
+### 15.4 第三轮(2026-05-15)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| 备份漏过滤"trashed baby 下的 ready media"(隐私泄露) | high | §6A.4 父链可见性不变量、§10.4 备份查询 join babies、§11 用例 #30 |
+| 备份写屏障未覆盖 trash/restore/purge,并发可让 zip 文件缺失 | high | §10.4 写屏障扩展 + Hardlink staging 解耦生产/打包、§11 用例 #31-33 |
+| Ownership 与 Target 字段语义混淆(`babyId` 处理矛盾) | medium | §5.5.1 字段分类表、§6.2 step 2.2 DB loader 显式校验、§11 用例 #9, #35-36 |
+| Editor 可通过直接 API 调用还原 owner 软删的内容(UI 过滤被绕过) | medium | §5.4 restore 加 `deletedBy === userId`、§5.5.2 UI 过滤 ≠ API 授权原则、§11 用例 #34 |
 
 ---
 
