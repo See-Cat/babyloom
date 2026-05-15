@@ -1,0 +1,24 @@
+{
+  "admin": {
+    "username": "admin",
+    "password": "admin123",
+    "nickname": "管理员"
+  },
+  "app": {
+    "name": "小日子",
+    "description": "宝宝生活记录",
+    "maxUploadSize": 52428800,
+    "allowRegistration": false,
+    "defaultLanguage": "zh-CN"
+  },
+  "storage": {
+    "uploadPath": "/app/uploads",
+    "backupEnabled": true,
+    "backupInterval": "daily"
+  },
+  "features": {
+    "enableTrash": true,
+    "trashRetentionDays": 30,
+    "enableNotifications": false
+  }
+}

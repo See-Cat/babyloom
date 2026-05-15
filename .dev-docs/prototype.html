@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head><script data-od-sandbox-shim>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小日子 — 宝宝生活记录</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:oklch(97% 0.012 80);
+  --surface:oklch(99% 0.005 80);
+  --fg:oklch(20% 0.02 60);
+  --muted:oklch(48% 0.015 60);
+  --border:oklch(89% 0.012 80);
+  --accent:oklch(58% 0.16 35);
+  --accent-light:oklch(92% 0.04 35);
+  --font-d:Georgia,'Iowan Old Style','Charter',serif;
+  --font-b:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+}
+body{
+  background:oklch(93% 0.005 80);
+  min-height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  font-family:var(--font-b);color:var(--fg);
+  padding:40px 20px;-webkit-font-smoothing:antialiased;
+  background-image:
+    linear-gradient(oklch(91% 0.003 80) 1px,transparent 1px),
+    linear-gradient(90deg,oklch(91% 0.003 80) 1px,transparent 1px);
+  background-size:48px 48px;
+}
+.sc-title{font-family:var(--font-d);font-size:28px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
+.sc-sub{font-size:13px;color:var(--muted);margin-bottom:28px;letter-spacing:0.03em}
+.sc-hint{font-size:12px;color:var(--muted);margin-top:20px;text-align:center;line-height:2}
+
+.phone{
+  position:relative;width:393px;height:852px;border-radius:50px;
+  background:var(--bg);overflow:hidden;flex-shrink:0;
+  box-shadow:inset 0 0 0 .5px rgba(0,0,0,.06),0 30px 80px rgba(0,0,0,.1),0 8px 24px rgba(0,0,0,.07);
+  animation:phoneIn .8s cubic-bezier(.16,1,.3,1);
+}
+@keyframes phoneIn{from{opacity:0;transform:scale(.96) translateY(16px)}to{opacity:1;transform:none}}
+
+.di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:37px;background:#1a1a1a;border-radius:20px;z-index:200}
+
+.sbar{position:relative;z-index:190;height:54px;padding:16px 28px 0;display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600}
+.sbar-r{display:flex;gap:6px;align-items:center}
+
+.screens{position:relative;height:calc(100% - 54px - 70px);overflow:hidden}
+.screen{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;opacity:0;transform:translateX(20px);
+  transition:opacity .35s ease,transform .35s ease;pointer-events:none;-webkit-overflow-scrolling:touch}
+.screen.active{opacity:1;transform:none;pointer-events:auto}
+.screen::-webkit-scrollbar{display:none}
+
+.tabs{position:absolute;bottom:0;left:0;right:0;height:70px;z-index:100;
+  background:rgba(253,250,245,.82);backdrop-filter:blur(24px) saturate(1.6);-webkit-backdrop-filter:blur(24px) saturate(1.6);
+  border-top:.5px solid var(--border);display:flex;align-items:flex-start;justify-content:space-around;padding:10px 16px 0}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;background:none;border:none;cursor:pointer;
+  padding:4px 12px;color:var(--muted);font-size:10px;font-family:var(--font-b);transition:color .2s}
+.tab.active{color:var(--accent)}
+.tab svg{width:22px;height:22px}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;background:var(--fg);border-radius:3px;opacity:.15;z-index:210}
+
+.page-btn{position:absolute;top:60px;right:20px;width:36px;height:36px;border-radius:50%;
+  background:var(--surface);border:.5px solid var(--border);cursor:pointer;z-index:50;
+  display:flex;align-items:center;justify-content:center;color:var(--fg);
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .2s}
+.page-btn:active{transform:scale(.88)}
+.page-btn svg{width:18px;height:18px}
+
+.tl-hdr{padding:16px 24px 4px}
+.tl-title{font-family:var(--font-d);font-size:32px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.tl-sub{font-size:13px;color:var(--muted);margin-top:4px;letter-spacing:.02em}
+.date-sec{padding:0 16px}
+.date-hdr{display:flex;align-items:baseline;gap:8px;padding:18px 8px 10px}
+.date-lbl{font-family:var(--font-d);font-size:18px;font-weight:600}
+.date-det{font-size:11px;color:var(--muted);letter-spacing:.04em}
+
+.mc{background:var(--surface);border-radius:16px;overflow:hidden;margin-bottom:12px;
+  border:.5px solid var(--border);cursor:pointer;
+  transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.mc:active{transform:scale(.97)}
+.mc.ph{opacity:0;transform:translateY(16px);transition:opacity .5s ease,transform .5s ease}
+.mc.ph.vis{opacity:1;transform:none}
+
+.mc-photo{position:relative;aspect-ratio:4/3;overflow:hidden}
+.carousel{position:absolute;inset:0;touch-action:pan-y}
+.carousel-track{display:flex;height:100%;transition:transform .5s cubic-bezier(.22,.68,.36,1.1);will-change:transform}
+.carousel-track.dragging{transition:none}
+.carousel-slide{min-width:100%;height:100%;position:relative;transform:scale(1);transition:transform .5s cubic-bezier(.22,.68,.36,1.1),opacity .5s ease}
+.carousel-slide.prev{transform:scale(.92);opacity:.6}
+.carousel-slide.next{transform:scale(.92);opacity:.6}
+.carousel-counter{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.35);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;font-size:11px;padding:3px 10px;border-radius:12px;z-index:5;letter-spacing:.03em;pointer-events:none}
+.carousel-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:5;pointer-events:none}
+.carousel-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.4);transition:all .35s cubic-bezier(.34,1.56,.64,1)}
+.carousel-dot.active{background:#fff;width:18px;border-radius:3px}
+.mc-body{padding:12px 14px 10px}
+.mc-text{font-size:14px;line-height:1.65;margin-bottom:8px}
+.mc-foot{display:flex;align-items:center;justify-content:space-between}
+.mc-date{font-size:11px;color:var(--muted)}
+.mc-tag{font-size:11px;color:var(--accent);background:var(--accent-light);
+  padding:2px 10px;border-radius:20px;white-space:nowrap}
+.mc-tag:empty{display:none}
+
+.cal-hdr{padding:16px 24px;display:flex;justify-content:space-between;align-items:center}
+.cal-mo{font-family:var(--font-d);font-size:22px;font-weight:600}
+.cal-nav{display:flex;gap:12px}
+.cal-nav button{background:none;border:none;cursor:pointer;color:var(--muted);font-size:18px;padding:4px}
+.cal-g{padding:0 12px}
+.cal-wd{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:11px;color:var(--muted);padding:6px 0;font-weight:500}
+.cal-ds{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-d{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:12px;font-size:13px;cursor:pointer;transition:background .2s;position:relative}
+.cal-d:hover{background:oklch(95% .01 80)}
+.cal-d.today{background:var(--accent);color:#fff;font-weight:600}
+.cal-d.hm::after{content:'';width:4px;height:4px;border-radius:50%;background:var(--accent);position:absolute;bottom:3px}
+.cal-d.today.hm::after{background:#fff}
+.cal-d.om{color:var(--border)}
+.cal-det{margin:16px}
+.cal-det-t{font-size:14px;font-weight:600;margin-bottom:10px}
+
+.pw-hdr{padding:16px 24px 8px;display:flex;justify-content:space-between;align-items:flex-end}
+.pw-hdr h1{font-family:var(--font-d);font-size:32px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.pw-count{font-size:12px;color:var(--muted);margin-bottom:4px}
+.pw-mo{padding:16px 16px 0}
+.pw-mo-label{font-family:var(--font-d);font-size:16px;font-weight:600;margin-bottom:10px;
+  display:flex;align-items:center;gap:8px}
+.pw-mo-label::after{content:'';flex:1;height:.5px;background:var(--border)}
+.pw-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-bottom:4px}
+.pw-item{position:relative;border-radius:8px;overflow:hidden;cursor:pointer;
+  transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.pw-item:active{transform:scale(.95)}
+.pw-ph{width:100%;display:block}
+.pw-item .pw-ph{aspect-ratio:1}
+.pw-item.tall .pw-ph{aspect-ratio:3/4}
+.pw-item.wide .pw-ph{aspect-ratio:2/3}
+.pw-item.wide{grid-column:span 2}
+.pw-vid{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+  width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.45);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  display:flex;align-items:center;justify-content:center;pointer-events:none}
+.pw-vid svg{width:14px;height:14px;color:#fff;margin-inline-start:2px}
+.pw-badge{position:absolute;bottom:4px;inset-inline-end:4px;
+  font-size:10px;color:#fff;background:rgba(0,0,0,.35);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  padding:1px 6px;border-radius:8px;pointer-events:none}
+
+.prof-hdr{padding:24px;text-align:center}
+.prof-av{width:72px;height:72px;border-radius:50%;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 10px;
+  font-family:var(--font-d);font-size:28px;font-weight:700;color:var(--accent)}
+.prof-name{font-family:var(--font-d);font-size:24px;font-weight:600}
+.prof-meta{font-size:13px;color:var(--muted);margin-top:3px}
+.prof-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);
+  margin:20px 16px;border-radius:16px;overflow:hidden}
+.prof-st{background:var(--surface);padding:14px 6px;text-align:center}
+.prof-st-n{font-family:var(--font-d);font-size:20px;font-weight:700;color:var(--accent)}
+.prof-st-l{font-size:10px;color:var(--muted);margin-top:2px}
+.prof-sec{padding:0 16px;margin-top:8px}
+.prof-sec-t{font-family:var(--font-d);font-size:16px;font-weight:600;margin-bottom:8px;padding:0 4px}
+.prof-row{display:flex;align-items:center;gap:12px;padding:13px 8px;border-bottom:.5px solid var(--border);cursor:pointer}
+.prof-row:last-child{border-bottom:none}
+.prof-row-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.prof-row-name{flex:1;font-size:14px}
+.prof-row-tag{font-size:11px;color:var(--muted);background:oklch(95% .008 80);padding:2px 8px;border-radius:8px}
+.prof-row-arrow{color:var(--border);font-size:14px}
+
+.ms-entry{margin:16px;padding:14px 16px;background:var(--surface);border-radius:16px;border:.5px solid var(--border);
+  display:flex;align-items:center;gap:12px;cursor:pointer;transition:transform .2s}
+.ms-entry:active{transform:scale(.98)}
+.ms-entry-icon{width:40px;height:40px;border-radius:12px;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ms-entry-info{flex:1}
+.ms-entry-title{font-size:14px;font-weight:600}
+.ms-entry-desc{font-size:12px;color:var(--muted);margin-top:2px}
+.ms-entry-count{font-size:12px;color:var(--accent);font-weight:600}
+.ms-entry-arrow{color:var(--border);font-size:14px}
+
+.ms-page{position:absolute;inset:0;z-index:140;background:var(--bg);
+  opacity:0;pointer-events:none;transform:translateX(30px);
+  transition:opacity .3s ease,transform .3s ease;
+  display:flex;flex-direction:column;overflow:hidden}
+.ms-page.open{opacity:1;pointer-events:auto;transform:none}
+.ms-page-hdr{padding:54px 20px 16px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.ms-page-back{width:32px;height:32px;border-radius:50%;border:none;background:var(--surface);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--fg);font-size:18px}
+.ms-page-title{font-family:var(--font-d);font-size:22px;font-weight:700}
+.ms-page-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 24px}
+.ms-page-body::-webkit-scrollbar{display:none}
+.ms-tag-sec{margin-bottom:24px}
+.ms-tag-head{display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;
+  padding:8px 12px;background:var(--surface);border-radius:12px;border:.5px solid var(--border)}
+.ms-tag-name{font-size:15px;font-weight:600}
+.ms-tag-count{font-size:12px;color:var(--accent);background:var(--accent-light);
+  padding:1px 8px;border-radius:10px}
+.ms-tag-toggle{font-size:12px;color:var(--muted);margin-left:auto;transition:transform .2s}
+.ms-tag-cards{display:none;padding-top:8px}
+.ms-tag-head.expanded+.ms-tag-cards{display:block}
+.ms-tag-head.expanded .ms-tag-toggle{transform:rotate(90deg)}
+
+.det{position:absolute;inset:0;z-index:150;background:#000;opacity:0;pointer-events:none;
+  transition:opacity .35s ease;display:flex;flex-direction:column}
+.det.open{opacity:1;pointer-events:auto}
+.det-ph{flex:1;background-size:cover;background-position:center}
+.det-close{position:absolute;top:60px;right:20px;width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;z-index:10}
+.det-close svg{width:18px;height:18px}
+
+.modal-bg{position:absolute;inset:0;background:rgba(30,25,20,.4);z-index:160;opacity:0;pointer-events:none;transition:opacity .3s}
+.modal-bg.open{opacity:1;pointer-events:auto}
+
+.sheet{position:absolute;bottom:0;left:0;right:0;background:var(--surface);border-radius:24px 24px 0 0;
+  padding:16px 24px 44px;z-index:170;transform:translateY(100%);transition:transform .4s cubic-bezier(.16,1,.3,1)}
+.sheet.open{transform:none}
+.sheet-hdl{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.sheet-t{font-family:var(--font-d);font-size:20px;font-weight:600;margin-bottom:18px}
+
+.action-list{margin-bottom:4px}
+.action-row{display:flex;align-items:center;gap:14px;padding:16px 4px;cursor:pointer;
+  border-bottom:.5px solid var(--border);transition:background .15s}
+.action-row:last-of-type{border-bottom:none}
+.action-row:active{background:oklch(95% .01 80)}
+.action-row-icon{width:40px;height:40px;border-radius:12px;background:var(--accent-light);
+  display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+.action-row-icon svg{width:20px;height:20px}
+.action-row-text{font-size:15px;font-weight:500}
+.action-cancel{display:block;width:100%;padding:14px;text-align:center;font-size:15px;
+  color:var(--muted);background:none;border:none;border-top:8px solid oklch(95% .008 80);
+  cursor:pointer;font-family:var(--font-b);transition:background .15s}
+.action-cancel:active{background:oklch(95% .01 80)}
+
+.add-ms-label{font-size:12px;color:var(--muted);margin-bottom:8px}
+.add-ms-tags{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.add-ms-tag{font-size:12px;padding:6px 14px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);color:var(--fg);cursor:pointer;
+  transition:all .25s cubic-bezier(.34,1.56,.64,1);font-family:var(--font-b)}
+.add-ms-tag.sel{border-color:var(--accent);background:var(--accent-light);color:var(--accent);transform:scale(1.05)}
+.add-inp{width:100%;border:1px solid var(--border);border-radius:12px;padding:10px 14px;
+  font-size:14px;font-family:var(--font-b);background:var(--bg);color:var(--fg);
+  resize:none;height:64px;margin-bottom:14px;outline:none;transition:border-color .2s}
+.add-inp:focus{border-color:var(--accent)}
+.add-sub{width:100%;padding:13px;border-radius:12px;background:var(--accent);color:#fff;
+  font-size:15px;font-weight:600;font-family:var(--font-b);border:none;cursor:pointer;transition:transform .2s}
+.add-sub:active{transform:scale(.97)}
+
+.photo-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.photo-thumb{width:64px;height:64px;border-radius:10px;overflow:hidden;position:relative;
+  border:.5px solid var(--border);animation:thumbIn .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes thumbIn{from{opacity:0;transform:scale(.7)}to{opacity:1;transform:none}}
+.photo-thumb-ph{width:100%;height:100%}
+.photo-thumb-del{position:absolute;top:-1px;right:-1px;width:18px;height:18px;border-radius:0 10px 0 8px;
+  background:rgba(0,0,0,.35);color:#fff;font-size:11px;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;line-height:1;backdrop-filter:blur(4px)}
+.photo-add-btn{width:64px;height:64px;border-radius:10px;border:1.5px dashed var(--border);
+  background:var(--bg);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  color:var(--muted);transition:border-color .2s,color .2s}
+.photo-add-btn:hover,.photo-add-btn:active{border-color:var(--accent);color:var(--accent)}
+.photo-add-btn svg{width:24px;height:24px}
+
+@media(max-height:960px){.phone{transform:scale(.85);transform-origin:top center}}
+@media(max-height:780px){.phone{transform:scale(.7);transform-origin:top center}}
+</style>
+</head>
+<body>
+<p class="sc-title">小日子</p>
+<p class="sc-sub">Baby Life Tracker · Prototype</p>
+
+<div class="phone">
+  <div class="di"></div>
+  <div class="sbar">
+    <span>9:41</span>
+    <div class="sbar-r">
+      <svg width="18" height="12" viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="7" width="3" height="5" rx=".5"/><rect x="5" y="4" width="3" height="8" rx=".5"/><rect x="10" y="1" width="3" height="11" rx=".5"/><rect x="15" y="0" width="3" height="12" rx=".5" opacity=".3"/></svg>
+      <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1 8.5C3.5 4 6.5 2 8 2s4.5 2 7 6.5"/><circle cx="8" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>
+      <svg width="27" height="13" viewBox="0 0 27 13" fill="none" stroke="currentColor" stroke-width="1"><rect x=".5" y=".5" width="23" height="12" rx="2.5"/><rect x="24" y="4" width="2.5" height="5" rx="1" fill="currentColor" stroke="none"/><rect x="2" y="2" width="16" height="9" rx="1" fill="currentColor" stroke="none" opacity=".9"/></svg>
+    </div>
+  </div>
+
+  <div class="screens">
+
+    <div class="screen active" id="s-tl">
+      <button class="page-btn" id="tlBtn" onclick="openTlSheet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="tl-hdr">
+        <h1 class="tl-title">小日子</h1>
+        <p class="tl-sub">记录宝宝的每一个瞬间</p>
+      </div>
+      <div class="date-sec">
+        <div class="date-hdr"><span class="date-lbl">今天</span><span class="date-det">5月7日 · 周三</span></div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-photo">
+            <div class="carousel" data-carousel>
+              <div class="carousel-track">
+                <div class="carousel-slide" style="background:linear-gradient(145deg,oklch(90% .05 75),oklch(82% .07 50),oklch(78% .09 40),oklch(85% .04 65))"></div>
+                <div class="carousel-slide" style="background:linear-gradient(130deg,oklch(88% .06 55),oklch(80% .08 40),oklch(85% .04 60))"></div>
+                <div class="carousel-slide" style="background:linear-gradient(155deg,oklch(85% .07 90),oklch(78% .09 70),oklch(82% .05 80))"></div>
+              </div>
+              <div class="carousel-counter">1/3</div>
+              <div class="carousel-dots"><span class="carousel-dot active"></span><span class="carousel-dot"></span><span class="carousel-dot"></span></div>
+            </div>
+          </div>
+          <div class="mc-body">
+            <p class="mc-text">宝宝第一次翻身了！趴在那里努力了半天，终于翻过来了，一脸得意地看着我们。</p>
+            <div class="mc-foot"><span class="mc-date">今天 · 上午 10:30</span><span class="mc-tag">第一次翻身</span></div>
+          </div>
+        </div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-body">
+            <p class="mc-text">下午和外婆视频通话，宝宝一直对着屏幕笑，外婆开心坏了。</p>
+            <div class="mc-foot"><span class="mc-date">今天 · 下午 3:15</span></div>
+          </div>
+        </div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-photo" style="background:linear-gradient(135deg,oklch(90% .06 85),oklch(84% .08 70),oklch(78% .06 50),oklch(88% .03 80))"></div>
+          <div class="mc-body">
+            <p class="mc-text">第一次尝试吃米糊，小嘴巴皱成一团，但吃完又张嘴要，太可爱了。</p>
+            <div class="mc-foot"><span class="mc-date">今天 · 下午 5:45</span><span class="mc-tag">第一次吃辅食</span></div>
+          </div>
+        </div>
+        <div class="date-hdr"><span class="date-lbl">昨天</span><span class="date-det">5月6日 · 周二</span></div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-photo">
+            <div class="carousel" data-carousel>
+              <div class="carousel-track">
+                <div class="carousel-slide" style="background:linear-gradient(150deg,oklch(85% .08 140),oklch(80% .06 120),oklch(88% .04 90),oklch(90% .02 80))"></div>
+                <div class="carousel-slide" style="background:linear-gradient(135deg,oklch(88% .05 100),oklch(82% .07 80),oklch(86% .04 95))"></div>
+              </div>
+              <div class="carousel-counter">1/2</div>
+              <div class="carousel-dots"><span class="carousel-dot active"></span><span class="carousel-dot"></span></div>
+            </div>
+          </div>
+          <div class="mc-body">
+            <p class="mc-text">天气很好，带宝宝去公园散步。坐在长椅上晒太阳，宝宝安安静静地看着树叶发呆。</p>
+            <div class="mc-foot"><span class="mc-date">昨天 · 上午 11:00</span></div>
+          </div>
+        </div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-body">
+            <p class="mc-text">夜里宝宝睡得很安稳，妈妈也终于睡了个好觉。这种幸福只有当了妈才知道。</p>
+            <div class="mc-foot"><span class="mc-date">昨天 · 凌晨 2:30</span></div>
+          </div>
+        </div>
+        <div class="date-hdr"><span class="date-lbl">5月4日</span><span class="date-det">周日</span></div>
+        <div class="mc ph" onclick="openDetail(this)">
+          <div class="mc-photo" style="background:linear-gradient(140deg,oklch(87% .05 55),oklch(80% .07 40),oklch(82% .05 65),oklch(90% .03 75))"></div>
+          <div class="mc-body">
+            <p class="mc-text">宝宝咿咿呀呀说个不停，好像在给我们讲故事，手舞足蹈的样子笑死人。</p>
+            <div class="mc-foot"><span class="mc-date">5月4日 · 下午 4:20</span><span class="mc-tag">第一次咿呀学语</span></div>
+          </div>
+        </div>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-gal">
+      <button class="page-btn" id="galBtn" style="display:none" onclick="openGalSheet()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <div class="pw-hdr">
+        <h1>画廊</h1>
+        <span class="pw-count">89 张照片 · 12 个视频</span>
+      </div>
+      <div class="pw-mo">
+        <div class="pw-mo-label">2026年5月</div>
+        <div class="pw-grid">
+          <div class="pw-item tall" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(145deg,oklch(90% .05 75),oklch(82% .07 50),oklch(78% .09 40))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(135deg,oklch(90% .06 85),oklch(84% .08 70))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(150deg,oklch(85% .08 140),oklch(80% .06 120))"></div><div class="pw-vid"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8,5 19,12 8,19"/></svg></div><div class="pw-badge">0:32</div></div>
+          <div class="pw-item wide" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(135deg,oklch(88% .05 70),oklch(80% .07 50),oklch(85% .04 65))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(140deg,oklch(87% .05 55),oklch(80% .07 40))"></div></div>
+          <div class="pw-item tall" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(160deg,oklch(88% .04 90),oklch(82% .06 70),oklch(78% .05 50))"></div><div class="pw-vid"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8,5 19,12 8,19"/></svg></div><div class="pw-badge">1:15</div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(130deg,oklch(90% .07 60),oklch(84% .09 45))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(145deg,oklch(86% .04 80),oklch(80% .06 55))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(155deg,oklch(92% .05 75),oklch(85% .07 50))"></div></div>
+        </div>
+      </div>
+      <div class="pw-mo">
+        <div class="pw-mo-label">2026年4月</div>
+        <div class="pw-grid">
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(135deg,oklch(88% .06 60),oklch(82% .08 40))"></div></div>
+          <div class="pw-item tall" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(140deg,oklch(90% .05 80),oklch(84% .07 60),oklch(80% .06 45))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(150deg,oklch(86% .07 100),oklch(80% .05 80))"></div><div class="pw-vid"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8,5 19,12 8,19"/></svg></div><div class="pw-badge">0:48</div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(125deg,oklch(84% .08 50),oklch(78% .06 35))"></div></div>
+          <div class="pw-item wide" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(135deg,oklch(88% .04 70),oklch(82% .06 50),oklch(86% .05 65))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(145deg,oklch(90% .06 55),oklch(84% .08 40))"></div></div>
+        </div>
+      </div>
+      <div class="pw-mo">
+        <div class="pw-mo-label">2026年3月</div>
+        <div class="pw-grid">
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(135deg,oklch(86% .06 70),oklch(80% .08 50))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(150deg,oklch(88% .05 90),oklch(82% .07 70))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(125deg,oklch(90% .04 60),oklch(84% .06 45))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(140deg,oklch(84% .08 55),oklch(78% .06 40))"></div><div class="pw-vid"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="8,5 19,12 8,19"/></svg></div><div class="pw-badge">0:21</div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(130deg,oklch(87% .05 80),oklch(81% .07 60))"></div></div>
+          <div class="pw-item" onclick="openPhotoDetail(this)"><div class="pw-ph" style="background:linear-gradient(160deg,oklch(89% .06 50),oklch(83% .08 35))"></div></div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+
+    <div class="screen" id="s-cal">
+      <div class="cal-hdr">
+        <h2 class="cal-mo">2026年5月</h2>
+        <div class="cal-nav"><button>&#8249;</button><button>&#8250;</button></div>
+      </div>
+      <div class="cal-g">
+        <div class="cal-wd"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+        <div class="cal-ds" id="calGrid"></div>
+      </div>
+      <div class="cal-det">
+        <div class="cal-det-t" id="calDetTitle">5月7日 · 今天</div>
+        <div class="mc" onclick="openDetail(this)">
+          <div class="mc-photo" style="background:linear-gradient(145deg,oklch(90% .05 75),oklch(82% .07 50),oklch(78% .09 40))"></div>
+          <div class="mc-body">
+            <p class="mc-text">宝宝第一次翻身了！趴在那里努力了半天，终于翻过来了。</p>
+            <div class="mc-foot"><span class="mc-date">今天 · 上午 10:30</span><span class="mc-tag">第一次翻身</span></div>
+          </div>
+        </div>
+        <div class="mc" onclick="openDetail(this)">
+          <div class="mc-body">
+            <p class="mc-text">和外婆视频通话，宝宝一直对着屏幕笑。</p>
+            <div class="mc-foot"><span class="mc-date">今天 · 下午 3:15</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="s-prof">
+      <div class="prof-hdr">
+        <div class="prof-av">橘</div>
+        <h2 class="prof-name">小橘子</h2>
+        <p class="prof-meta">2025年9月15日出生 · 7个月22天</p>
+      </div>
+      <div class="prof-stats">
+        <div class="prof-st"><div class="prof-st-n">156</div><div class="prof-st-l">条记录</div></div>
+        <div class="prof-st"><div class="prof-st-n">89</div><div class="prof-st-l">张照片</div></div>
+        <div class="prof-st"><div class="prof-st-n">12</div><div class="prof-st-l">个视频</div></div>
+        <div class="prof-st"><div class="prof-st-n">234</div><div class="prof-st-l">天陪伴</div></div>
+      </div>
+      <div class="ms-entry" onclick="openMsPage()">
+        <div class="ms-entry-icon">&#127919;</div>
+        <div class="ms-entry-info">
+          <div class="ms-entry-title">成长里程碑</div>
+          <div class="ms-entry-desc">按主题浏览宝宝的珍贵时刻</div>
+        </div>
+        <div class="ms-entry-count">5</div>
+        <div class="ms-entry-arrow">&#8250;</div>
+      </div>
+      <div class="prof-sec">
+        <h3 class="prof-sec-t">家庭成员</h3>
+        <div class="prof-row"><div class="prof-row-av" style="background:oklch(90% .04 340);color:oklch(55% .12 340)">&#128105;</div><div class="prof-row-name">妈妈</div><div class="prof-row-tag">管理员</div></div>
+        <div class="prof-row"><div class="prof-row-av" style="background:oklch(90% .04 240);color:oklch(55% .12 240)">&#128104;</div><div class="prof-row-name">爸爸</div><div class="prof-row-tag">成员</div></div>
+        <div class="prof-row"><div class="prof-row-av" style="background:var(--accent-light);color:var(--accent)">&#128117;</div><div class="prof-row-name">外婆</div><div class="prof-row-tag">成员</div></div>
+      </div>
+      <div class="prof-sec" style="margin-top:16px">
+        <h3 class="prof-sec-t">设置</h3>
+        <div class="prof-row"><div class="prof-row-name">通知提醒</div><div class="prof-row-arrow">&#8250;</div></div>
+        <div class="prof-row"><div class="prof-row-name">数据备份</div><div class="prof-row-arrow">&#8250;</div></div>
+        <div class="prof-row"><div class="prof-row-name">家庭共享</div><div class="prof-row-arrow">&#8250;</div></div>
+        <div class="prof-row"><div class="prof-row-name">关于小日子</div><div class="prof-row-arrow">&#8250;</div></div>
+      </div>
+      <div style="height:24px"></div>
+    </div>
+  </div>
+
+  <div class="ms-page" id="msPage">
+    <div class="ms-page-hdr">
+      <button class="ms-page-back" onclick="closeMsPage()">&#8249;</button>
+      <h2 class="ms-page-title">成长里程碑</h2>
+    </div>
+    <div class="ms-page-body">
+      <div class="ms-tag-sec">
+        <div class="ms-tag-head expanded" onclick="toggleMsTag(this)">
+          <span class="ms-tag-name">第一次翻身</span><span class="ms-tag-count">1</span><span class="ms-tag-toggle">&#8250;</span>
+        </div>
+        <div class="ms-tag-cards">
+          <div class="mc" onclick="openDetail(this)">
+            <div class="mc-photo" style="background:linear-gradient(145deg,oklch(90% .05 75),oklch(82% .07 50),oklch(78% .09 40),oklch(85% .04 65))"></div>
+            <div class="mc-body">
+              <p class="mc-text">宝宝第一次翻身了！趴在那里努力了半天，终于翻过来了，一脸得意地看着我们。</p>
+              <div class="mc-foot"><span class="mc-date">5月7日 · 上午 10:30</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ms-tag-sec">
+        <div class="ms-tag-head expanded" onclick="toggleMsTag(this)">
+          <span class="ms-tag-name">第一次吃辅食</span><span class="ms-tag-count">1</span><span class="ms-tag-toggle">&#8250;</span>
+        </div>
+        <div class="ms-tag-cards">
+          <div class="mc" onclick="openDetail(this)">
+            <div class="mc-photo" style="background:linear-gradient(135deg,oklch(90% .06 85),oklch(84% .08 70),oklch(78% .06 50),oklch(88% .03 80))"></div>
+            <div class="mc-body">
+              <p class="mc-text">第一次尝试吃米糊，小嘴巴皱成一团，但吃完又张嘴要，太可爱了。</p>
+              <div class="mc-foot"><span class="mc-date">5月7日 · 下午 5:45</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ms-tag-sec">
+        <div class="ms-tag-head expanded" onclick="toggleMsTag(this)">
+          <span class="ms-tag-name">第一次咿呀学语</span><span class="ms-tag-count">1</span><span class="ms-tag-toggle">&#8250;</span>
+        </div>
+        <div class="ms-tag-cards">
+          <div class="mc" onclick="openDetail(this)">
+            <div class="mc-photo" style="background:linear-gradient(140deg,oklch(87% .05 55),oklch(80% .07 40),oklch(82% .05 65),oklch(90% .03 75))"></div>
+            <div class="mc-body">
+              <p class="mc-text">宝宝咿咿呀呀说个不停，好像在给我们讲故事，手舞足蹈的样子笑死人。</p>
+              <div class="mc-foot"><span class="mc-date">5月4日 · 下午 4:20</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ms-tag-sec">
+        <div class="ms-tag-head expanded" onclick="toggleMsTag(this)">
+          <span class="ms-tag-name">第一次笑出声</span><span class="ms-tag-count">1</span><span class="ms-tag-toggle">&#8250;</span>
+        </div>
+        <div class="ms-tag-cards">
+          <div class="mc" onclick="openDetail(this)">
+            <div class="mc-body">
+              <p class="mc-text">逗宝宝玩的时候，他突然咯咯笑出了声，把我们都惊到了。那一刻觉得一切都值了。</p>
+              <div class="mc-foot"><span class="mc-date">4月20日 · 下午 2:10</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="ms-tag-sec">
+        <div class="ms-tag-head expanded" onclick="toggleMsTag(this)">
+          <span class="ms-tag-name">会主动抓东西了</span><span class="ms-tag-count">1</span><span class="ms-tag-toggle">&#8250;</span>
+        </div>
+        <div class="ms-tag-cards">
+          <div class="mc" onclick="openDetail(this)">
+            <div class="mc-photo" style="background:linear-gradient(130deg,oklch(87% .06 70),oklch(81% .08 50),oklch(84% .05 55))"></div>
+            <div class="mc-body">
+              <p class="mc-text">把摇铃放在宝宝面前，他居然伸手去抓了！虽然抓了几次才抓住，但动作越来越有目的性了。</p>
+              <div class="mc-foot"><span class="mc-date">3月28日 · 上午 9:40</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <div class="det" id="det">
+    <div class="det-ph" id="detPh" style="background:linear-gradient(145deg,oklch(88% .05 70),oklch(78% .09 40))"></div>
+    <button class="det-close" onclick="closeDet()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+  </div>
+
+  <div class="modal-bg" id="modBg" onclick="closeSheet()"></div>
+
+  <div class="sheet" id="sheetMain">
+    <div class="sheet-hdl"></div>
+
+    <div id="tlForm">
+      <h3 class="sheet-t">记录这一刻</h3>
+      <div class="photo-row" id="tlPhotos">
+        <button class="photo-add-btn" onclick="openPicker('tl')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <textarea class="add-inp" id="tlInput" placeholder="写点什么记录这一刻…" style="height:72px;margin-bottom:14px"></textarea>
+      <div class="add-ms-label">里程碑标签（可选）</div>
+      <div class="add-ms-tags">
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">第一次翻身</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">第一次笑出声</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">第一次吃辅食</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">长牙</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">叫爸妈</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">第一次坐稳</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">开始爬行</button>
+        <button class="add-ms-tag" onclick="toggleMsTagBtn(this)">独自行走</button>
+      </div>
+      <button class="add-sub" onclick="submitTl()">记录这一刻</button>
+    </div>
+
+    <div id="galForm" style="display:none">
+      <h3 class="sheet-t">添加到画廊</h3>
+      <div class="photo-row" id="galPhotos">
+        <button class="photo-add-btn" onclick="openPicker('gal')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+      <button class="add-sub" onclick="submitGal()">添加到画廊</button>
+    </div>
+  </div>
+
+  <div class="sheet" id="sheetPicker" style="z-index:180;display:none">
+    <div class="sheet-hdl"></div>
+    <div class="action-list">
+      <div class="action-row" onclick="pickSource('camera')">
+        <div class="action-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
+        <span class="action-row-text">拍摄</span>
+      </div>
+      <div class="action-row" onclick="pickSource('album')">
+        <div class="action-row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div>
+        <span class="action-row-text">从相册选择</span>
+      </div>
+    </div>
+    <button class="action-cancel" onclick="closePicker()">取消</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="swTab('s-tl',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      <span>时光</span>
+    </button>
+    <button class="tab" onclick="swTab('s-gal',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      <span>画廊</span>
+    </button>
+    <button class="tab" onclick="swTab('s-cal',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      <span>日历</span>
+    </button>
+    <button class="tab" onclick="swTab('s-prof',this)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+      <span>我的</span>
+    </button>
+  </div>
+  <div class="home-ind"></div>
+</div>
+
+<div id="toast" style="position:fixed;top:32px;left:50%;transform:translateX(-50%) translateY(-80px);
+  background:var(--fg);color:var(--surface);padding:10px 24px;border-radius:24px;font-size:14px;
+  font-family:var(--font-b);transition:transform .4s cubic-bezier(.16,1,.3,1);z-index:999;pointer-events:none"></div>
+
+<p class="sc-hint">点击底部导航栏切换页面 · 时光/画廊右上角可记录新时刻 · 我的页面查看里程碑</p>
+
+<script>
+function swTab(id,btn){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+  document.getElementById('tlBtn').style.display=id==='s-tl'?'flex':'none';
+  document.getElementById('galBtn').style.display=id==='s-gal'?'flex':'none';
+}
+
+function openDetail(el){
+  var det=document.getElementById('det');
+  var photo=el.querySelector('.mc-photo');
+  if(photo) document.getElementById('detPh').style.background=photo.style.background;
+  else document.getElementById('detPh').style.background='var(--surface)';
+  det.classList.add('open');
+}
+
+function openPhotoDetail(el){
+  var det=document.getElementById('det');
+  var ph=el.querySelector('.pw-ph');
+  if(ph) document.getElementById('detPh').style.background=ph.style.background;
+  det.classList.add('open');
+}
+
+function closeDet(){document.getElementById('det').classList.remove('open')}
+
+function openMsPage(){document.getElementById('msPage').classList.add('open')}
+function closeMsPage(){document.getElementById('msPage').classList.remove('open')}
+function toggleMsTag(el){el.classList.toggle('expanded')}
+
+var pickerCtx='tl';
+
+function openTlSheet(){
+  document.getElementById('tlForm').style.display='block';
+  document.getElementById('galForm').style.display='none';
+  document.getElementById('modBg').classList.add('open');
+  document.getElementById('sheetMain').classList.add('open');
+  document.querySelectorAll('.add-ms-tag').forEach(function(b){b.classList.remove('sel')});
+  var inp=document.getElementById('tlInput');if(inp)inp.value='';
+  var row=document.getElementById('tlPhotos');
+  row.querySelectorAll('.photo-thumb').forEach(function(t){t.remove()});
+}
+function openGalSheet(){
+  document.getElementById('tlForm').style.display='none';
+  document.getElementById('galForm').style.display='block';
+  document.getElementById('modBg').classList.add('open');
+  document.getElementById('sheetMain').classList.add('open');
+  var row=document.getElementById('galPhotos');
+  row.querySelectorAll('.photo-thumb').forEach(function(t){t.remove()});
+}
+function closeSheet(){
+  document.getElementById('modBg').classList.remove('open');
+  document.getElementById('sheetMain').classList.remove('open');
+  closePicker();
+}
+
+function openPicker(ctx){
+  pickerCtx=ctx;
+  var p=document.getElementById('sheetPicker');
+  p.style.display='block';
+  p.offsetHeight;
+  p.classList.add('open');
+}
+function closePicker(){
+  var p=document.getElementById('sheetPicker');
+  p.classList.remove('open');
+  setTimeout(function(){p.style.display='none'},400);
+}
+
+function pickSource(type){
+  closePicker();
+  var container=pickerCtx==='tl'?'tlPhotos':'galPhotos';
+  var row=document.getElementById(container);
+  var addBtn=row.querySelector('.photo-add-btn');
+  var hues=[35,50,75,100,140,200,280,340];
+  var h=hues[Math.floor(Math.random()*hues.length)];
+  var thumb=document.createElement('div');
+  thumb.className='photo-thumb';
+  var ph=document.createElement('div');
+  ph.className='photo-thumb-ph';
+  ph.style.background='linear-gradient(135deg,oklch(88% .06 '+h+'),oklch(80% .08 '+(h+20)+'))';
+  thumb.appendChild(ph);
+  var del=document.createElement('button');
+  del.className='photo-thumb-del';
+  del.textContent='×';
+  del.onclick=function(){thumb.remove()};
+  thumb.appendChild(del);
+  row.insertBefore(thumb,addBtn);
+  showToast(type==='camera'?'拍摄完成':'已选择照片');
+}
+
+function toggleMsTagBtn(btn){btn.classList.toggle('sel')}
+
+function submitTl(){
+  var inp=document.getElementById('tlInput');
+  var sel=document.querySelector('#tlForm .add-ms-tag.sel');
+  if(!sel&&(!inp||!inp.value)){showToast('写点什么或选个标签吧');return}
+  closeSheet();
+  showToast('已记录这一刻');
+}
+function submitGal(){
+  var thumbs=document.querySelectorAll('#galPhotos .photo-thumb');
+  if(!thumbs.length){showToast('请先选择照片');return}
+  closeSheet();
+  showToast('已添加到画廊');
+}
+
+function showToast(msg){
+  var t=document.getElementById('toast');
+  t.textContent=msg;t.style.transform='translateX(-50%) translateY(0)';
+  setTimeout(function(){t.style.transform='translateX(-50%) translateY(-80px)'},2000);
+}
+
+(function(){
+  var grid=document.getElementById('calGrid');
+  var hm=new Set([1,3,5,7,8,10,12,15,18,20,22,25,28,30]);
+  var start=4,total=31;
+  var prev=[27,28,29,30];
+  for(var i=0;i<start;i++){
+    var d=document.createElement('div');d.className='cal-d om';d.textContent=prev[i];grid.appendChild(d);
+  }
+  for(var day=1;day<=total;day++){
+    var el=document.createElement('div');el.className='cal-d';
+    if(day===7) el.classList.add('today');
+    if(hm.has(day)) el.classList.add('hm');
+    el.textContent=day;grid.appendChild(el);
+  }
+  var rem=(start+total)%7;
+  if(rem){for(var j=1;j<=7-rem;j++){
+    var extra=document.createElement('div');extra.className='cal-d om';extra.textContent=j;grid.appendChild(extra);
+  }}
+})();
+
+var obs=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){if(e.isIntersecting){e.target.classList.add('vis');obs.unobserve(e.target)}});
+},{threshold:.15,root:document.querySelector('#s-tl')});
+document.querySelectorAll('.mc.ph').forEach(function(c){obs.observe(c)});
+
+function initCarousels(){
+  document.querySelectorAll('[data-carousel]').forEach(function(carousel){
+    var track=carousel.querySelector('.carousel-track');
+    var slides=carousel.querySelectorAll('.carousel-slide');
+    var dots=carousel.querySelectorAll('.carousel-dot');
+    var counter=carousel.querySelector('.carousel-counter');
+    var total=slides.length;
+    if(total<=1)return;
+    var idx=0,startX=0,deltaX=0,isDragging=false,w=0;
+
+    function goTo(i){
+      idx=Math.max(0,Math.min(i,total-1));
+      track.style.transform='translateX(-'+idx*100+'%)';
+      slides.forEach(function(s,j){
+        s.classList.remove('prev','next');
+        if(j!==idx){s.classList.add(Math.abs(j-idx)>1?'next':j<idx?'prev':'next')}
+      });
+      dots.forEach(function(d,j){d.classList.toggle('active',j===idx)});
+      if(counter)counter.textContent=(idx+1)+'/'+total;
+    }
+
+    carousel.addEventListener('touchstart',function(e){
+      isDragging=true;startX=e.touches[0].clientX;deltaX=0;w=carousel.offsetWidth;
+      track.classList.add('dragging');
+    },{passive:true});
+    carousel.addEventListener('touchmove',function(e){
+      if(!isDragging)return;
+      deltaX=e.touches[0].clientX-startX;
+      var pct=(deltaX/w)*100,base=-idx*100;
+      track.style.transform='translateX('+(base+pct)+'%)';
+    },{passive:true});
+    carousel.addEventListener('touchend',function(){
+      if(!isDragging)return;isDragging=false;
+      track.classList.remove('dragging');
+      if(Math.abs(deltaX)>w*.2){goTo(deltaX<0?idx+1:idx-1)}else{goTo(idx)}
+    });
+
+    carousel.addEventListener('mousedown',function(e){
+      isDragging=true;startX=e.clientX;deltaX=0;w=carousel.offsetWidth;
+      track.classList.add('dragging');e.preventDefault();
+    });
+    carousel.addEventListener('mousemove',function(e){
+      if(!isDragging)return;deltaX=e.clientX-startX;
+      var pct=(deltaX/w)*100,base=-idx*100;
+      track.style.transform='translateX('+(base+pct)+'%)';
+    });
+    carousel.addEventListener('mouseup',function(){
+      if(!isDragging)return;isDragging=false;
+      track.classList.remove('dragging');
+      if(Math.abs(deltaX)>w*.2){goTo(deltaX<0?idx+1:idx-1)}else{goTo(idx)}
+    });
+    carousel.addEventListener('mouseleave',function(){
+      if(isDragging){isDragging=false;track.classList.remove('dragging');goTo(idx)}
+    });
+  });
+}
+initCarousels();
+
+(function(){
+  var birth=new Date(2025,8,15);
+  var now=new Date(2026,4,7);
+  var y=now.getFullYear()-birth.getFullYear();
+  var m=now.getMonth()-birth.getMonth();
+  var d=now.getDate()-birth.getDate();
+  if(d<0){m--;var prev=new Date(now.getFullYear(),now.getMonth(),0);d+=prev.getDate()}
+  if(m<0){y--;m+=12}
+  var age=y>0?y+'岁'+m+'个月'+d+'天':m+'个月'+d+'天';
+  var el=document.getElementById('calDetTitle');
+  if(el) el.textContent='5月7日 · '+age;
+})();
+</script>
+</body>
+</html>
