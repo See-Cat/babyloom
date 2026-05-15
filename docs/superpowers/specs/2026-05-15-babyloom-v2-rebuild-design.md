@@ -185,9 +185,11 @@ babies {
   birthday: text NOT NULL,   // ISO date
   gender: text NOT NULL,     // 'boy' | 'girl' | 'other'
   avatarUrl: text,
+  status: text NOT NULL,     // 'active' | 'trashed' | 'purged'
   createdAt: integer NOT NULL,
   updatedAt: integer NOT NULL,
-  deletedAt: integer,        // soft delete
+  deletedAt: integer,        // 进入 trashed 状态的时间
+  deletedBy: text FK,
 }
 
 // 宝宝-成员细粒度权限(可选覆盖,默认按 family role)
@@ -208,9 +210,11 @@ entries {
   authorId: text NOT NULL FK,
   content: text NOT NULL,
   occurredAt: integer NOT NULL,   // 默认 createdAt,允许用户调整
+  status: text NOT NULL,          // 'active' | 'trashed' | 'purged'
   createdAt: integer NOT NULL,
   updatedAt: integer NOT NULL,
-  deletedAt: integer,
+  deletedAt: integer,             // 进入 trashed 状态的时间
+  deletedBy: text FK,
 }
 
 // 里程碑(系统预设 + 家庭自定义)
@@ -244,25 +248,35 @@ media {
   height: integer,
   durationSec: integer,         // 仅视频
   relativePath: text NOT NULL,  // '<babyId>/<year>/<month>'
-  contentHash: text NOT NULL,   // sha256(原文件),幂等键 + 重复检测
-  status: text NOT NULL,        // 'pending' | 'processing' | 'ready' | 'failed' | 'deleted'
-                                // 仅 ready 的对外可见;非 ready 由 reconcile job 清理
+  contentHash: text NOT NULL,   // sha256(原文件),幂等键
+  status: text NOT NULL,        // 完整状态机见 §6.5
+                                // 'pending' | 'processing' | 'ready' | 'trashed' | 'purged' | 'failed'
+                                // 仅 ready 对外可见;trashed 仅在垃圾桶 UI 可见
+  clientUploadId: text,         // 客户端幂等 token(仅 pending/processing 阶段使用)
   takenAt: integer,             // 从 EXIF,fallback createdAt
   createdAt: integer NOT NULL,
-  deletedAt: integer,           // soft delete 时间戳
-  deletedBy: text FK,           // 删除者 userId
-  // UNIQUE(babyId, contentHash) — 同一宝宝下同一文件不重复入库
+  deletedAt: integer,           // 进入 trashed 的时间
+  deletedBy: text FK,           // 软删触发者
+  purgedAt: integer,            // 进入 purged 的时间
+  purgedBy: text FK,            // 硬删触发者(owner 或 system)
+  // 见 §3.1 索引:partial UNIQUE 仅对 status='ready' 生效
 }
 
 // 会话(better-auth 自动管理)
 sessions { id, userId, expiresAt, ipAddress, userAgent, ... }
 ```
 
-**索引**:
-- `entries`: `(babyId, occurredAt DESC)` 用于时间线
-- `media`: `(babyId, takenAt DESC)` 用于画廊
-- `media`: `(babyId, contentHash)` UNIQUE,幂等去重
-- `media`: `(status)` 用于 reconcile job 扫描
+**索引 / 约束**(§3.1):
+- `entries`: `(babyId, status, occurredAt DESC)` 用于时间线(status=active 过滤)
+- `entries`: `(status, deletedAt)` 用于垃圾桶查询
+- `media`: `(babyId, status, takenAt DESC)` 用于画廊
+- `media`: `(status, deletedAt)` 用于垃圾桶查询
+- `media`: **PARTIAL UNIQUE** `(babyId, contentHash) WHERE status = 'ready'`
+  ⚠️ **关键**:partial index 而非全表 UNIQUE,使 pending/processing/failed/trashed/purged row 不占去重坑位。
+  实现:`CREATE UNIQUE INDEX media_dedupe ON media(babyId, contentHash) WHERE status = 'ready';`
+- `media`: `(status, createdAt)` 用于 reconcile job 扫描卡住的 pending/processing
+- `media`: `(clientUploadId)` WHERE clientUploadId IS NOT NULL,用于幂等重试匹配
+- `babies`: `(familyId, status)`
 - `family_members`: `(userId)` 用于权限查询
 - `baby_member_permissions`: `(familyMemberId)` 用于权限查询
 
@@ -333,13 +347,18 @@ app:
 
 ### 5.2 角色权限矩阵
 
+**注**:所有"删除"指**软删**(进垃圾桶)。**硬删**(从垃圾桶彻底清除)仅 owner 可做,见 §5.6。
+
 | 操作 | owner | editor | viewer |
 |---|---|---|---|
-| 看所有宝宝/记录/媒体 | ✓ | ✓ | ✓ |
-| 创建/编辑/删除**自己的**记录 | ✓ | ✓ | ✗ |
-| 编辑/删除**他人**记录 | ✓ | ✗ | ✗ |
+| 看所有宝宝/记录/媒体 (`status='active'/'ready'`) | ✓ | ✓ | ✓ |
+| 创建/编辑/**软删** 自己的记录 | ✓ | ✓ | ✗ |
+| 编辑/软删他人记录 | ✓ | ✗ | ✗ |
 | 上传媒体 | ✓ | ✓ | ✗ |
-| 删除媒体 | ✓ | 仅自己上传的 | ✗ |
+| 软删媒体 | ✓ | 仅自己上传的 | ✗ |
+| **看垃圾桶** | 全部 | 自己软删的 | ✗ |
+| **还原**(trashed → active/ready) | ✓ | 自己软删的 | ✗ |
+| **硬删**(trashed → purged) | ✓ | ✗ | ✗ |
 | 管理成员(增删/改角色/重置密码) | ✓ | ✗ | ✗ |
 | 管理宝宝(增删/改资料) | ✓ | ✗ | ✗ |
 | 管理里程碑预设 | ✓ | ✗ | ✗ |
@@ -358,20 +377,28 @@ app:
 ```ts
 // 完整 Action 集合 —— 任何新增受保护资源必须先加到这里
 type Action =
-  | 'baby:read'   | 'baby:write'   | 'baby:delete'
-  | 'entry:read'  | 'entry:write'  | 'entry:delete'
-  | 'media:read'  | 'media:write'  | 'media:delete'   // ← 媒体一等公民
+  | 'baby:read'   | 'baby:write'   | 'baby:trash'   | 'baby:purge'   | 'baby:restore'
+  | 'entry:read'  | 'entry:write'  | 'entry:trash'  | 'entry:purge'  | 'entry:restore'
+  | 'media:read'  | 'media:write'  | 'media:trash'  | 'media:purge'  | 'media:restore'
+  | 'trash:view'                                    // 查看垃圾桶页
   | 'member:manage'
   | 'family:manage'
   | 'milestone:manage'
   | 'system:logs'
   | 'system:backup';
 
+// 命名约定:
+//   *:trash   软删(active/ready → trashed)
+//   *:purge   硬删(trashed → purged) — owner only
+//   *:restore 还原(trashed → active/ready)
+
 interface PermissionResource {
   babyId?: string;
   entryId?: string;
   mediaId?: string;
-  targetUserId?: string;  // member:manage 时的被操作者
+  authorId?: string;      // entry 的作者(从 DB 读出,绝不接受客户端)
+  uploadedBy?: string;    // media 的上传者(从 DB 读出)
+  targetUserId?: string;  // member:manage 的被操作者
 }
 
 async function assertPermission(
@@ -382,31 +409,101 @@ async function assertPermission(
   // 1. 查 user 在 family 的 role
   // 2. 若 action 涉及 babyId,查 baby_member_permissions 覆盖
   // 3. 所有权规则(见下方矩阵):
-  //    - entry:write|delete  → 非 owner 时,authorId 必须 === userId
-  //    - media:delete        → 非 owner 时,uploadedBy 必须 === userId
-  // 4. 不通过 → throw ForbiddenError(被统一异常处理转 403)
+  //    - *:trash / *:restore  → 非 owner 时,对应 ownership 字段必须 === userId
+  //    - *:purge              → 仅 owner,其他角色一律拒绝
+  // 4. 不通过 → throw ForbiddenError(被统一异常处理转 403/404,见 §5.5)
   // 5. 记 warn 日志(action, userId, resource, reason)
 }
 ```
 
 **所有权规则矩阵**(细化原 5.2):
 
-| 资源 | viewer | editor | owner |
+| Action | viewer | editor | owner |
 |---|---|---|---|
-| `entry:write` | ✗ | 仅 `authorId === userId` | 任意 |
-| `entry:delete` | ✗ | 仅 `authorId === userId` | 任意 |
-| `media:write` | ✗ | 允许(对有 `media:write` 权限的 babyId) | 任意 |
-| `media:delete` | ✗ | 仅 `uploadedBy === userId` | 任意 |
+| `entry:write` / `entry:trash` / `entry:restore` | ✗ | 仅 `authorId === userId` | 任意 |
+| `entry:purge` | ✗ | ✗ | ✓ |
+| `media:write` | ✗ | 允许(对有 `media:write` 的 babyId) | 任意 |
+| `media:trash` / `media:restore` | ✗ | 仅 `uploadedBy === userId` | 任意 |
+| `media:purge` | ✗ | ✗ | ✓ |
 | `media:read` | 允许(有 `baby:read` 即可) | 同左 | 任意 |
+| `baby:trash` / `baby:restore` / `baby:purge` | ✗ | ✗ | ✓ |
+| `trash:view` | ✗ | 允许(过滤为自己软删的) | 全部 |
 
 ### 5.5 调用约定(关键 — 不只 server action)
 
-**所有受保护入口必须显式调用 `assertPermission`**,Codex review 指出"server action 走 wrapper、API route 漏检"是真实风险点,固化如下规则:
+**所有受保护入口必须显式调用 `assertPermission`**。固化规则:
 
 - **Server Actions**:用高阶函数 `withPermission(action, resolveResource)(handler)` 包裹,handler 内可直接使用受信任的 `userId`
-- **API Routes**(`app/api/*/route.ts`):**必须**在 handler 起手调 `await assertPermission(userId, action, resource)`,且 lint 规则强制(自定义 ESLint rule `babyloom/api-route-must-assert`,扫描 `export async function (GET|POST|PUT|DELETE)` 内是否含 `assertPermission` 调用)
-- **统一异常处理**:在 `app/(family)/layout.tsx` 和每个 `route.ts` 都包一层 `try/catch` 把 `ForbiddenError` 转成 403 + 日志
-- **测试硬性要求**(见 §11.3):每个媒体 API endpoint 必须有"跨宝宝 viewer / 跨作者 editor 删除"的拒绝用例,否则视为该 endpoint 未完成
+- **API Routes**(`app/api/*/route.ts`):**必须**走规范化路由模板(见 §5.7),起手调 `await assertPermission(userId, action, resource)`,且 lint 规则强制(自定义 ESLint rule `babyloom/api-route-must-assert`,扫描 `export async function (GET|POST|PUT|DELETE)` 内是否含 `assertPermission` 调用)
+- **统一异常处理**:在 `app/(family)/layout.tsx` 和每个 `route.ts` 都包一层 `try/catch`,**`ForbiddenError` 和"资源不存在/非 ready/已软删"统一返回 404**(见 §5.6 — 防存在性泄露)
+- **服务端绝不接受客户端传入的 `babyId / authorId / uploadedBy / status`** — 任何 ownership/状态字段必须从 DB 读出,这些字段在请求 body/query 中出现一律忽略
+- **测试硬性要求**(见 §11.3):每个受保护 endpoint 必须有跨权限拒绝用例,否则视为该 endpoint 未完成
+
+### 5.6 防存在性泄露:统一 404 响应
+
+**问题**:若"资源不存在 → 404"而"未授权 → 403",攻击者可通过响应码差异枚举出真实存在的 mediaId。
+
+**规则**:对**任何**资源(media / entry / baby),以下情况一律返回**统一 404**(响应体相同 `{ "error": "not_found" }`,不区分原因):
+- 资源 ID 不存在
+- 资源存在但 `status` 不在允许集(如 ready/active)
+- 资源已 `purged`
+- 当前用户对该资源**任一字段**无 `*:read` 权限(包括跨家庭、跨宝宝 baby_member_permissions 限制)
+- ID 格式非法(非 UUID)
+
+**例外**:已认证用户访问垃圾桶页相关 endpoint 时,可以看到自己有权看到的 `trashed` 资源(此时 200),其他情况仍统一 404。
+
+**`401 vs 404`**:**未认证**(无 session cookie)→ 401(因为登录与否本就不是机密)。**已认证但无权 / 不存在** → 一律 404。
+
+### 5.7 规范化 API Route 模板
+
+所有 `/api/media/*` 和受保护 API Route **必须**套此模板,通过 `withAuthorizedResource(action, loader)` 高阶函数实现:
+
+```ts
+// 伪代码 — 实际实现在 lib/permissions/route-template.ts
+export function withAuthorizedResource<R>(
+  action: Action,
+  loader: (id: string) => Promise<R | null>,   // 仅返回最小必要字段
+  toResource: (row: R) => PermissionResource,
+) {
+  return (handler: (req, ctx, row: R) => Promise<Response>) =>
+    async (req: Request, ctx: { params: { id: string } }) => {
+      // 1. 解析 + 校验 ID 形状(UUID 正则) → 否则统一 404
+      const id = ctx.params.id;
+      if (!UUID_RE.test(id)) return jsonNotFound();
+
+      // 2. 认证 session → 否则 401(未登录信息可暴露)
+      const userId = await getSessionUserId(req);
+      if (!userId) return jsonUnauthorized();
+
+      // 3. 服务端唯一来源:从 DB 拿资源最小字段集
+      //    media: { id, babyId, status, uploadedBy, type, relativePath }
+      const row = await loader(id);
+      if (!row) return jsonNotFound();          // 真不存在
+
+      // 4. 状态闸门:非可读状态等同不存在(防存在性泄露)
+      //    media 只允许 'ready'(或 trash:view 路径下 'trashed')
+      //    详见每个 endpoint 的具体接受 status 集合
+
+      // 5. 授权:基于 DB 字段(永远不读客户端 babyId)
+      try {
+        await assertPermission(userId, action, toResource(row));
+      } catch (e) {
+        if (e instanceof ForbiddenError) return jsonNotFound();  // 转 404
+        throw e;
+      }
+
+      // 6. 通过 → 调业务 handler(handler 收到的 row 已可信任)
+      return handler(req, ctx, row);
+    };
+}
+```
+
+**关键不变量**:
+- 第 5 步**永远**用 `loader` 拿到的 DB 字段调 `assertPermission`,handler **绝不可**从请求体读取 babyId/authorId/uploadedBy
+- 第 4-5 步任何失败都走"统一 404"出口
+- 路径(文件系统)构造在第 6 步之后,且 `relativePath` 来自 DB,杜绝路径遍历
+
+`GET /api/media/[id]`、`DELETE /api/media/[id]` 等所有 endpoint 一律包此模板,ESLint rule 禁止裸 export。
 
 ---
 
@@ -432,76 +529,210 @@ data/media/
 
 - **`mediaId`** = DB 主键(uuid),保证文件名唯一
 - **DB 中存** `relativePath: '<babyId>/<year>/<month>'`,文件名用 `mediaId + 推导扩展名`
-- **删除宝宝** = soft delete + 后台 job 清理 `data/media/<babyId>/`(避免误删,delay 7 天)
 - **`_staging/`** 必须与 babyId 目录在同一文件系统挂载点 → 保证 `rename(2)` 原子
 
-### 6.2 上传流程(两阶段、原子、幂等)
+### 6.2 上传流程(两阶段、原子、status-aware 幂等)
 
 **设计原则**:
 - DB 是真相源,文件系统是衍生品
 - 任何步骤失败后,reconcile job 总能根据 `media.status` 清理孤儿
-- 客户端可安全重试,服务端按 `contentHash` 去重
+- 幂等是 **status-aware**:仅对 `status='ready'` 的 row 做去重,pending/processing/failed/trashed/purged 不占去重坑位
+- 客户端可安全重试,服务端按 `(contentHash, clientUploadId)` 联合识别"是同一次重试"还是"独立的并发"
+
+**前置约束**(回应 Codex 第二轮发现):
+- 唯一索引为 **partial unique**:`UNIQUE(babyId, contentHash) WHERE status='ready'`
+- pending/processing 的 row 不阻塞新 row 插入,仅通过 `clientUploadId` 匹配判断"同一请求重试"
 
 **流程**:
 
-1. **客户端**:计算 `contentHash = sha256(file)` → `POST /api/media/upload` multipart:
-   - `babyId`, `contentHash`, `filename`, `mimeType`, `sizeBytes`,文件二进制
-   - 可选 `clientUploadId`(客户端生成的幂等 token,网络重试时透传)
+1. **客户端**:
+   - 计算 `contentHash = sha256(file)`
+   - 生成 `clientUploadId = uuidv4()`(本次上传任务的稳定 token,**网络层重试必须复用同一个**)
+   - `POST /api/media/upload` multipart:`babyId`, `contentHash`, `clientUploadId`, `filename`, `mimeType`, `sizeBytes`, 文件二进制
 
-2. **服务端 — 准入**(在 staging 任何 IO 前):
-   - `assertPermission(userId, 'media:write', { babyId })` — 失败立即 403
-   - 查询 `media` 表 `(babyId, contentHash)`:命中已存在记录 → 直接返回该 `mediaId`(幂等,**不重新落盘**)
+2. **服务端 — 准入**(任何 IO 前):
+   - 走 §5.7 规范化模板的认证 + 状态闸门 + `assertPermission(userId, 'media:write', { babyId })`
+   - **Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
+   - 按命中行的状态分支:
 
-3. **服务端 — Stage**:
-   - 在**事务内** insert media 行 `(id=uuid, status='pending', contentHash, uploadedBy, ...)`,违反 UNIQUE 约束则降级为"已存在"分支返回
-   - 流式写入 `data/media/_staging/<uploadId>/original.<ext>`,边写边算 sha256
-   - 写完后**校验 hash 与请求声明一致** — 不一致删 staging 目录、把 media 行更新为 `'failed'` 并 4xx 返回
+   | 命中 row 状态 | 处理 |
+   |---|---|
+   | `ready` | **真去重**:200 `{ mediaId, deduplicated: true }`,不重新落盘 |
+   | `pending` / `processing` 且 `clientUploadId` 相同 | **同请求重试**:202 `{ mediaId, status, pollUrl }`,客户端轮询 |
+   | `pending` / `processing` 且 `clientUploadId` 不同 / 缺失 | **并发独立请求**:继续走新 row(partial index 不阻拦) |
+   | 仅 `failed` / `trashed` / `purged` | **允许重传**:旧行保留作审计,走新 row |
+   | 无命中 | 走新 row |
+
+3. **服务端 — Stage**(对"走新 row"分支):
+   - 在事务内 `INSERT INTO media (id=uuid, status='pending', babyId, contentHash, clientUploadId, uploadedBy, filename, mimeType, sizeBytes, createdAt)`
+   - 流式写入 `data/media/_staging/<mediaId>/original.<ext>`,边写边算 sha256
+   - 写完校验 hash 与客户端声明一致 → 不一致:删 staging、`status='failed'`、422 返回
 
 4. **服务端 — Process**(在 staging 内):
-   - 更新 `media.status = 'processing'`
+   - `status='processing'`
    - Sharp 并行生成 large/thumb;视频用 `ffmpeg-static` 抓 poster;提取 EXIF → `takenAt`
-   - 任一步失败 → 删除整个 `_staging/<uploadId>/` → 更新 `media.status = 'failed'` → 抛错
+   - 任一步失败 → 删 `_staging/<mediaId>/` → `status='failed'` → 5xx 抛错
 
-5. **服务端 — Commit(原子移动)**:
-   - 确保目标目录 `data/media/<babyId>/<year>/<month>/{original,large,thumb,poster}/` 存在
-   - 用 `fs.rename` 把 staging 文件移到最终位置(同文件系统下是原子操作)
-   - **事务内**更新 `media.status = 'ready'`、`relativePath`、`width/height/durationSec/takenAt`
-   - 若提供 `entryId`,同事务内 update `media.entryId`
+5. **服务端 — Commit(原子)**:
+   - 确保目标目录存在
+   - 用 `fs.rename` 把 staging 文件移到最终位置(同文件系统原子)
+   - 事务内 `status='ready'`、写 `relativePath`、`width/height/durationSec/takenAt`
+   - 若提供 `entryId`,同事务 `media.entryId = ?`
+   - 此刻 partial unique index 才生效;**若此时检测到约束冲突**(极端并发:两个独立请求同一文件同时 commit),保留一个 `ready`,另一个回滚为 `failed`、删 staging,客户端可重试(它会命中 ready 分支真去重)
 
-6. **失败恢复 / Reconcile Job**(应用启动 + 每天一次):
-   - 扫描 `status IN ('pending','processing')` 且 `createdAt < now - 1h` 的 media 行
-   - 删除对应 staging 目录(若存在)
-   - 把状态标为 `'failed'`(保留行用于审计)
-   - 扫描 `_staging/` 下没有对应 DB 行的目录 → 删除
+6. **进度轮询端点**:`GET /api/media/[id]/status` — 返回 `{ status, progress? }`,供步骤 2 表中 202 场景使用,同样走 §5.7 模板
 
-7. **对外可见性**:所有查询(timeline / gallery / `GET /api/media/[id]`)默认 `WHERE status = 'ready'`,非 ready 的行对用户不可见
+7. **失败恢复 / Reconcile Job**(应用启动 + 每天一次):
+   - `status IN ('pending','processing')` 且 `createdAt < now - 1h` → 删 staging、标 `failed`
+   - `_staging/` 内无对应 DB row 的目录 → 删
+   - 不处理 `trashed`(用户主导,见 §6.5)
 
-### 6.3 输出流程
+8. **对外可见性**:所有业务查询默认 `WHERE status = 'ready'`;`trashed` 仅在垃圾桶 endpoint 可见;`failed` / `purged` / `pending` / `processing` 对用户完全隐藏
+
+### 6.3 输出流程(走 §5.7 模板)
 
 `GET /api/media/[id]?size=thumb|large|original`:
 
-1. **必须**起手调 `assertPermission(userId, 'media:read', { mediaId, babyId })`(API route lint 强制)
-2. 查 `media` 表:`status !== 'ready'` → 404
-3. 从 `relativePath` + `type` 拼绝对路径
-4. 流式输出:
-   - `Cache-Control: private, max-age=31536000, immutable`
-   - `Content-Type` 从 mime
-   - 支持 `Range` 请求(视频拖动)
+走 §5.7 `withAuthorizedResource('media:read', loadMediaForRead, ...)`,其中:
+- `loadMediaForRead(id)` 仅 `SELECT id, babyId, status, uploadedBy, type, relativePath WHERE id=?`,**绝不读客户端 babyId**
+- 状态闸门:`status !== 'ready'` → 走 §5.6 统一 404
+- `size` 参数白名单校验(`thumb|large|original`),非法 → 400
+- 通过授权后才拼绝对路径(从 DB `relativePath`),流式输出:
+  - `Cache-Control: private, max-age=31536000, immutable`
+  - `Content-Type` 从 mime
+  - 支持 `Range` 请求
 
-### 6.4 删除流程
+### 6.4 软删流程(进垃圾桶)
 
-`DELETE /api/media/[id]`:
+`POST /api/media/[id]/trash`:
 
-1. `assertPermission(userId, 'media:delete', { mediaId, babyId, uploadedBy })`
-   — editor 角色时该函数内部校验 `uploadedBy === userId`
-2. 事务内:`media.status = 'deleted'` + 记 `deletedAt` + `deletedBy`
-3. **不立即删文件**,由 reconcile job delay 7 天后清理(允许"撤销删除")
+走 §5.7 `withAuthorizedResource('media:trash', loadMediaForTrash, ...)`,授权时把 DB 的 `uploadedBy` 传入 PermissionResource → editor 仅能软删自己上传的。
 
-### 6.4 视频策略
+事务内:
+- `status='trashed'`, `deletedAt=now`, `deletedBy=userId`
+- **不删文件**(还原时需要)
+- 释放 partial unique index 占位(因为 index 仅对 ready),允许同 hash 重传
+
+### 6.5 媒体状态机(完整)
+
+```
+                  upload
+                    │
+                    ▼
+                 pending ────(超时/失败)────► failed
+                    │                          ▲
+            (开始处理)                         │
+                    ▼                          │
+                processing ──(Sharp/ffmpeg失败)┘
+                    │
+            (commit 原子 rename)
+                    ▼
+                  ready ◄──(restore)── trashed
+                    │                     │
+                (trash)                (owner purge)
+                    │                     │
+                    ▼                     ▼
+                 trashed              purged
+                                      (DB 行保留作审计,
+                                       媒体文件被删除)
+```
+
+**对外可见性**:
+- 业务查询(timeline/gallery)→ `status='ready'`
+- 垃圾桶页 → `status='trashed'`(按权限过滤为自己软删的或全部)
+- 永远不可见:`pending` / `processing` / `failed` / `purged`
+
+### 6.6 视频策略
 
 - **不转码**:直接存原文件(MP4/MOV/HEVC 都直接存)
 - 浏览器播不动 HEVC 时,提示用户安装兼容插件(标注已知限制)
 - 抓首帧用于画廊封面
+
+---
+
+## 6A. 垃圾桶(Trash Bin)
+
+V1 的核心 UX 不变量保留:**移动端常规删除走软删,真删隔离到特权位置**。V2 没有独立 admin app,把"特权位置"挪到主 app 内的 owner-only UI。
+
+### 6A.1 设计哲学
+
+| 决策 | 选择 | 理由 |
+|---|---|---|
+| 自动清理(N 天后硬删) | **不做** | NAS 存储成本极低;owner 主动管理,避免误自动清 |
+| 资源范围 | entries / media / babies | 这三类是用户数据,删错代价高 |
+| 排除资源 | family_members(撤销访问权)、milestones(配置,可重建) | 语义不是"数据软删" |
+| 软删后是否仍备份 | 否,仅备份 `status='ready' / 'active'` | 备份 = 干净数据 |
+| 撤销窗口(Toast) | 软删时 5 秒"撤销"toast | 应对手滑 |
+| 还原行为 | 完全恢复(同 ID、同关系) | 不创建新行 |
+
+### 6A.2 状态机统一
+
+| 资源 | active 状态值 | trashed 状态值 | purged 状态值 |
+|---|---|---|---|
+| `entries` | `'active'` | `'trashed'` | `'purged'` |
+| `babies` | `'active'` | `'trashed'` | `'purged'` |
+| `media` | `'ready'` | `'trashed'` | `'purged'` |
+
+> media 用 `'ready'` 而非 `'active'` 是因为它前置还有 pending/processing/failed,语义更准。
+
+### 6A.3 软删 → 还原 → 硬删 流程
+
+**软删 (`*:trash`)**:
+- editor 仅能软删自己作者/上传的;owner 任意
+- 事务内:`status = 'trashed'`、`deletedAt = now`、`deletedBy = userId`
+- 媒体文件**不动**(还原时需要)
+- 返回 200 + Toast `"已删除 · 撤销"`(5 秒撤销窗口)
+
+**撤销 Toast (`*:restore` 子路径)**:
+- 客户端 5 秒内点撤销 → 立即调还原
+- 5 秒后 Toast 消失,数据仍在垃圾桶可还原
+
+**还原 (`*:restore`)**:
+- 同软删权限(editor 自己的、owner 任意)
+- `status` 回到 `active` / `ready`、清 `deletedAt`/`deletedBy`
+- 媒体的 partial unique index 重新生效;若期间已重传过同 hash 文件,**还原失败**(409 Conflict)并提示用户"垃圾桶版本与现有重复,请先处理"
+
+**硬删 (`*:purge`,owner only)**:
+- 单项硬删:`status = 'purged'`、`purgedAt = now`、`purgedBy = userId`
+- 媒体:**立即**删除对应 `original/large/thumb/poster/` 文件
+- 关联清理:
+  - 硬删 entry → 关联 `entry_milestones` 删除;关联 media `entryId` 置 NULL(媒体本身保留)
+  - 硬删 baby → 该宝宝下所有 `entries` 和 `media` **必须先**全部进 trashed 状态(否则拒绝),硬删 baby 时不级联硬删它们(避免一键销毁)— 由 owner 显式批量硬删
+- DB 行保留为 `purged`(审计用),业务查询全不可见
+
+**清空垃圾桶(owner only,批量 `*:purge`)**:
+- 在 `/profile/trash` 顶部按钮,弹二次确认("此操作不可撤销")
+- 对当前过滤条件下的所有 `trashed` 行执行硬删
+- 大批量时分批事务(每批 100 项),避免单事务过大
+
+### 6A.4 跨资源一致性
+
+**软删 baby 时**:
+- baby 本身 `status='trashed'`
+- 其下所有 `status='ready'` media 和 `status='active'` entries **不**自动 trashed(独立软删生命周期)
+- 但业务查询(timeline/gallery)会因 baby 不可见而过滤掉这些 → **用户视角等同消失**
+- 还原 baby → 这些资源自然重新可见
+
+**软删 entry 时**:
+- entry `status='trashed'`
+- 其关联 media `entryId` **不**置 NULL(还原时需要恢复关系)
+- 若 entry 还原 → 关联 media 自动重新挂上
+
+### 6A.5 API 端点
+
+| 端点 | Action | 备注 |
+|---|---|---|
+| `GET /api/trash` | `trash:view` | 列表,过滤 entries/media/babies,editor 视角仅自己软删的 |
+| `POST /api/media/[id]/trash` | `media:trash` | 走 §5.7 模板 |
+| `POST /api/media/[id]/restore` | `media:restore` | |
+| `DELETE /api/media/[id]` | `media:purge` | **真删**,owner only |
+| `POST /api/entries/[id]/trash` | `entry:trash` | |
+| `POST /api/entries/[id]/restore` | `entry:restore` | |
+| `DELETE /api/entries/[id]` | `entry:purge` | owner only |
+| 同理 babies | | |
+| `POST /api/trash/empty` | `*:purge` 批量 | owner only,二次确认 |
+
+> 部分操作也可走 server action,但凡是单点 endpoint 一律套 §5.7 模板。
 
 ---
 
@@ -621,8 +852,20 @@ data/media/
 | `/profile/family` | 成员管理(owner)— 添加/重置密码/改角色/删除 |
 | `/profile/family/permissions` | 宝宝粒度权限(owner) |
 | `/profile/milestones` | 自定义里程碑(owner) |
+| `/profile/trash` | **垃圾桶** — 任何成员可访问,内容按权限过滤 |
 | `/profile/data` | 备份导出 + 日志查看(owner) |
 | `/profile/data/logs` | 日志查看 |
+
+**`/profile/trash` 页面结构**:
+```
+┌─ 顶部:Tab [记录] [媒体] [宝宝]
+├─ 列表:每项显示 缩略图/标题 + "X 由 Y 删除"
+│  └─ 单项操作:[还原] [彻底删除(owner)]
+└─ 底部(owner only):[清空当前 Tab] 按钮(二次确认)
+```
+- editor 看到的列表仅过滤为"自己软删的"
+- owner 看到全部
+- 硬删按钮在 editor 视角下隐藏(双重保险:UI 不展示 + 后端 §5.7 拒绝)
 
 ### 8.3 关键流程
 
@@ -647,6 +890,16 @@ data/media/
 2. 改 `owner.password`
 3. `docker compose restart`
 4. 用新密码登录
+
+**误删恢复(editor)**:
+1. timeline 长按某条记录 → 删除 → Toast `"已删除 · 撤销"` 5 秒
+2. 错过 toast → 进 `/profile/trash` → [记录] tab → 找到该条 → 还原
+3. 想立即真删 → 找 owner 操作
+
+**owner 清理垃圾桶**:
+1. `/profile/trash` → 选 tab → 单项 [彻底删除] 或顶部 [清空]
+2. 二次确认弹窗:"此操作不可撤销,确认彻底删除 N 项?"
+3. 确认后立即硬删 + 删媒体文件
 
 ---
 
@@ -772,7 +1025,8 @@ services:
 4. **冻结媒体清单**:对快照库执行 `SELECT id, relativePath, contentHash, sizeBytes FROM media WHERE status = 'ready'` → 写 `manifest.json`,字段:
    - `version`、`createdAt`、`appVersion`、`dbSha256`
    - `media[]: { id, path, contentHash, sizeBytes }`(实际进归档的文件列表)
-5. **流式打包 zip**:`babyloom.db`(快照副本)+ `manifest.json` + `media/` 目录(只打包 manifest 列出的文件,跳过 staging、failed、deleted)
+   - **明确排除**:status ∈ {pending, processing, failed, trashed, purged} 的媒体不进备份
+5. **流式打包 zip**:`babyloom.db`(快照副本)+ `manifest.json` + `media/` 目录(**只打包 manifest 列出的 ready 文件**;跳过 staging、failed、trashed、purged)
 6. **校验**:边打包边计算 zip 整体 sha256 → 写入 zip 注释 + 单独 `babyloom-backup-<ts>.sha256` 文件
 7. **解除备份模式**,标志清除
 8. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
@@ -814,21 +1068,43 @@ services:
 2. **创建记录**:登录 → 新建 entry → 上传 1 张照片 → 选 2 个里程碑 → 保存 → 时光线可见
 3. **成员协作**:owner 创建 editor 成员 → 切登录 → editor 创建一条记录 → 切回 owner → 看见 editor 的记录
 
-**安全 / 权限拒绝用例**(必须全部存在,缺一个视为该 endpoint 未完成):
+**安全 / 权限拒绝用例**(必须全部存在,缺一个视为该 endpoint 未完成 — **统一 404 防存在性泄露**):
 
-4. **跨宝宝媒体拒绝**:配置两个宝宝 A、B;给 viewer 用户单独配置 `baby_member_permissions` 只能看 A → viewer `GET /api/media/<B 的 mediaId>` 返回 403,且**响应体不泄露资源是否存在**(统一 403,不区分"无权"和"不存在")
-5. **跨作者媒体删除拒绝**:editor1 上传 mediaX → editor2 调用 `DELETE /api/media/<X>` 返回 403 → mediaX 仍 `status = 'ready'`
-6. **viewer 写入拒绝**:viewer 调用 `POST /api/media/upload` 返回 403
-7. **未认证拒绝**:无 cookie 直接 `GET /api/media/<id>` 返回 401
-8. **直接路径遍历拒绝**:`GET /api/media/../../config.yaml` 等异常 mediaId 一律 404,不暴露文件系统
-9. **配置文件改 owner 密码生效**:重写 config.yaml + 重启容器 → 旧密码登录失败、新密码成功
-10. **上传幂等**:同一文件(同 contentHash)上传两次 → 只一条 `ready` 记录、磁盘只一份原图
+4. **跨宝宝媒体拒绝(不存在性泄露)**:两个宝宝 A、B;viewer 仅可看 A → viewer `GET /api/media/<B 的 mediaId>` 返回 **404**(不是 403);同时 `GET /api/media/<完全不存在的-uuid>` 也返回 **404**,**两个响应体必须完全相同**(`{ "error": "not_found" }`)
+5. **跨作者媒体软删拒绝**:editor1 上传 mediaX → editor2 调用 `POST /api/media/<X>/trash` 返回 **404** → mediaX 仍 `status='ready'`
+6. **viewer 写入拒绝**:viewer 调用 `POST /api/media/upload` 返回 **404**(因为它无 `media:write`,统一走 404)
+7. **未认证 vs 已认证无权区分**:无 cookie → 401;有 cookie 但无权 → 404
+8. **路径遍历拒绝**:`GET /api/media/../../config.yaml` / `GET /api/media/xxx?path=...` 等异常一律 404,且**不会落到文件系统**
+9. **客户端伪造 babyId 被忽略**:editor 上传时 multipart 里塞错 babyId(填别人家庭的)→ 服务端**完全忽略**该字段,授权基于 session userId 自动推导;拒绝时统一 404
+10. **配置文件改 owner 密码生效**:重写 config.yaml + 重启 → 旧密码 401、新密码成功
+11. **GET /api/media/[id]/status 同样套模板**:无权访问的 mediaId 返回 404,不暴露状态信息
 
-**故障注入用例**(可用 mock 实现,不必真实崩 ffmpeg):
+**上传幂等 / 状态机用例**(Codex Finding #1 必须覆盖):
 
-11. **Sharp 失败 → 无孤儿**:mock Sharp 抛错 → staging 被清空、media 行 `status = 'failed'`、目标目录无文件
-12. **进程中途崩 → reconcile 清理**:手动建一条 `status='processing'` + 1h 前的脏行 + 一个 staging 目录 → 触发 reconcile → 行变 `failed`、目录被删
-13. **备份一致性**:并发上传中点击备份 → 上传被短暂拒绝(503)→ 备份完成 → zip 内 manifest 与文件一一对应、sha256 校验通过
+12. **真去重(ready 命中)**:上传同一文件两次(同 contentHash、同 clientUploadId 或不同都行)→ 第二次返回 200 + `deduplicated: true`、`mediaId` 与第一次相同、磁盘仅一份原图、partial unique index 仅一条 ready 记录
+13. **同请求重试(pending 命中)**:模拟客户端在第一次请求未完成时重传(同 clientUploadId)→ 返回 202 + 进度端点,**不**新建 row,**不**重新落盘
+14. **并发独立请求(pending 命中但 token 不同)**:两个独立客户端几乎同时上传同一文件(同 contentHash、不同 clientUploadId)→ 允许并发 → 都进入 pending → commit 时仅一个胜出为 ready,另一个回滚为 failed → 客户端重试时命中 ready 真去重
+15. **failed 不卡坑位**:模拟一次 failed → 用户重传同一文件 → **成功创建新 ready row**(不被 failed row 阻塞)
+16. **trashed 不卡坑位**:软删一个 media → 重传同一文件 → 成功新建 ready;此时 trashed 行被还原会触发 409(见 §6A.3)
+
+**故障注入用例**(可用 mock 实现):
+
+17. **Sharp 失败 → 无孤儿**:mock Sharp 抛错 → staging 被清空、media 行 `status='failed'`、目标目录无文件
+18. **进程中途崩 → reconcile 清理**:手动建一条 `status='processing'` + 1h 前的脏行 + 一个 staging 目录 → 触发 reconcile → 行变 `failed`、目录被删
+19. **备份一致性**:并发上传中点击备份 → 上传被短暂拒绝(503)→ 备份完成 → zip 内 manifest 与文件一一对应、sha256 校验通过
+
+**垃圾桶用例**:
+
+20. **软删后从 timeline 消失**:editor 软删自己的 entry → timeline 不再展示 → `/profile/trash` 可见
+21. **撤销 toast 还原**:软删后 5 秒内点撤销 → entry 立即回到 timeline、`status='active'`
+22. **editor 只能还原自己的**:editor1 软删 entry → editor2 进 `/profile/trash` **看不到**该 entry(列表过滤)
+23. **owner 看全部垃圾桶**:owner 进 `/profile/trash` 能看到所有成员软删的内容
+24. **editor 硬删拒绝**:editor 调用 `DELETE /api/entries/[id]`(对应 `entry:purge`)→ 404
+25. **owner 硬删生效**:owner `DELETE /api/media/[id]` → DB 行 `status='purged'`、磁盘文件被删
+26. **owner 清空垃圾桶**:`/profile/trash` 顶部"清空"→ 二次确认 → 所有当前 tab 的 trashed 项变 purged
+27. **还原冲突 409**:软删 mediaX(hash=H)→ 重传同 hash 文件成功创建新 ready → 试图还原 X → 409 Conflict
+28. **软删 baby 后内容不可见**:软删 babyA → timeline/gallery 中其 entries 和 media 都不再展示(但状态仍是 active/ready,DB 行未变)→ 还原 baby → 自动重新可见
+29. **备份排除 trashed**:垃圾桶里有 N 个 media → 触发备份 → manifest 不包含它们、zip 内无这些文件
 
 ### 11.4 视觉回归
 
@@ -858,6 +1134,8 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 - ❌ 实时同步/协作
 - ❌ 配置文件热加载
 - ❌ 自动备份 cron(首版手动导出)
+- ❌ 垃圾桶自动清理 cron(owner 主导)
+- ❌ 垃圾桶里二次软删撤销栈(只有一层 trashed)
 
 ---
 
@@ -873,8 +1151,13 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | 配置文件明文密码暴露 | 部署文档强调 `chmod 600`,owner 物理拥有 NAS 是前提 |
 | 媒体 API Route 漏写 `assertPermission` | 自定义 ESLint rule `babyloom/api-route-must-assert` 在 CI 拦截;E2E 测试覆盖跨权限拒绝 |
 | 上传过程崩溃产生孤儿文件/脏行 | 两阶段上传 + staging 隔离 + `status` 状态机 + reconcile job 兜底 |
+| **上传幂等键卡死(failed/pending row 永久占坑)** | **Partial UNIQUE 仅对 `status='ready'` 生效;status-aware 准入逻辑按命中行状态分支** |
+| **响应码差异泄露资源存在性** | **§5.6 统一 404 响应(无权/不存在/非 ready 同样响应体);§5.7 规范化路由模板强制顺序** |
+| **服务端误信客户端 babyId** | **§5.5 明确"绝不接受客户端 ownership 字段";§5.7 模板内 babyId 必从 DB loader 读出;E2E 用例 #9 覆盖** |
 | 备份取到不一致快照(并发上传期间) | SQLite Online Backup API + 短暂上传冻结 + manifest 校验 + 还原前 sha256 验证 |
 | WAL 模式下意外丢失未 checkpoint 的写入 | 启动启用 `journal_mode=WAL` + `synchronous=NORMAL`,备份前显式 `wal_checkpoint(TRUNCATE)` |
+| **editor 通过硬删销毁证据** | **硬删(`*:purge`)owner only,editor 即便对自己软删的也无法硬删;UI 不展示按钮 + 后端拒绝双重保险** |
+| **垃圾桶无限增长占满 NAS 磁盘** | owner 在 `/profile/trash` 可手动清空;`/profile/data` 显示存储占用;**不做自动清理**(显式选择) |
 
 ---
 
@@ -892,15 +1175,28 @@ PRAGMA temp_store = MEMORY;
 
 ---
 
-## 15. Codex Adversarial Review 回应
+## 15. Codex Adversarial Review 回应历史
 
-本 spec 在 2026-05-15 经 Codex 评审,verdict 为 `needs-attention`,三个 high/medium 级发现已逐项修复:
+### 15.1 第一轮(2026-05-15)— 已修复
 
 | 发现 | 严重度 | 修复位置 |
 |---|---|---|
 | 媒体授权链条不完整(无 `media:*` Action、API Route 未强制 wrapper、`media` 缺 `uploadedBy`) | high | §3 schema、§5.4 Action 集、§5.5 调用约定、§11.3 拒绝用例 |
-| 上传非原子、无清理无重试语义 | high | §6.1 staging 目录、§6.2 两阶段流程、§3 `status`/`contentHash`、§11 reconcile 测试 |
+| 上传非原子、无清理无重试语义 | high | §6.1 staging、§6.2 两阶段流程、§3 `status`/`contentHash`、§11 reconcile 测试 |
 | 备份可产生不一致快照 | medium | §10.4 SQLite Online Backup + 暂停窗口 + manifest、§14 PRAGMA WAL |
+
+### 15.2 第二轮(2026-05-15)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| 上传幂等返回非 ready row 导致重试卡死;failed row 永久占据 hash 坑位 | high | §3.1 partial unique index、§3 `clientUploadId` 字段、§6.2 status-aware 准入分支表、§11 用例 #12-16 |
+| 媒体读取授权顺序不明(`babyId` 来源未约束、404/403 不一致泄露存在性、路径构造时机) | medium | §5.6 统一 404、§5.7 规范化路由模板、§6.3 `loadMediaForRead`、§11 用例 #4-11 |
+
+### 15.3 同期非 Codex 增量
+
+| 增量 | 来源 | 落点 |
+|---|---|---|
+| 垃圾桶功能(继承 V1 设计哲学,owner-only 硬删,无自动清理) | 用户 | §3 status 字段统一、§5.2 矩阵更新、§6A 专章、§8 `/profile/trash`、§10.4 备份排除 trashed、§11 用例 #20-29 |
 
 ---
 
