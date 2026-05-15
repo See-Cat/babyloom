@@ -455,6 +455,48 @@ async function assertPermission(
 
 伪造的 target 字段(指向别人家庭的 baby)**统一走 §5.6 的 404 出口**,不区分"无权"和"不存在"。
 
+#### Target Field 完整枚举(实现端必须逐项覆盖)
+
+> **元教训**:target field 是个**集合**,不能给单个字段加 loader 就以为安全了。Codex 第四轮发现 entryId 漏校验,根因就是没枚举。
+
+下表列出 V2 全部 target field,**任何新增的 target 字段必须先扩充本表并补 loader**,否则视为未实现:
+
+| 字段 | 出现位置 | DB loader 加载字段 | 必校验 |
+|---|---|---|---|
+| `babyId` | upload multipart / entry create / 任何资源新建 | `id, familyId, status` | 形状 / 存在 / `status='active'` / `family_members(userId, baby.familyId)` 存在 / 有目标 action 权限 |
+| `entryId` | upload multipart(可选,挂载到 entry) | `id, babyId, status, authorId, familyId` | 形状 / 存在 / `status='active'` / `entry.babyId === loaded baby.id`(跨宝宝拒绝) / user 有 `entry:write` 权限(挂载等于编辑该 entry) |
+| `mediaId` | URL path `/api/media/[id]/...` | `id, babyId, status, uploadedBy, type, relativePath` | 形状 / 存在 / 该 endpoint 允许的 status 集合 / 父 baby `status='active'` / 对应 `media:*` 权限 |
+| `milestoneId` | entry create(关联里程碑) | `id, familyId` | 形状 / 存在 / `familyId IS NULL`(系统预设)OR `familyId === user 所在 family` |
+| `memberId` (target) | owner 改/删成员、宝宝粒度权限配置 | `id, familyId, role` | 形状 / 存在 / `familyId === user 所在 family` / 操作矩阵允许(如不能 demote 自己、不能删 owner) |
+
+**通用 loader 模板**(`lib/permissions/target-loaders.ts`):
+
+```ts
+async function loadAndAssertTarget<T>(opts: {
+  id: string;
+  table: 'babies' | 'entries' | 'media' | 'milestones' | 'users';
+  allowedStatuses?: string[];     // 如 ['active']
+  parentLoaded?: { id: string };  // 如父 baby,确保 child.parentId === parent.id
+  requirePermission: { userId: string; action: Action };
+}): Promise<T>
+```
+
+实现端调用范式(以 entryId 为例):
+```ts
+const baby = await loadAndAssertTarget({ id: req.babyId, table: 'babies',
+                                          allowedStatuses: ['active'],
+                                          requirePermission: { userId, action: 'media:write' } });
+let entry: Entry | undefined;
+if (req.entryId) {
+  entry = await loadAndAssertTarget({ id: req.entryId, table: 'entries',
+                                       allowedStatuses: ['active'],
+                                       parentLoaded: baby,
+                                       requirePermission: { userId, action: 'entry:write' } });
+}
+```
+
+任何 target field 漏走 `loadAndAssertTarget` → ESLint 规则 + 测试缺失视为该 endpoint 未完成。
+
 ### 5.5.2 UI 过滤 ≠ API 授权
 
 **原则**:UI 列表的"看不到" **不等于** API 接口的"拒绝"。每条 UI 过滤逻辑必须在 API 层有等价的 `assertPermission` 校验。
@@ -597,7 +639,20 @@ data/media/
    - 内部检查 `family_members.role` + `baby_member_permissions` 覆盖
    - 失败 → 统一 404
 
-   **2.4 Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
+   **2.4 Target 校验:DB loader 加载 `entryId`**(若客户端传了 entryId — Codex 第四轮 finding #1 修法)
+   ```sql
+   SELECT id, babyId, status, authorId, familyId FROM entries WHERE id = ?
+   ```
+   仅当 multipart 包含 `entryId` 时执行,**走 §5.5.1 通用 target loader 模板**:
+   - 格式非 UUID → 404
+   - 不存在 → 404
+   - `status !== 'active'` → 404(trashed/purged 的 entry 不能挂新媒体)
+   - **跨宝宝校验**:`entry.babyId !== baby.id` → 404(防止挂到别人宝宝下的 entry)
+   - **跨家庭校验**:`entry.familyId !== baby.familyId` → 404(理论上由跨宝宝隐含,但显式校验作冗余防线)
+   - **权限校验**:`assertPermission(userId, 'entry:write', { entryId, authorId: entry.authorId, babyId: entry.babyId })` — editor 仅能挂到自己作者的 entry 上;owner 任意。失败 → 统一 404
+   - 至此 `entry` row 可信,后续用 `entry.id` 写入 `media.entryId`(绝不直接用 multipart 里的 entryId)
+
+   **2.5 Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
    - 按命中行的状态分支:
 
    | 命中 row 状态 | 处理 |
@@ -1107,7 +1162,67 @@ services:
 
 3. **WAL Checkpoint**:`PRAGMA wal_checkpoint(TRUNCATE)` 把 WAL 合并进主库
 
-4. **生成 manifest(父链感知查询)** — 对快照库执行:
+4. **Sanitize 快照 DB(关键 — Codex 第四轮 finding #2 修法)**
+
+   > **原则**:备份产物 = 干净自包含数据集。文件层面已经只放 ready/active,**DB 层面必须同步清洗**,否则 trashed/purged/failed 行的元数据(filename、EXIF、deletedBy 等)会偷渡进备份。
+
+   在 snapshot DB(**不动生产 DB**)上执行,全部在单一事务内,失败立即中止备份:
+
+   ```sql
+   BEGIN;
+
+   -- 4.1 删除非干净状态的资源行
+   DELETE FROM media   WHERE status != 'ready';
+   DELETE FROM entries WHERE status != 'active';
+   DELETE FROM babies  WHERE status != 'active';
+
+   -- 4.2 删除"父链不干净"的孤儿行(被上一步切断父级的子)
+   DELETE FROM media   WHERE babyId  NOT IN (SELECT id FROM babies);
+   DELETE FROM entries WHERE babyId  NOT IN (SELECT id FROM babies);
+   DELETE FROM entry_milestones WHERE entryId NOT IN (SELECT id FROM entries);
+   DELETE FROM media   WHERE entryId IS NOT NULL
+                         AND entryId NOT IN (SELECT id FROM entries);
+   -- ↑ 媒体的 entry 已被删但媒体本身保留:把 entryId 置 NULL 而不是删媒体
+   --   实际应改为 UPDATE 而非 DELETE:
+   UPDATE media SET entryId = NULL
+     WHERE entryId IS NOT NULL
+       AND entryId NOT IN (SELECT id FROM entries);
+
+   -- 4.3 清理删除/审计字段(保留行不应保留这些痕迹)
+   UPDATE media   SET deletedAt=NULL, deletedBy=NULL, purgedAt=NULL, purgedBy=NULL;
+   UPDATE entries SET deletedAt=NULL, deletedBy=NULL;
+   UPDATE babies  SET deletedAt=NULL, deletedBy=NULL;
+   -- clientUploadId 是上传期间幂等 token,ready 之后已无用,清空
+   UPDATE media   SET clientUploadId=NULL;
+
+   -- 4.4 不进备份的表(运行时数据,还原后应当重新生成)
+   DELETE FROM sessions;
+   -- 若有其他临时/缓存表(如 reconcile 标记)同样清空
+
+   -- 4.5 baby_member_permissions 中指向已删 baby/member 的孤儿
+   DELETE FROM baby_member_permissions
+     WHERE babyId NOT IN (SELECT id FROM babies);
+   -- familyMemberId 不切断(family_members 不参与状态清洗)
+
+   COMMIT;
+
+   -- 4.6 物理清除 deleted page(关键!防止 forensic 残留)
+   VACUUM;
+   ```
+
+   **执行后不变量**(每条都是 E2E 测试断言):
+   - `SELECT COUNT(*) FROM media WHERE status != 'ready'` = 0
+   - `SELECT COUNT(*) FROM entries WHERE status != 'active'` = 0
+   - `SELECT COUNT(*) FROM babies WHERE status != 'active'` = 0
+   - `SELECT COUNT(*) FROM media WHERE deletedAt IS NOT NULL OR purgedAt IS NOT NULL` = 0
+   - `SELECT COUNT(*) FROM sessions` = 0
+   - 每条 media 必有对应 baby:`m.babyId IN babies.id`
+   - 每条 entry 必有对应 baby:同上
+   - 每个 media.entryId(非 NULL)必有对应 entry
+
+   **失败处理**:任一 SQL 失败 → 立即回滚事务、删 snapshot db、释放写屏障、返回 5xx → 客户端可重试
+
+5. **生成 manifest(父链感知查询)** — 对**清洗后**的 snapshot DB 执行:
    ```sql
    SELECT m.id, m.relativePath, m.contentHash, m.sizeBytes, m.type
    FROM media m
@@ -1120,33 +1235,44 @@ services:
    JOIN babies b ON b.id = e.babyId
    WHERE e.status = 'active' AND b.status = 'active';
    ```
-   写 `manifest.json`:`version`、`createdAt`、`appVersion`、`dbSha256`、`media[]: { id, path, contentHash, sizeBytes }`
+   写 `manifest.json`:`version`、`createdAt`、`appVersion`、`dbSha256`(对**清洗后** DB 计算)、`media[]: { id, path, contentHash, sizeBytes }`
 
-5. **Hardlink staging(关键 — Codex 第三轮 finding #2 修法)**:
+   因为 sanitize(步骤 4)已经把 DB 过滤为 `status='ready' AND parent active`,这里 join 的结果集**应当等价于** `SELECT FROM media`(冗余保险);若两者数量不一致 → spec invariant 被违反,立即中止备份。
+
+6. **Hardlink staging(Codex 第三轮 finding #2 修法)**:
    - 创建 `data/_backup_staging/<backupId>/media/` 目录
    - 对 manifest 列出的**每个**文件执行 `fs.link(原路径, staging路径)`(POSIX hardlink)
    - hardlink 几乎免费,NAS 同文件系统下毫秒级
    - **即使后续生产文件被删,hardlink 副本仍存在**(inode 引用计数 > 0,文件不会被实际释放)
    - 失败兜底:如 hardlink syscall 失败(跨文件系统、磁盘满)→ 回退为 copy;copy 也失败 → 中止备份并清理 staging,返回错误
 
-6. **释放写屏障**:`BACKUP_IN_PROGRESS = false`,后续 owner 的删改操作正常进行
-   - **写屏障窗口**:从步骤 1 到步骤 6,典型只持续数秒(取决于 hardlink 数量),家用场景几乎无感
+7. **释放写屏障**:`BACKUP_IN_PROGRESS = false`,后续 owner 的删改操作正常进行
+   - **写屏障窗口**:从步骤 1 到步骤 7,典型只持续数秒(取决于 sanitize SQL 执行 + hardlink 数量),家用场景几乎无感
 
-7. **流式打包 zip**:从 `_backup_staging/<backupId>/` 读文件 + 快照 db + manifest.json,流式输出
+8. **流式打包 zip**:从 `_backup_staging/<backupId>/` 读文件 + 清洗后的 snapshot db + manifest.json,流式输出
    - 即使此时生产侧 owner 在硬删某些 media,staging 里 hardlink 不受影响
 
-8. **校验**:边打包边算 zip 整体 sha256 → 写 zip 注释 + 单独 `babyloom-backup-<ts>.sha256`
+9. **校验**:边打包边算 zip 整体 sha256 → 写 zip 注释 + 单独 `babyloom-backup-<ts>.sha256`
 
-9. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
+10. **响应**:zip 流式下载,文件名 `babyloom-backup-<YYYY-MM-DD-HHMM>.zip`
 
-10. **清理**:打包完成或失败后,`rm -rf data/_backup_staging/<backupId>/`(只删 hardlink,生产文件 inode 不受影响)
+11. **清理**:打包完成或失败后,`rm -rf data/_backup_staging/<backupId>/`(只删 hardlink,生产文件 inode 不受影响)
 
 **还原流程**(后续迭代,先把"导出可还原"作为设计前提):
 1. 上传 zip → 校验整体 sha256
 2. 校验 `manifest.dbSha256` 与 zip 内 db 一致
 3. 校验每个 media 文件的 sha256 与 manifest 一致
-4. 任何不一致 → 拒绝还原并报告差异
-5. 通过后停服 → 替换 `babyloom.db` + `media/` → 启动 → reconcile job 自检
+4. **校验清洗不变量**(对解压后的 DB 执行):
+   - `SELECT COUNT(*) FROM media WHERE status != 'ready'` = 0
+   - `SELECT COUNT(*) FROM entries WHERE status != 'active'` = 0
+   - `SELECT COUNT(*) FROM babies WHERE status != 'active'` = 0
+   - `SELECT COUNT(*) FROM sessions` = 0
+   - `SELECT COUNT(*) FROM media WHERE deletedAt IS NOT NULL OR purgedAt IS NOT NULL` = 0
+   - 每条 `media.babyId` 在 `babies.id` 中
+   - 每条 `entries.babyId` 在 `babies.id` 中
+   - 每条非 NULL `media.entryId` 在 `entries.id` 中
+5. 任何不一致 → 拒绝还原并报告差异
+6. 通过后停服 → 替换 `babyloom.db` + `media/` → 启动 → reconcile job 自检
 
 **自动备份**(后续迭代):cron 调用同一备份流程,旋转保留 N 份。
 
@@ -1237,6 +1363,26 @@ services:
 35. **跨家庭 baby 上传被拒**(Codex finding #3):editor 在 multipart 塞别家庭的 babyId → 404,无 staging 副作用,无 DB 行写入
 36. **trashed baby 上传被拒**:multipart babyId 指向已 trashed 的 baby → 404
 
+**Codex 第四轮新增**:
+
+37. **跨宝宝 entryId 上传拒绝**(finding #1):editor 上传时 multipart `babyId=A`,`entryId=<B 宝宝的 entry>` → `entry.babyId !== loaded baby.id` → 404,无 staging,无 DB 写
+38. **trashed entryId 上传拒绝**:multipart entryId 指向已 trashed 的 entry → 404
+39. **未授权 entryId 上传拒绝**:editor1 上传时 multipart 塞 editor2 作者的 entryId → `entry:write` 权限失败 → 404
+40. **合法 entryId 上传成功**:editor 上传带自己作者的 active entryId → media.entryId 写入正确、可在该 entry 详情看到
+41. **无 entryId 上传成功**:multipart 不传 entryId → 上传成功、`media.entryId IS NULL`
+42. **清洗后 DB 无 trashed 元数据**(finding #2):
+    - 制造数据:owner 软删 mediaX(filename=`secret.jpg`)+ owner 软删 entryY + owner 软删 babyZ
+    - 触发备份 → 拿到 zip → 解压 db
+    - 断言:`SELECT COUNT(*) FROM media WHERE status='trashed'` = 0
+    - 断言:`SELECT COUNT(*) FROM entries WHERE status='trashed'` = 0
+    - 断言:`SELECT COUNT(*) FROM babies WHERE status='trashed'` = 0
+    - 断言:DB 内**不存在** `filename='secret.jpg'` 的行
+    - 断言:`SELECT COUNT(*) FROM sessions` = 0
+    - 断言:所有 `deletedAt` / `purgedAt` 字段均为 NULL
+43. **清洗后 DB 与文件一一对应**:解压 zip → 遍历 DB 中所有 media 行 → 每条都能在 `media/` 目录里找到对应文件;遍历 zip 内每个文件 → 都能在 DB 中找到对应行
+44. **VACUUM 后无残留**:制造数据 → 备份前后 sqlite3 dump 出 raw page → 解压备份 db → 用 `sqlite3 .dump` 与文本搜索 → 确认被 sanitize 的 row 字段(如 deleted 的 filename)**不在** page 物理空间内
+45. **Sanitize SQL 失败回滚**:mock 4.5 步 SQL 失败 → 备份立即中止、snapshot 文件被删、写屏障被释放、返回 5xx、生产 DB 与文件**未受任何影响**
+
 ### 11.4 视觉回归
 
 Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
@@ -1293,6 +1439,8 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | **备份期间并发 purge 让 zip 文件缺失** | §10.4 写屏障扩展为全媒体相关写 + Hardlink staging 解耦生产与打包;E2E 用例 #31-33 |
 | **Ownership 与 Target 字段混淆**(实现者错信客户端 babyId 或拒绝必要 target) | §5.5.1 字段分类表;§6.2 step 2.2 显式 DB loader;E2E 用例 #9, #35-36 |
 | **Editor 通过直接 API 还原 owner 软删的内容**(UI 过滤被绕过) | §5.4 矩阵 restore 加 `deletedBy === userId` 约束;§5.5.2 UI 过滤 ≠ API 授权原则;E2E 用例 #34 |
+| **`entryId` 上传时无 loader,可跨宝宝/跨权限挂载** | §5.5.1 Target field 完整枚举表 + 通用 loader 模板;§6.2 step 2.4 显式 entryId loader;E2E 用例 #37-41 |
+| **备份 DB 快照保留 trashed/purged/failed 行元数据** | §10.4 step 4 在 snapshot 上执行 sanitize SQL + VACUUM,与文件清单一一对应;还原前校验清洗不变量;E2E 用例 #42-45 |
 
 ---
 
@@ -1341,6 +1489,17 @@ PRAGMA temp_store = MEMORY;
 | 备份写屏障未覆盖 trash/restore/purge,并发可让 zip 文件缺失 | high | §10.4 写屏障扩展 + Hardlink staging 解耦生产/打包、§11 用例 #31-33 |
 | Ownership 与 Target 字段语义混淆(`babyId` 处理矛盾) | medium | §5.5.1 字段分类表、§6.2 step 2.2 DB loader 显式校验、§11 用例 #9, #35-36 |
 | Editor 可通过直接 API 调用还原 owner 软删的内容(UI 过滤被绕过) | medium | §5.4 restore 加 `deletedBy === userId`、§5.5.2 UI 过滤 ≠ API 授权原则、§11 用例 #34 |
+
+### 15.5 第四轮(2026-05-15)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| 上传 `entryId` 是 target field 但缺 loader 校验,可跨宝宝/跨权限挂载 | high | §5.5.1 Target field 完整枚举表 + 通用 `loadAndAssertTarget` 模板、§6.2 step 2.4 显式 entryId loader、§11 用例 #37-41 |
+| 备份只过滤文件,DB 快照仍含 trashed/purged/failed 行元数据,违反"清洁备份"承诺并可让还原一致性破坏 | high | §10.4 step 4 在 snapshot 上执行 sanitize SQL(DELETE 非干净行 + 清孤儿 + 清审计字段 + 清 sessions + VACUUM)、还原前校验清洗不变量、§11 用例 #42-45 |
+
+**元教训沉淀**:
+- **Target field 是个集合,不能漏一个**:任何客户端传入的资源 ID 都必须走相同的 loader 模板,新增字段须先扩充 §5.5.1 的枚举表
+- **"清理"必须做到数据层面**:对外发布的产物(备份/导出)需在数据(DB)和文件两个出口同步净化,文件过滤了 DB 也必须过滤,否则元数据会偷渡;`VACUUM` 是防 forensic 残留的必备一步
 
 ---
 
