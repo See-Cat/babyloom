@@ -689,18 +689,45 @@ data/media/
 
 8. **对外可见性**:所有业务查询默认 `WHERE status = 'ready'`;`trashed` 仅在垃圾桶 endpoint 可见;`failed` / `purged` / `pending` / `processing` 对用户完全隐藏
 
-### 6.3 输出流程(走 §5.7 模板)
+### 6.3 输出流程(走 §5.7 模板 + 父链 join)
 
 `GET /api/media/[id]?size=thumb|large|original`:
 
 走 §5.7 `withAuthorizedResource('media:read', loadMediaForRead, ...)`,其中:
-- `loadMediaForRead(id)` 仅 `SELECT id, babyId, status, uploadedBy, type, relativePath WHERE id=?`,**绝不读客户端 babyId**
-- 状态闸门:`status !== 'ready'` → 走 §5.6 统一 404
+- `loadMediaForRead(id)` **必须 JOIN babies**(Codex 第六轮 finding #2 修法):
+  ```sql
+  SELECT m.id, m.babyId, m.status, m.uploadedBy, m.type, m.relativePath,
+         b.status AS babyStatus
+  FROM media m
+  JOIN babies b ON b.id = m.babyId
+  WHERE m.id = ?;
+  ```
+  **绝不读客户端 babyId**
+- **联合状态闸门**:必须同时 `m.status === 'ready'` **AND** `b.status === 'active'` → 任一失败走 §5.6 统一 404
+  > 关键:防止 baby 被软删后,持有 mediaId 的客户端通过直链绕过 timeline/gallery 的父链过滤继续下载照片
 - `size` 参数白名单校验(`thumb|large|original`),非法 → 400
 - 通过授权后才拼绝对路径(从 DB `relativePath`),流式输出:
   - `Cache-Control: private, max-age=31536000, immutable`
   - `Content-Type` 从 mime
   - 支持 `Range` 请求
+
+### 6.3.1 所有 media route loader 统一要求
+
+凡是 `/api/media/[id]/*` 的 endpoint,其 loader **必须**遵循同一模式:JOIN babies + 联合状态闸门。具体每个 endpoint 接受的状态集合不同:
+
+| Endpoint | Action | 接受的 `m.status` | 接受的 `b.status` |
+|---|---|---|---|
+| `GET /api/media/[id]` | `media:read` | `ready` | `active` |
+| `GET /api/media/[id]/status` | `media:read` | 任意非 purged(用于轮询上传进度) | `active` |
+| `POST /api/media/[id]/trash` | `media:trash` | `ready` | `active` |
+| `POST /api/media/[id]/restore` | `media:restore` | `trashed` | `active`(还原前提是父 baby 必须 active) |
+| `DELETE /api/media/[id]` | `media:purge` | `trashed` | `active` 或 `trashed`(允许 owner 在 trashed baby 下硬删媒体) |
+
+不符合上述状态组合 → 统一 404。
+
+### 6.3.2 entries / babies 路由同样要求
+
+`entry:*` 系列 endpoint 的 loader 同样 JOIN babies 校验 `b.status='active'`;`baby:*` 自身无父级,跳过 join 但仍校验自身 status。详见 §6A.4 父链可见性检查清单。
 
 ### 6.4 软删流程(进垃圾桶)
 
@@ -813,12 +840,30 @@ V1 的核心 UX 不变量保留:**移动端常规删除走软删,真删隔离到
 - `entries` 的父 = `babies`(via `babyId`)
 - `babies` 无父
 
-**"对外出口"包括**(实现端逐一对账):
-- timeline / gallery / calendar 等业务查询
-- `GET /api/media/[id]` 媒体输出
-- **备份导出 manifest**(Codex 抓到的实际漏洞 — 之前只看自身 status)
-- 任何 entry/media 详情接口
-- 搜索(若后续添加)
+**"对外出口"逐项检查清单**(Codex 第六轮强化 — 不再依赖记忆,实现端逐行打勾):
+
+| # | 出口 | 必 JOIN 父级 | 父级接受状态 | 自身接受状态 |
+|---|---|---|---|---|
+| 1 | `/timeline` RSC 查询 | babies | active | entries: active |
+| 2 | `/gallery` RSC 查询 | babies | active | media: ready |
+| 3 | `/calendar` RSC 查询 | babies | active | entries: active |
+| 4 | `/entry/[id]` RSC | babies | active | entries: active |
+| 5 | `GET /api/media/[id]` | babies | active | media: ready |
+| 6 | `GET /api/media/[id]/status` | babies | active | media: 非 purged |
+| 7 | `POST /api/media/[id]/trash` | babies | active | media: ready |
+| 8 | `POST /api/media/[id]/restore` | babies | active | media: trashed |
+| 9 | `DELETE /api/media/[id]` (purge) | babies | active 或 trashed | media: trashed |
+| 10 | `POST /api/entries/[id]/trash` | babies | active | entries: active |
+| 11 | `POST /api/entries/[id]/restore` | babies | active | entries: trashed |
+| 12 | `DELETE /api/entries/[id]` (purge) | babies | active 或 trashed | entries: trashed |
+| 13 | `GET /api/trash` 列表(垃圾桶页) | babies | active 或 trashed(不显示 purged 下的) | media: trashed / entries: trashed |
+| 14 | 备份 manifest 查询(§10.4 step 5) | babies | active | media: ready / entries: active |
+| 15 | 媒体物理路径计算(§6.3 拼绝对路径) | 已经过 5/6/7/8/9 校验 | — | — |
+| 16 | RSS / 分享(若后续添加)| 必须 JOIN | active | active/ready |
+
+**实现端要求**:每个出口的 SQL/loader 都必须显式 join babies 表并 WHERE 双重过滤。**自定义 ESLint rule 检查**:任何对 `media` / `entries` 表的查询若没出现 `babies` join,需有 `// PARENT-CHAIN-EXEMPT: <reason>` 注释豁免,否则 CI 拦截。
+
+清单内每一项对应一个 §11 测试用例,缺一即视为该出口未完成。
 
 **实现要点**:每个查询都必须 join 父表过滤,不允许偷懒只看自身 status。SQL 模板:
 ```sql
@@ -1166,45 +1211,53 @@ services:
 
    > **原则**:备份产物 = 干净自包含数据集。文件层面已经只放 ready/active,**DB 层面必须同步清洗**,否则 trashed/purged/failed 行的元数据(filename、EXIF、deletedBy 等)会偷渡进备份。
 
-   在 snapshot DB(**不动生产 DB**)上执行,全部在单一事务内,失败立即中止备份:
+   在 snapshot DB(**不动生产 DB**)上执行,全部在单一事务内,失败立即中止备份。
+
+   **SQL 顺序约束**(Codex 第六轮 finding #1 修法):snapshot 启用 `PRAGMA foreign_keys = ON` 与生产一致;`media`/`entries` 的 `babyId` 是 FK 引用 `babies.id`。**必须先切子,后删父**,否则 trashed baby 下挂有 ready media 时,删父语句会触发 FK 约束失败、整个事务回滚、备份功能在带垃圾桶 baby 的场景下直接挂掉。
 
    ```sql
    BEGIN;
 
-   -- 4.1 删除非干净状态的资源行
+   -- 4.1 先把 trashed/purged baby 下的所有子行清掉(子可能 status='ready'/'active',
+   --     但其父级要被删除,这些子必须先消失)
+   DELETE FROM media   WHERE babyId IN (SELECT id FROM babies WHERE status != 'active');
+   DELETE FROM entries WHERE babyId IN (SELECT id FROM babies WHERE status != 'active');
+
+   -- 4.2 删除自身非干净的子(剩下的 babies 都是 active 的,父级安全)
    DELETE FROM media   WHERE status != 'ready';
    DELETE FROM entries WHERE status != 'active';
-   DELETE FROM babies  WHERE status != 'active';
 
-   -- 4.2 切断"父链不干净"的孤儿
-   --     babyId 父级是必需(media 没有 baby 就没意义)→ 删除
-   --     entryId 父级是可选(media 没有 entry 也合法,变成裸照片)→ NULL 化保留媒体
-   DELETE FROM media   WHERE babyId NOT IN (SELECT id FROM babies);
-   DELETE FROM entries WHERE babyId NOT IN (SELECT id FROM babies);
-   DELETE FROM entry_milestones WHERE entryId NOT IN (SELECT id FROM entries);
+   -- 4.3 切断 media 对已被删 entry 的引用(NULL 化而非删媒体)
+   --     entryId 父级是可选(media 没有 entry 也合法,变成裸照片)
    UPDATE media SET entryId = NULL
      WHERE entryId IS NOT NULL
        AND entryId NOT IN (SELECT id FROM entries);
 
-   -- 4.3 清理删除/审计字段(保留行不应保留这些痕迹)
+   -- 4.4 清 entry_milestones 孤儿
+   DELETE FROM entry_milestones WHERE entryId NOT IN (SELECT id FROM entries);
+
+   -- 4.5 此时所有 media/entries 都属于 active baby,可以安全删父
+   DELETE FROM babies WHERE status != 'active';
+
+   -- 4.6 清 baby_member_permissions 孤儿
+   DELETE FROM baby_member_permissions
+     WHERE babyId NOT IN (SELECT id FROM babies);
+   -- familyMemberId 不切断(family_members 不参与状态清洗)
+
+   -- 4.7 清理删除/审计字段(保留行不应保留这些痕迹)
    UPDATE media   SET deletedAt=NULL, deletedBy=NULL, purgedAt=NULL, purgedBy=NULL;
    UPDATE entries SET deletedAt=NULL, deletedBy=NULL;
    UPDATE babies  SET deletedAt=NULL, deletedBy=NULL;
    -- clientUploadId 是上传期间幂等 token,ready 之后已无用,清空
    UPDATE media   SET clientUploadId=NULL;
 
-   -- 4.4 不进备份的表(运行时数据,还原后应当重新生成)
+   -- 4.8 不进备份的表(运行时数据,还原后应当重新生成)
    DELETE FROM sessions;
    -- 若有其他临时/缓存表(如 reconcile 标记)同样清空
 
-   -- 4.5 baby_member_permissions 中指向已删 baby/member 的孤儿
-   DELETE FROM baby_member_permissions
-     WHERE babyId NOT IN (SELECT id FROM babies);
-   -- familyMemberId 不切断(family_members 不参与状态清洗)
-
    COMMIT;
 
-   -- 4.6 物理清除 deleted page(关键!防止 forensic 残留)
+   -- 4.9 物理清除 deleted page(关键!防止 forensic 残留)
    VACUUM;
    ```
 
@@ -1388,6 +1441,24 @@ services:
       - DB 内 mediaX 行的 `entryId IS NULL`(已切断与已删 entry 的关联)
       - DB 内无 entryY 行(被 sanitize 删除)
 
+**Codex 第六轮新增**:
+
+47. **Sanitize SQL 在带 trashed baby + ready media 时不违反 FK**(finding #1):
+    - 设置 `PRAGMA foreign_keys = ON`(与生产一致)
+    - 制造数据:babyA `status='trashed'`,babyA 下 mediaX `status='ready'`,entryY `status='active'`,babyB `status='active'` 下 entryZ `status='trashed'` 挂着 mediaW `status='ready'`
+    - 触发备份 → snapshot sanitize 应**成功提交事务**,不抛 FK 错误
+    - 验证备份后 DB:
+      - babyA、mediaX、entryY 均不在(随父链清理)
+      - babyB 在,mediaW 在,`mediaW.entryId IS NULL`(其 entry 被删但媒体保留)
+48. **直链下载越过软删 baby 被拒**(finding #2):
+    - editor 持有 mediaX 的 URL,babyA 是 mediaX 的父
+    - owner 软删 babyA → `babies.status='trashed'`,mediaX 自身仍 `ready`(独立生命周期)
+    - editor 直接 `GET /api/media/X?size=large` → loader JOIN babies → `b.status != 'active'` → **统一 404**
+    - 同理 `GET /api/media/X/status` 也 404
+49. **软删 baby 后媒体软删 endpoint 拒绝**:editor 知道 mediaX ID,babyA 已 trashed → editor `POST /api/media/X/trash` → 404(父级非 active)
+50. **还原 trashed baby 后媒体直链恢复**:接 #48,owner 还原 babyA → `babies.status='active'` → editor 重新 `GET /api/media/X` → 200
+51. **父链清单全量覆盖**:对 §6A.4 清单 16 项中的每一项,各写一个用例,验证其 SQL 已带 babies JOIN + 双重 status 过滤
+
 ### 11.4 视觉回归
 
 Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
@@ -1448,6 +1519,8 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | **备份 DB 快照保留 trashed/purged/failed 行元数据** | §10.4 step 4 在 snapshot 上执行 sanitize SQL + VACUUM,与文件清单一一对应;还原前校验清洗不变量;E2E 用例 #42-45 |
 | **Sanitize SQL 误删挂在 trashed entry 上的 ready media** | §10.4 step 4.2 改为对 `media.entryId` 仅 UPDATE NULL,不 DELETE 媒体行;E2E 用例 #46 |
 | **entryId loader SQL 引用 entries 中不存在的列** | §6.2 step 2.4 & §5.5.1 表统一:entry loader 仅 SELECT `id, babyId, status, authorId`,跨家庭由跨宝宝隐含 |
+| **Sanitize SQL 顺序违反 FK 约束(在 trashed baby 有 ready media 时备份失败)** | §10.4 step 4 重排:先删 trashed baby 下的子,再删自身非干净的子,最后删父 babies;E2E 用例 #47 |
+| **媒体直链下载越过软删 baby**(已外泄 URL 仍可访问 trashed baby 的照片) | §6.3 `loadMediaForRead` 改为 JOIN babies + 联合状态闸门;§6.3.1 所有 media route loader 同款统一;§6A.4 引入 16 项父链强制清单 + 自定义 ESLint rule 拦截;E2E 用例 #48-51 |
 
 ---
 
@@ -1518,6 +1591,17 @@ PRAGMA temp_store = MEMORY;
 **元教训沉淀**:
 - **渐进改稿要收尾**:spec 不是讨论稿,不允许"X 应改为 Y"这种 inline 备注与原文并存。改主意了就**真删掉旧逻辑**,留下注释只会被实现者照搬到代码里
 - **Schema 与 query 必须对账**:每次新增 loader / 查询 SQL,需要扫一遍它引用的所有列是否真的存在于 schema(§3);spec 内的不同章节是独立演化的,需要 cross-check
+
+### 15.7 第六轮(2026-05-15)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| Sanitize SQL 顺序违反 FK 约束(trashed baby 有 ready media 时备份失败) | high | §10.4 step 4 重排:先切子(trashed baby 下的子)→ 删自身非干净的子 → NULL 化 entry 引用 → 删父 baby → 清孤儿权限;E2E 用例 #47 |
+| 媒体直链下载越过软删 baby(父链可见性原则在 §6.3 没落地) | high | §6.3 `loadMediaForRead` JOIN babies + 联合状态闸门;§6.3.1 所有 media route loader 接受状态组合表;§6A.4 16 项父链强制检查清单 + ESLint rule 拦截裸查询;E2E 用例 #48-51 |
+
+**元教训沉淀**:
+- **抽象原则必须降阶为机械清单**:"父链可见性"作为原则不够,要逐项列出**所有对外出口** + 每个出口对应的 SQL/loader 必须 join 父表。不依赖记忆、不依赖纪律,靠清单 + ESLint rule 强制
+- **FK 约束顺序敏感**:任何对多张关联表的批量 DELETE 必须按依赖方向排序(先子后父);用 `PRAGMA foreign_keys=ON` 的测试环境验证
 
 ---
 
