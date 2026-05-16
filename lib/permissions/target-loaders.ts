@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { getDb } from '@/lib/db/client';
-import { babies } from '@/lib/db/schema';
+import { babies, entries } from '@/lib/db/schema';
 import type { Action, PermissionResource } from './actions';
 import { NotFoundError } from './errors';
 import { assertPermission } from './assert';
@@ -9,7 +9,7 @@ import { UUID_RE } from './responses';
 
 export interface LoadAndAssertOptions {
   id: string;
-  table: 'babies'; // expanded in P2/P3 to 'entries' | 'media' | 'milestones' | 'users'
+  table: 'babies' | 'entries';
   allowedStatuses?: string[];
   requirePermission: { userId: string; action: Action };
   toResource?: (row: any) => PermissionResource;
@@ -38,6 +38,29 @@ export async function loadAndAssertTarget<R = unknown>(
     case 'babies':
       row = db.select().from(babies).where(eq(babies.id, opts.id)).get();
       break;
+    case 'entries':
+      row = db
+        .select({
+          id: entries.id,
+          babyId: entries.babyId,
+          authorId: entries.authorId,
+          content: entries.content,
+          occurredAt: entries.occurredAt,
+          status: entries.status,
+          createdAt: entries.createdAt,
+          updatedAt: entries.updatedAt,
+          deletedAt: entries.deletedAt,
+          deletedBy: entries.deletedBy,
+          babyStatus: babies.status
+        })
+        .from(entries)
+        .innerJoin(babies, eq(babies.id, entries.babyId))
+        .where(eq(entries.id, opts.id))
+        .get();
+      if (row && row.babyStatus !== 'active') {
+        row = null;
+      }
+      break;
     default:
       throw new Error(`unsupported table: ${opts.table}`);
   }
@@ -48,7 +71,20 @@ export async function loadAndAssertTarget<R = unknown>(
     throw new NotFoundError(opts.table);
   }
 
-  const resource = opts.toResource ? opts.toResource(row) : { babyId: row.id };
+  const defaultResource = (target: any): PermissionResource => {
+    switch (opts.table) {
+      case 'babies':
+        return { babyId: target.id };
+      case 'entries':
+        return {
+          babyId: target.babyId,
+          entryId: target.id,
+          authorId: target.authorId,
+          deletedBy: target.deletedBy ?? undefined
+        };
+    }
+  };
+  const resource = opts.toResource ? opts.toResource(row) : defaultResource(row);
   await assertPermission(opts.requirePermission.userId, opts.requirePermission.action, resource, {
     dataDir
   });
