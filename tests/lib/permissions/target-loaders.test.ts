@@ -150,3 +150,52 @@ describe('loadAndAssertTarget — entries', () => {
     ).rejects.toThrow(/not_found/);
   });
 });
+
+describe('loadAndAssertTarget — milestones', () => {
+  let dataDir: string;
+  let ctx: { ownerId: string; milestoneId: string };
+
+  beforeEach(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'babyloom-target-milestones-'));
+    const seed = await seedOwnerBabyEntries(dataDir);
+    const { getDb } = await import('@/lib/db/client');
+    const { families, milestones } = await import('@/lib/db/schema');
+    const { db } = getDb({ dataDir });
+    const familyId = db.select().from(families).all()[0].id;
+    const milestoneId = randomUUID();
+    db.insert(milestones)
+      .values({
+        id: milestoneId,
+        familyId,
+        name: 'First smile',
+        icon: 'smile',
+        sortOrder: 0,
+        createdAt: Date.now()
+      })
+      .run();
+    ctx = { ownerId: seed.ownerId, milestoneId };
+  });
+
+  it('owner loads milestone for milestone:manage', async () => {
+    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const row = await loadAndAssertTarget<any>({
+      id: ctx.milestoneId,
+      table: 'milestones',
+      requirePermission: { userId: ctx.ownerId, action: 'milestone:manage' },
+      dataDir
+    });
+    expect(row.id).toBe(ctx.milestoneId);
+  });
+
+  it('non-uuid id → 404', async () => {
+    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    await expect(
+      loadAndAssertTarget({
+        id: 'bad',
+        table: 'milestones',
+        requirePermission: { userId: ctx.ownerId, action: 'milestone:manage' },
+        dataDir
+      })
+    ).rejects.toThrow(/not_found/);
+  });
+});

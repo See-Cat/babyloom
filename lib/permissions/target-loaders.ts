@@ -9,7 +9,7 @@ import { UUID_RE } from './responses';
 
 export interface LoadAndAssertOptions {
   id: string;
-  table: 'babies' | 'entries';
+  table: 'babies' | 'entries' | 'milestones' | 'users';
   allowedStatuses?: string[];
   requirePermission: { userId: string; action: Action };
   toResource?: (row: any) => PermissionResource;
@@ -61,6 +61,18 @@ export async function loadAndAssertTarget<R = unknown>(
         row = null;
       }
       break;
+    case 'milestones': {
+      const { milestones } = await import('@/lib/db/schema');
+      row = db.select().from(milestones).where(eq(milestones.id, opts.id)).get();
+      break;
+    }
+    case 'users': {
+      // This branch is only safe for action='member:manage'. Do not extend it
+      // to baby-scoped actions without adding a baby-aware resource mapping.
+      const { users } = await import('@/lib/db/schema');
+      row = db.select().from(users).where(eq(users.id, opts.id)).get();
+      break;
+    }
     default:
       throw new Error(`unsupported table: ${opts.table}`);
   }
@@ -82,6 +94,10 @@ export async function loadAndAssertTarget<R = unknown>(
           authorId: target.authorId,
           deletedBy: target.deletedBy ?? undefined
         };
+      case 'milestones':
+        return {};
+      case 'users':
+        return { targetUserId: target.id };
     }
   };
   const resource = opts.toResource ? opts.toResource(row) : defaultResource(row);
