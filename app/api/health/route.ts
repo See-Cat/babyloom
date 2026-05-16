@@ -5,7 +5,7 @@ import { ensureStartup } from '@/instrumentation.node';
 
 const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
 
-export async function GET() {
+export const GET = async () => {
   try {
     await ensureStartup();
     const { raw } = getDb({ dataDir });
@@ -14,4 +14,4 @@ export async function GET() {
   } catch (err) {
     return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 503 });
   }
-}
+};
