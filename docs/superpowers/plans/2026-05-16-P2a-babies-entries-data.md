@@ -74,7 +74,10 @@ tests/
 - [ ] **Step 1: Append the four tables**
 
 ```typescript
-// At the end of lib/db/schema.ts, after the existing exports:
+// First extend the sqlite-core import:
+import { sqliteTable, text, integer, index, uniqueIndex, primaryKey } from 'drizzle-orm/sqlite-core';
+
+// Then append at the end of lib/db/schema.ts, after the existing exports:
 
 export const entries = sqliteTable(
   'entries',
@@ -124,7 +127,7 @@ export const entryMilestones = sqliteTable(
       .references(() => milestones.id, { onDelete: 'cascade' })
   },
   (t) => ({
-    pk: uniqueIndex('pk_entry_milestones').on(t.entryId, t.milestoneId)
+    pk: primaryKey({ columns: [t.entryId, t.milestoneId] })
   })
 );
 
@@ -143,7 +146,7 @@ export const entryMedia = sqliteTable(
     attachedAt: integer('attached_at').notNull()
   },
   (t) => ({
-    pk: uniqueIndex('pk_entry_media').on(t.entryId, t.mediaId),
+    pk: primaryKey({ columns: [t.entryId, t.mediaId] }),
     byMedia: index('ix_entry_media_media').on(t.mediaId)
   })
 );
@@ -212,7 +215,8 @@ export interface LoadAndAssertOptions {
 
 ```typescript
 // Inside loadAndAssertTarget, replace the switch:
-import { entries } from '@/lib/db/schema';
+// Extend the existing schema import to include entries.
+import { babies, entries } from '@/lib/db/schema';
 
 // ...
 switch (opts.table) {
@@ -220,7 +224,27 @@ switch (opts.table) {
     row = db.select().from(babies).where(eq(babies.id, opts.id)).get();
     break;
   case 'entries':
-    row = db.select().from(entries).where(eq(entries.id, opts.id)).get();
+    row = db
+      .select({
+        id: entries.id,
+        babyId: entries.babyId,
+        authorId: entries.authorId,
+        content: entries.content,
+        occurredAt: entries.occurredAt,
+        status: entries.status,
+        createdAt: entries.createdAt,
+        updatedAt: entries.updatedAt,
+        deletedAt: entries.deletedAt,
+        deletedBy: entries.deletedBy,
+        babyStatus: babies.status
+      })
+      .from(entries)
+      .innerJoin(babies, eq(babies.id, entries.babyId))
+      .where(eq(entries.id, opts.id))
+      .get();
+    if (row && row.babyStatus !== 'active') {
+      row = null;
+    }
     break;
   default:
     throw new Error(`unsupported table: ${opts.table}`);
@@ -248,7 +272,13 @@ After the existing babies tests, append:
 ```typescript
 describe('loadAndAssertTarget — entries', () => {
   let dataDir: string;
-  let ctx: { ownerId: string; activeEntryId: string; trashedEntryId: string; babyId: string };
+  let ctx: {
+    ownerId: string;
+    babyId: string;
+    activeEntryId: string;
+    trashedEntryId: string;
+    hiddenByParentEntryId: string;
+  };
 
   beforeEach(async () => {
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-target-entries-'));
@@ -292,15 +322,28 @@ describe('loadAndAssertTarget — entries', () => {
     });
     expect(row.id).toBe(ctx.trashedEntryId);
   });
+
+  it('NotFoundError for active entry under trashed baby', async () => {
+    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    await expect(
+      loadAndAssertTarget({
+        id: ctx.hiddenByParentEntryId,
+        table: 'entries',
+        allowedStatuses: ['active'],
+        requirePermission: { userId: ctx.ownerId, action: 'entry:read' },
+        dataDir
+      })
+    ).rejects.toThrow(/not_found/);
+  });
 });
 ```
 
 - [ ] **Step 3: Extract a shared seed helper**
 
-Create `tests/lib/permissions/_seed.ts` to share the "owner + baby + (active+trashed) entries" fixture across tests:
+Create `tests/lib/permissions/_seed.ts` to share the "owner + baby + (active+trashed) entries + entry hidden by trashed parent baby" fixture across tests:
 
 ```typescript
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { join } from 'node:path';
 
@@ -334,31 +377,44 @@ app:
   const family = db.select().from(families).all()[0];
 
   const babyId = randomUUID();
+  const trashedBabyId = randomUUID();
   const now = Date.now();
-  db.insert(babies).values({
-    id: babyId, familyId: family.id, name: 'Baby A',
-    birthday: '2024-01-01', gender: 'girl',
-    status: 'active', createdAt: now, updatedAt: now
-  }).run();
+  db.insert(babies).values([
+    {
+      id: babyId, familyId: family.id, name: 'Baby A',
+      birthday: '2024-01-01', gender: 'girl',
+      status: 'active', createdAt: now, updatedAt: now
+    },
+    {
+      id: trashedBabyId, familyId: family.id, name: 'Baby T',
+      birthday: '2024-01-01', gender: 'boy',
+      status: 'trashed', createdAt: now, updatedAt: now,
+      deletedAt: now, deletedBy: owner.id
+    }
+  ]).run();
 
   const activeEntryId = randomUUID();
   const trashedEntryId = randomUUID();
+  const hiddenByParentEntryId = randomUUID();
   db.insert(entries).values([
     { id: activeEntryId, babyId, authorId: owner.id, content: 'active',
       occurredAt: now, status: 'active', createdAt: now, updatedAt: now },
     { id: trashedEntryId, babyId, authorId: owner.id, content: 'trashed',
       occurredAt: now, status: 'trashed', createdAt: now, updatedAt: now,
-      deletedAt: now, deletedBy: owner.id }
+      deletedAt: now, deletedBy: owner.id },
+    { id: hiddenByParentEntryId, babyId: trashedBabyId, authorId: owner.id,
+      content: 'hidden by parent', occurredAt: now, status: 'active',
+      createdAt: now, updatedAt: now }
   ]).run();
 
-  return { ownerId: owner.id, babyId, activeEntryId, trashedEntryId };
+  return { ownerId: owner.id, babyId, activeEntryId, trashedEntryId, hiddenByParentEntryId };
 }
 ```
 
 - [ ] **Step 4: Run tests**
 
 Run: `pnpm test tests/lib/permissions/target-loaders.test.ts`
-Expected: 6 (existing babies tests) + 3 (new entries tests) = 9 passing.
+Expected: 6 (existing babies tests) + 4 (new entries tests) = 10 passing.
 
 - [ ] **Step 5: Commit**
 
@@ -390,9 +446,12 @@ import { assertPermission } from './assert';
 export interface WithAuthorizedActionOpts {
   action: Action;
   // For action-scoped permissions that need a resource shape derived from
-  // the request (e.g. POST /api/babies with no id — pass undefined; the
-  // role/ownership matrix handles owner-only baby:write).
-  resolveResource?: (req: NextRequest) => Promise<PermissionResource | undefined>;
+  // the request and trusted session user (e.g. POST /api/entries creates a
+  // self-authored entry, so pass { authorId: userId }).
+  resolveResource?: (
+    req: NextRequest,
+    userId: string
+  ) => Promise<PermissionResource | undefined>;
 }
 
 // Wraps a list / create / other non-resource API route. Pipeline:
@@ -419,7 +478,7 @@ export function withAuthorizedAction(opts: WithAuthorizedActionOpts) {
           throw e;
         }
 
-        const resource = opts.resolveResource ? await opts.resolveResource(req) : undefined;
+        const resource = opts.resolveResource ? await opts.resolveResource(req, userId) : undefined;
         await assertPermission(userId, opts.action, resource);
 
         return await handler(req, userId);
@@ -436,7 +495,7 @@ export function withAuthorizedAction(opts: WithAuthorizedActionOpts) {
 
 ```typescript
 // tests/lib/permissions/action-template.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -457,6 +516,11 @@ describe('withAuthorizedAction', () => {
     process.env.BABYLOOM_DATA_DIR = dataDir;
   });
 
+  afterEach(() => {
+    vi.doUnmock('@/lib/permissions/session');
+    vi.resetModules();
+  });
+
   it('401 when no session', async () => {
     vi.doMock('@/lib/permissions/session', () => ({
       getSessionUserId: async () => {
@@ -468,7 +532,6 @@ describe('withAuthorizedAction', () => {
     const route = withAuthorizedAction({ action: 'baby:read' })(async () => new Response('x'));
     const res = await route(mockReq());
     expect(res.status).toBe(401);
-    vi.doUnmock('@/lib/permissions/session');
   });
 
   it('200 for owner on baby:write action', async () => {
@@ -483,7 +546,19 @@ describe('withAuthorizedAction', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.userId).toBe(ctx.ownerId);
-    vi.doUnmock('@/lib/permissions/session');
+  });
+
+  it('passes trusted userId into resolveResource', async () => {
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    const { withAuthorizedAction } = await import('@/lib/permissions/action-template');
+    const route = withAuthorizedAction({
+      action: 'entry:write',
+      resolveResource: async (_req, userId) => ({ authorId: userId })
+    })(async () => Response.json({ ok: true }));
+    const res = await route(mockReq());
+    expect(res.status).toBe(200);
   });
 
   it('404 (not 403) when stranger tries baby:write', async () => {
@@ -496,7 +571,6 @@ describe('withAuthorizedAction', () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
-    vi.doUnmock('@/lib/permissions/session');
   });
 });
 ```
@@ -504,7 +578,7 @@ describe('withAuthorizedAction', () => {
 - [ ] **Step 3: Run tests**
 
 Run: `pnpm test tests/lib/permissions/action-template.test.ts`
-Expected: 3 passing.
+Expected: 4 passing.
 
 - [ ] **Step 4: Commit**
 
@@ -543,18 +617,19 @@ notWrapped:
 
 - [ ] **Step 2: Add fixture #10 — list endpoint with withAuthorizedAction must PASS**
 
-In the Task 16 smoke script (P1 plan), the implementer should remember that running it now should still pass all existing fixtures plus this new one. The plan documents it; the implementer adds the case to whatever local smoke script they maintain:
+Create a temporary API route that uses `withAuthorizedAction`, run lint, then remove the temporary route:
 
 ```bash
+mkdir -p app/api/_rule_smoke
 cat > app/api/_rule_smoke/route.ts <<'EOF'
 import { withAuthorizedAction } from '@/lib/permissions/action-template';
 export const GET = withAuthorizedAction({ action: 'baby:read' })(async () => new Response('list'));
 EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "OK: 10 action-template-positive passed" || echo "FAIL: 10"
+pnpm lint app/api/_rule_smoke/route.ts
 rm -rf app/api/_rule_smoke
 ```
 
-Expected: `OK: 10`.
+Expected: lint exits 0.
 
 - [ ] **Step 3: Commit**
 
@@ -689,7 +764,8 @@ git commit -m "feat(P2a): GET /api/babies (list) + POST /api/babies (owner-only 
 // Add to the existing file's imports:
 import { z } from 'zod';
 import { jsonBadRequest } from '@/lib/permissions/responses';
-import { eq } from 'drizzle-orm'; // already imported in P1 sample — adjust if needed
+// Extend the existing drizzle import to include and:
+import { eq, and } from 'drizzle-orm';
 
 const patchSchema = z.object({
   name: z.string().min(1).max(50).optional(),
@@ -814,9 +890,6 @@ export const POST = withAuthorizedResource({
   // by row but become invisible via JOIN filtering in their list endpoints.
   // No cascading state change here.
   const now = Date.now();
-  // userId is enforced server-side via session; pull from a future loader if needed.
-  // For now, deletedBy is the owner who triggered (the only role allowed by matrix).
-  // Read it from session for completeness:
   const { getSessionUserId } = await import('@/lib/permissions/session');
   const userId = await getSessionUserId(_req);
   db.update(babies)
@@ -895,7 +968,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
-import { entries, babies, familyMembers } from '@/lib/db/schema';
+import { entries, babies } from '@/lib/db/schema';
 import { withAuthorizedAction } from '@/lib/permissions/action-template';
 import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
@@ -958,7 +1031,14 @@ export const GET = withAuthorizedAction({ action: 'baby:read' })(async (req, use
 
 // POST /api/entries — editor or owner; uses authorId == userId per matrix.
 // Spec §5.5.1: babyId is a target field — server loads + verifies + uses DB id.
-export const POST = withAuthorizedAction({ action: 'entry:write' })(async (req, userId) => {
+export const POST = withAuthorizedAction({
+  action: 'entry:write',
+  resolveResource: async (_req, userId) => {
+    // Create-time entry:write is self-authored; the handler below also forces
+    // authorId=userId at insert time.
+    return { authorId: userId };
+  }
+})(async (req, userId) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -1003,59 +1083,16 @@ export const POST = withAuthorizedAction({ action: 'entry:write' })(async (req, 
 });
 ```
 
-> The `withAuthorizedAction` for POST uses action `entry:write` without a resource — the matrix path will reject viewer (no entry:write at all). Editor passes because the matrix branch checks `authorId === userId`, but here we don't have a resource to pass — so we need to refine the assertion. Actually rethink:
->
-> `entry:write` for editor requires `authorId === userId`. On CREATE the row doesn't exist yet — there is no authorId to compare. The intent is "editor can create their own entries" → the resource shape is `{ authorId: userId }` (self-authored).
->
-> Pass that explicitly via `resolveResource`:
-
-Update the POST `withAuthorizedAction` call:
-
-```typescript
-export const POST = withAuthorizedAction({
-  action: 'entry:write',
-  resolveResource: async (_req) => {
-    // For create: the entry will be self-authored. Pass authorId === userId so
-    // the matrix's "editor only if authorId===userId" branch resolves true.
-    // We can't easily get userId here (resolveResource doesn't see it), so
-    // instead bypass: leave resource undefined and let editor's "authorId
-    // required" check fail. But that blocks create entirely.
-    //
-    // Solution: matrix has a separate case for entry:write WITHOUT resource =
-    // create-time — allowed for editor (because by definition authorId is
-    // self). Add this special-case in assert.ts.
-    return undefined;
-  }
-})(/* handler ... */);
-```
-
-Actually it's cleaner to keep `resolveResource` simple and add a one-line carve-out in `checkOwnershipMatrix`. **Apply this carve-out as part of Task 9** — modify `lib/permissions/assert.ts` so:
-
-```typescript
-case 'entry:write':
-case 'entry:trash':
-  if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_write');
-  // Carve-out: entry:write with no resource = create-time. Editor self-authors.
-  if (!resource && action === 'entry:write') return;
-  if (!resource?.authorId || resource.authorId !== userId)
-    throw new ForbiddenError(action, 'editor_not_author');
-  return;
-```
-
-> **NOTE for implementer**: this carve-out is intentional — create-time has no authorId to compare against, and the server forces `authorId = userId` when inserting. The matrix coverage already includes "editor cannot edit/trash others' entries" via the trash/update endpoints which DO pass authorId.
-
-- [ ] **Step 2: Patch `lib/permissions/assert.ts`** with the carve-out above.
-
-- [ ] **Step 3: Lint + typecheck**
+- [ ] **Step 2: Lint + typecheck**
 
 Run: `pnpm lint app/api/entries/route.ts && pnpm typecheck`
 Expected: 0 errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add app/api/entries/route.ts lib/permissions/assert.ts
-git commit -m "feat(P2a): GET /api/entries (per-baby) + POST /api/entries (editor+) + create-time carve-out"
+git add app/api/entries/route.ts
+git commit -m "feat(P2a): GET /api/entries (per-baby) + POST /api/entries (editor+)"
 ```
 
 ---
@@ -1068,19 +1105,19 @@ git commit -m "feat(P2a): GET /api/entries (per-baby) + POST /api/entries (edito
 - [ ] **Step 1: Write the route**
 
 ```typescript
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
-import { entries, babies } from '@/lib/db/schema';
+import { entries, babies, entryMilestones, entryMedia } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { jsonBadRequest, jsonNotFound } from '@/lib/permissions/responses';
+import { jsonBadRequest } from '@/lib/permissions/responses';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
   : resolve(process.cwd(), 'data');
 
-async function loadEntry(id: string) {
+async function loadEntryWithActiveBaby(id: string) {
   const { db } = getDb({ dataDir });
   // §6A.4 parent-chain JOIN: surface baby.status so the wrapper can collapse
   // "trashed baby" to 404 (we still call getStatus on entry.status; we also
@@ -1108,6 +1145,31 @@ async function loadEntry(id: string) {
   return row;
 }
 
+async function loadEntryForPurge(id: string) {
+  const { db } = getDb({ dataDir });
+  // §6A.4 allows entry purge when parent baby is active or trashed.
+  const row = db
+    .select({
+      id: entries.id,
+      babyId: entries.babyId,
+      authorId: entries.authorId,
+      content: entries.content,
+      occurredAt: entries.occurredAt,
+      status: entries.status,
+      deletedBy: entries.deletedBy,
+      createdAt: entries.createdAt,
+      updatedAt: entries.updatedAt,
+      babyStatus: babies.status
+    })
+    .from(entries)
+    .innerJoin(babies, eq(babies.id, entries.babyId))
+    .where(eq(entries.id, id))
+    .get();
+  if (!row) return null;
+  if (row.babyStatus !== 'active' && row.babyStatus !== 'trashed') return null;
+  return row;
+}
+
 const toEntryResource = (row: any) => ({
   babyId: row.babyId,
   entryId: row.id,
@@ -1118,7 +1180,7 @@ const toEntryResource = (row: any) => ({
 // GET /api/entries/[id]
 export const GET = withAuthorizedResource({
   action: 'entry:read',
-  loader: loadEntry,
+  loader: loadEntryWithActiveBaby,
   getStatus: (row) => row.status,
   allowedStatuses: ['active'],
   toResource: toEntryResource
@@ -1142,7 +1204,7 @@ const patchSchema = z.object({
 // PATCH /api/entries/[id] — editor+owner per matrix (editor: own only via authorId check)
 export const PATCH = withAuthorizedResource({
   action: 'entry:write',
-  loader: loadEntry,
+  loader: loadEntryWithActiveBaby,
   getStatus: (row) => row.status,
   allowedStatuses: ['active'],
   toResource: toEntryResource
@@ -1167,12 +1229,14 @@ export const PATCH = withAuthorizedResource({
 // DELETE /api/entries/[id] — owner only purge (entry:purge in OWNER_ONLY_ACTIONS)
 export const DELETE = withAuthorizedResource({
   action: 'entry:purge',
-  loader: loadEntry,
+  loader: loadEntryForPurge,
   getStatus: (row) => row.status,
   allowedStatuses: ['trashed'], // must soft-delete first
   toResource: toEntryResource
 })(async (_req, _ctx, row) => {
   const { db } = getDb({ dataDir });
+  db.delete(entryMilestones).where(eq(entryMilestones.entryId, row.id)).run();
+  db.delete(entryMedia).where(eq(entryMedia.entryId, row.id)).run();
   db.update(entries)
     .set({ status: 'purged', updatedAt: Date.now() })
     .where(eq(entries.id, row.id))
@@ -1416,7 +1480,7 @@ export default async function HomePage() {
     .from(familyMembers)
     .where(eq(familyMembers.userId, session.user.id))
     .get();
-  if (!member) redirect('/login'); // shouldn't happen — bootstrap ensures this
+  if (!member) redirect('/login');
 
   const activeBabies = db
     .select({ id: babies.id })
@@ -1738,7 +1802,85 @@ git commit -m "feat(P2a): entry detail page (read-only)"
 
 ---
 
-## Task 17: E2E — main flow
+## Task 17: Update existing E2E expectations + isolation helpers
+
+**Why:** P2a changes `/` from a static post-login page into redirect logic, so the P0 login E2E expectation must change. P2a also adds more E2E specs that mutate babies/entries; tests must not depend on Playwright file execution order.
+
+**Files:**
+- Modify: `tests/e2e/login.spec.ts`
+- Modify: `tests/e2e/permissions.spec.ts`
+- Modify: `tests/e2e/fixtures.ts`
+
+- [ ] **Step 1: Update the successful-login expectation**
+
+In `tests/e2e/login.spec.ts`, replace the old home-page assertion:
+
+```typescript
+await expect(page).toHaveURL('/');
+await expect(page.getByRole('heading', { name: 'Babyloom' })).toBeVisible();
+```
+
+with:
+
+```typescript
+await page.waitForURL(/\/(onboarding\/baby|timeline)$/);
+await expect(page.getByRole('heading', { name: /第一个宝宝|时间线/ })).toBeVisible();
+```
+
+- [ ] **Step 2: Update permissions E2E post-login waits**
+
+In `tests/e2e/permissions.spec.ts`, replace each post-login wait:
+
+```typescript
+await page.waitForURL('/');
+```
+
+with:
+
+```typescript
+await page.waitForURL('**/timeline');
+```
+
+`seedE2eExtras()` creates an active baby before these tests, so `/` should now resolve to `/timeline`.
+
+- [ ] **Step 3: Add an E2E domain-data reset helper**
+
+Append this helper to `tests/e2e/fixtures.ts`:
+
+```typescript
+export async function resetE2eDomainData() {
+  const dataDir = resolve(process.cwd(), 'test-data/e2e');
+  process.env.BABYLOOM_DATA_DIR = dataDir;
+
+  const { resetDbForTesting, getDb } = await import('../../lib/db/client');
+  resetDbForTesting();
+  const { db } = getDb({ dataDir });
+  const { babies, babyMemberPermissions, entries, entryMilestones, entryMedia } =
+    await import('../../lib/db/schema');
+
+  db.delete(entryMedia).run();
+  db.delete(entryMilestones).run();
+  db.delete(entries).run();
+  db.delete(babyMemberPermissions).run();
+  db.delete(babies).run();
+}
+```
+
+- [ ] **Step 4: Run existing E2E smoke**
+
+Run: `pnpm test:e2e tests/e2e/login.spec.ts tests/e2e/permissions.spec.ts`
+Expected: both files pass with the updated redirect behavior.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add tests/e2e/login.spec.ts tests/e2e/permissions.spec.ts tests/e2e/fixtures.ts
+git commit -m "test(P2a): update e2e login expectations and isolate domain data"
+```
+
+---
+
+## Task 18: E2E — main flow
 
 **Files:**
 - Create: `tests/e2e/main-flow.spec.ts`
@@ -1747,11 +1889,13 @@ git commit -m "feat(P2a): entry detail page (read-only)"
 
 ```typescript
 import { test, expect } from '@playwright/test';
+import { resetE2eDomainData } from './fixtures';
 
-// This test relies on the e2e global-setup writing a fresh test-data/e2e with
-// the owner credentials below. P0/P1 already set this up.
+test.describe.serial('main flow: login → onboarding → create baby → write entry → see in timeline', () => {
+  test.beforeAll(async () => {
+    await resetE2eDomainData();
+  });
 
-test.describe('main flow: login → onboarding → create baby → write entry → see in timeline', () => {
   test('owner end-to-end', async ({ page }) => {
     // 1. login
     await page.goto('/login');
@@ -1797,20 +1941,10 @@ test.describe('main flow: login → onboarding → create baby → write entry �
 });
 ```
 
-Note: this test depends on previous test order (it expects a baby to exist after the first test). Either:
-- Run tests in order (Playwright `workers: 1` is already set in P0 config), OR
-- Use `test.describe.serial(...)` to enforce sequencing.
-
-Use `test.describe.serial`:
-
-```typescript
-test.describe.serial('main flow ...', () => { ... });
-```
-
 - [ ] **Step 2: Run e2e**
 
 Run: `pnpm test:e2e`
-Expected: All P0 + P1 + P2a tests pass (9 existing + 2 new main-flow = 11).
+Expected: All P0 + P1 + P2a tests pass. Main-flow resets only babies/entries domain data, then verifies fresh onboarding and same-session second login behavior.
 
 - [ ] **Step 3: Commit**
 
@@ -1821,13 +1955,13 @@ git commit -m "test(P2a): E2E main flow login→onboarding→entry"
 
 ---
 
-## Task 18: API E2E for babies + entries + trash + restore
+## Task 19: API E2E for babies + entries CRUD + trash + restore + purge
 
 **Files:**
 - Create: `tests/e2e/babies.spec.ts`
 - Create: `tests/e2e/entries.spec.ts`
 
-- [ ] **Step 1: Babies API spec — list / create / trash / restore / purge**
+- [ ] **Step 1: Babies API spec — list / create / patch / trash / restore / purge**
 
 ```typescript
 // tests/e2e/babies.spec.ts
@@ -1867,6 +2001,16 @@ test.describe.serial('babies API', () => {
     expect(body.babies.some((b: any) => b.id === babyId)).toBe(true);
   });
 
+  test('PATCH /api/babies/[id] updates fields', async ({ request }) => {
+    const res = await request.patch(`/api/babies/${babyId}`, {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { name: 'API Baby Updated' }
+    });
+    expect(res.status()).toBe(200);
+    const body = await res.json();
+    expect(body.name).toBe('API Baby Updated');
+  });
+
   test('soft-delete moves baby out of list', async ({ request }) => {
     const res = await request.post(`/api/babies/${babyId}/trash`, { headers: { cookie } });
     expect(res.status()).toBe(200);
@@ -1887,10 +2031,20 @@ test.describe.serial('babies API', () => {
     const res = await request.delete(`/api/babies/${babyId}`, { headers: { cookie } });
     expect(res.status()).toBe(404); // status gate rejects active
   });
+
+  test('purge succeeds after trash when no active child entries remain', async ({ request }) => {
+    const trash = await request.post(`/api/babies/${babyId}/trash`, { headers: { cookie } });
+    expect(trash.status()).toBe(200);
+    const res = await request.delete(`/api/babies/${babyId}`, { headers: { cookie } });
+    expect(res.status()).toBe(200);
+    const list = await request.get('/api/babies', { headers: { cookie } });
+    const body = await list.json();
+    expect(body.babies.some((b: any) => b.id === babyId)).toBe(false);
+  });
 });
 ```
 
-- [ ] **Step 2: Entries API spec — list / create / trash / restore**
+- [ ] **Step 2: Entries API spec — list / create / patch / trash / restore / purge**
 
 ```typescript
 // tests/e2e/entries.spec.ts
@@ -1911,10 +2065,13 @@ test.describe.serial('entries API', () => {
 
   test.beforeAll(async ({ request }) => {
     cookie = await signInAsOwner(request);
-    // Find any baby in the family — created by earlier tests / E2E baby
-    const list = await request.get('/api/babies', { headers: { cookie } });
-    const body = await list.json();
-    babyId = body.babies[0].id;
+    const baby = await request.post('/api/babies', {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { name: 'Entries API Baby', birthday: '2024-07-01', gender: 'other' }
+    });
+    expect(baby.status()).toBe(201);
+    const body = await baby.json();
+    babyId = body.id;
   });
 
   test('create entry', async ({ request }) => {
@@ -1942,8 +2099,20 @@ test.describe.serial('entries API', () => {
     expect(body.content).toBe('hello world');
   });
 
+  test('PATCH single entry', async ({ request }) => {
+    const res = await request.patch(`/api/entries/${entryId}`, {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { content: 'hello world edited' }
+    });
+    expect(res.status()).toBe(200);
+    const get = await request.get(`/api/entries/${entryId}`, { headers: { cookie } });
+    const body = await get.json();
+    expect(body.content).toBe('hello world edited');
+  });
+
   test('trash removes from list', async ({ request }) => {
-    await request.post(`/api/entries/${entryId}/trash`, { headers: { cookie } });
+    const trash = await request.post(`/api/entries/${entryId}/trash`, { headers: { cookie } });
+    expect(trash.status()).toBe(200);
     const list = await request.get(`/api/entries?babyId=${babyId}`, { headers: { cookie } });
     const body = await list.json();
     expect(body.entries.some((e: any) => e.id === entryId)).toBe(false);
@@ -1960,6 +2129,15 @@ test.describe.serial('entries API', () => {
     const list = await request.get(`/api/entries?babyId=${babyId}`, { headers: { cookie } });
     const body = await list.json();
     expect(body.entries.some((e: any) => e.id === entryId)).toBe(true);
+  });
+
+  test('purge succeeds after trash', async ({ request }) => {
+    const trash = await request.post(`/api/entries/${entryId}/trash`, { headers: { cookie } });
+    expect(trash.status()).toBe(200);
+    const res = await request.delete(`/api/entries/${entryId}`, { headers: { cookie } });
+    expect(res.status()).toBe(200);
+    const get = await request.get(`/api/entries/${entryId}`, { headers: { cookie } });
+    expect(get.status()).toBe(404);
   });
 });
 ```
@@ -1981,8 +2159,8 @@ git commit -m "test(P2a): API E2E for babies + entries CRUD + status gating"
 ## P2a Acceptance Checklist
 
 - [ ] `pnpm typecheck` exits 0
-- [ ] `pnpm test` ≥ P1's 37 + Task 4 (3 action-template) + Task 3 (3 entries target-loader) = **43 passing**
-- [ ] `pnpm test:e2e` — P1's 9 + P2a's main-flow (2) + babies (5) + entries (6) = **22 passing**
+- [ ] `pnpm test` ≥ P1's 37 + Task 4 (4 action-template) + Task 3 (4 entries target-loader) = **45 passing**
+- [ ] `pnpm test:e2e` — P1's 9 + P2a's main-flow (2) + babies (7) + entries (8) = **26 passing**
 - [ ] `pnpm lint` — 0 errors; lint negative fixtures 1-9 + new fixture 10 (`withAuthorizedAction` positive) all behave as documented
 - [ ] Fresh boot with no babies → owner logs in → lands on `/onboarding/baby` (not 404, not blank)
 - [ ] After onboarding → next login → `/timeline` directly (no onboarding flash)
