@@ -624,15 +624,29 @@ data/media/
 - 唯一索引为 **partial unique**:`UNIQUE(babyId, contentHash) WHERE status='ready'`
 - pending/processing 的 row 不阻塞新 row 插入,仅通过 `clientUploadId` 匹配判断"同一请求重试"
 
+**关键信任边界**(Codex 第八轮 finding #1/#2 修法):
+- **客户端声明的 `contentHash` 永不作权威**:服务端必须自己流式 hash 上传字节,以服务端计算结果为准。若客户端 `contentHash` 与服务端结果不一致 → 422,**绝不进入 dedupe 分支**
+- **客户端声明的 `mimeType` 永不作权威**:服务端必须用 Sharp / ffprobe 嗅探真实容器格式 + 校验白名单。存入 DB 的 `mimeType` 是服务端嗅探结果,服务输出时 `Content-Type` 也以此为准(见 §6.3)
+- **Dedupe 副作用必须在服务端验证哈希之后**:任何 `INSERT OR IGNORE INTO entry_media`、`200 deduplicated: true` 这类"承认你拥有此文件"的响应,只能在服务端已收完整字节并 hash 对账后才允许发出
+- **以 mediaId attach 不走 upload**:若客户端已知某 mediaId 想挂到 entry 上(不重新上传字节),走 §6.2.1 专用端点;upload 端点不接受"只声明哈希不上传字节"的语义
+
+**MIME 白名单**(实现端硬编码,任何不在表内的格式 → 422):
+
+| 类型 | 允许的容器 / 嗅探结果 | 备注 |
+|---|---|---|
+| photo | `image/jpeg` / `image/png` / `image/webp` / `image/heic` / `image/heif` | Sharp `metadata()` 读出的 `format` 反推 |
+| video | `video/mp4` / `video/quicktime` | ffprobe `format_name` 反推 |
+
+**显式拒绝**:`image/svg+xml`(SVG = 可执行 XML)、`text/html`、`application/*`、任何 `*/x-*` 实验类型、扩展名为 `.htm/.html/.svg/.xml/.js/.wasm` 的文件(即便嗅探说是图片也拒绝,因双重保险)。
+
 **流程**:
 
 1. **客户端**:
-   - 计算 `contentHash = sha256(file)`
-   - 生成 `clientUploadId = uuidv4()`(本次上传任务的稳定 token,**网络层重试必须复用同一个**)
+   - 生成 `clientUploadId = uuidv4()`(本次上传任务的稳定 token,**网络层重试必须复用同一个**;不再传 `contentHash`,服务端权威)
    - `POST /api/media/upload` multipart:
      - **Target 字段**(用户选择,必传):`babyId`(目标宝宝)、可选 `entryId`(若关联记录)
-     - **请求字段**:`contentHash`, `clientUploadId`, `filename`, `mimeType`, `sizeBytes`, 文件二进制
-     - **绝不接受**:`uploadedBy / authorId / familyId / status` 等 ownership 字段(出现一律忽略,见 §5.5.1)
+     - **请求字段**:`clientUploadId`, `filename`(仅展示用,服务端会单独 sanitize), 文件二进制
+     - **绝不接受**(出现一律忽略,见 §5.5.1):`uploadedBy / authorId / familyId / status / contentHash / mimeType / sizeBytes / width / height / durationSec` — 这些都是服务端权威派生字段
 
 2. **服务端 — 准入**(任何 IO 前,严格按序):
 
@@ -663,44 +677,89 @@ data/media/
    - **跨宝宝校验**:`entry.babyId !== baby.id` → 404(防止挂到别人宝宝下的 entry)
      > 跨家庭由"baby 已通过 step 2.2 校验属于当前 user 的 family"+"entry.babyId === baby.id" 联合隐含,无需额外校验 `entries.familyId`(entries 表不存 familyId,通过 babyId 推导)
    - **权限校验**:`assertPermission(userId, 'entry:write', { entryId, authorId: entry.authorId, babyId: entry.babyId })` — editor 仅能挂到自己作者的 entry 上;owner 任意。失败 → 统一 404
-   - 至此 `entry` row 可信,后续用 `entry.id` 写入 `media.entryId`(绝不直接用 multipart 里的 entryId)
+   - 至此 `entry` row 可信,后续用 `entry.id`(绝不用 multipart 原值)写入 `entry_media.entryId`
 
-   **2.5 Status-aware 去重查询**:`SELECT id, status, clientUploadId, uploadedBy FROM media WHERE babyId=? AND contentHash=? ORDER BY createdAt DESC`
-   - 按命中行的状态分支:
+   **2.5 准入分支(基于 `clientUploadId`,不基于哈希)**:
+   ```sql
+   SELECT id, status, uploadedBy FROM media
+   WHERE clientUploadId = ? AND uploadedBy = ?
+   ```
+   仅按"同一上传任务的网络重试"识别。**不在此处做基于 contentHash 的 dedupe**(因为还没收字节、还没拿到服务端权威 hash)。
 
-   | 命中 row 状态 | 处理 |
+   | 命中状态 | 处理 |
    |---|---|
-   | `ready` | **真去重**:200 返回 `{ mediaId, deduplicated: true }`,不重新落盘。**若提供 entryId**:同事务执行 `INSERT OR IGNORE INTO entry_media (entryId, mediaId, attachedBy, attachedAt)`,实现幂等 attach(Codex 第七轮 finding #2 修法)|
-   | `pending` / `processing` 且 `clientUploadId` 相同 | **同请求重试**:202 `{ mediaId, status, pollUrl }`,客户端轮询;entryId 在最终 commit 时一起 attach |
-   | `pending` / `processing` 且 `clientUploadId` 不同 / 缺失 | **并发独立请求**:继续走新 row(partial index 不阻拦) |
-   | 仅 `failed` / `trashed` / `purged` | **允许重传**:旧行保留作审计,走新 row |
+   | `pending` / `processing` | **同请求重试**:202 `{ mediaId, status, pollUrl }`,客户端轮询,**不再次接收字节** |
+   | `ready` | 上次已成功,直接 200 `{ mediaId, deduplicated: false }`(此次为幂等重发) |
+   | `failed` | 旧行保留作审计,继续走新 row(下面步骤 3) |
    | 无命中 | 走新 row |
 
-3. **服务端 — Stage**(对"走新 row"分支):
-   - 在事务内 `INSERT INTO media (id=uuid, status='pending', babyId, contentHash, clientUploadId, uploadedBy, filename, mimeType, sizeBytes, createdAt)`
-   - 流式写入 `data/media/_staging/<mediaId>/original.<ext>`,边写边算 sha256
-   - 写完校验 hash 与客户端声明一致 → 不一致:删 staging、`status='failed'`、422 返回
+3. **服务端 — Stream + Stage + 服务端权威 hash + MIME 嗅探**(对"走新 row"分支):
+   - 在事务内 `INSERT INTO media (id=uuid, status='pending', babyId, clientUploadId, uploadedBy, filename, createdAt)` —— **`contentHash` / `mimeType` / `sizeBytes` 字段先留空,后面服务端填**
+   - 流式接收 multipart body 文件部分写入 `data/media/_staging/<mediaId>/raw.bin`(扩展名先用中性 `.bin`,等嗅探后再决定),**边写边算 sha256 + 累计 bytes**
+   - 落字节上限阈值(从 config 读,默认 photo 50MB / video 500MB);流式累计超限 → 中止 + 删 staging + `status='failed'` + 413
+   - 写完后:
+     - 服务端 `contentHash := streamingHashResult`、`sizeBytes := streamingBytesResult`
+     - **MIME 嗅探**:
+       - 用 `file-type` 库读首部 magic bytes(避免任何 trust on filename / declared mime)
+       - 若嗅探类型 ∈ MIME 白名单中 photo 集合 → 用 Sharp `metadata()` 二次确认 + 拿 `width/height`,失败 → 422
+       - 若嗅探类型 ∈ video 集合 → 用 ffprobe 确认 + 拿 `width/height/durationSec`,失败 → 422
+       - 不在白名单 → 422,删 staging,`status='failed'`
+     - 服务端 `mimeType := sniffResult`、写 `width/height/durationSec`
+     - 服务端按 sniffMime 派生真实扩展(`.jpg/.png/.webp/.heic/.mp4/.mov`),将 `raw.bin` 改名为 `original.<ext>`
+     - `filename` 字段做 sanitize:strip 路径分隔符 + 截断到 255 字符 + 替换不可打印字符;**注意 `filename` 仅是展示用元数据,服务输出绝不用它构造 Content-Disposition 的 path part 或落盘路径**(落盘路径只用 `mediaId`)
 
-4. **服务端 — Process**(在 staging 内):
+4. **服务端 — 服务端权威 hash 完成后的 dedupe 检查**(关键修法位置):
+
+   现在我们手里持有的是**自己算的** `contentHash`,可以安全 dedupe:
+   ```sql
+   SELECT id, status, uploadedBy FROM media
+   WHERE babyId = ? AND contentHash = ? AND status = 'ready' AND id != ?
+   LIMIT 1
+   ```
+   (`id != ?` 排除本次插入的 pending row)
+
+   | 结果 | 处理 |
+   |---|---|
+   | 命中已有 `ready` row(mediaId = X) | **真 dedupe**(此时已证明持有字节):删 staging、把本次 pending row 标 `status='failed'`(或直接 DELETE,保留 row 也可)。**若提供 entryId**:同事务 `INSERT OR IGNORE INTO entry_media (entryId=entry.id, mediaId=X, attachedBy=userId, attachedAt=now)`。返回 200 `{ mediaId: X, deduplicated: true }` |
+   | 无命中 | 继续步骤 5 处理 |
+
+5. **服务端 — Process**(仅"走新 row 且非 dedupe"分支,在 staging 内):
    - `status='processing'`
-   - Sharp 并行生成 large/thumb;视频用 `ffmpeg-static` 抓 poster;提取 EXIF → `takenAt`
+   - Sharp 并行生成 large/thumb(从 `original.<ext>` 派生);视频抓 poster;提取 EXIF → `takenAt`
    - 任一步失败 → 删 `_staging/<mediaId>/` → `status='failed'` → 5xx 抛错
 
-5. **服务端 — Commit(原子)**:
-   - 确保目标目录存在
-   - 用 `fs.rename` 把 staging 文件移到最终位置(同文件系统原子)
-   - 事务内 `status='ready'`、写 `relativePath`、`width/height/durationSec/takenAt`
-   - **若提供 entryId**:同事务 `INSERT INTO entry_media (entryId, mediaId, attachedBy=userId, attachedAt=now)`(因为是新 row,不会冲突;若极端并发情况下 PK 冲突即 `INSERT OR IGNORE`)
-   - 此刻 partial unique index 才生效;**若此时检测到约束冲突**(极端并发:两个独立请求同一文件同时 commit),保留一个 `ready`,另一个回滚为 `failed`、删 staging,客户端可重试(它会命中 ready 分支真去重 + attach)
+6. **服务端 — Commit(原子)**:
+   - 确保目标目录存在(`data/media/<babyId>/<year>/<month>/<mediaId>/`)
+   - 用 `fs.rename` 把 staging 目录所有文件移到最终位置(同文件系统原子)
+   - 事务内 `status='ready'`、写 `relativePath`、`takenAt`(`width/height/durationSec/contentHash/mimeType/sizeBytes` 已在步骤 3 写入)
+   - **若提供 entryId**:同事务 `INSERT OR IGNORE INTO entry_media (entryId=entry.id, mediaId, attachedBy=userId, attachedAt=now)`
+   - 此刻 partial unique index 才生效;**若此时检测到约束冲突**(极端并发:两个独立请求同一文件同时 commit),保留一个 `ready`,另一个回滚为 `failed`、删 staging,客户端可重试(下次走步骤 4 dedupe 分支 + attach)
 
-6. **进度轮询端点**:`GET /api/media/[id]/status` — 返回 `{ status, progress? }`,供步骤 2 表中 202 场景使用,同样走 §5.7 模板
+7. **进度轮询端点**:`GET /api/media/[id]/status` — 返回 `{ status, progress? }`,供步骤 2.5 表中 202 场景使用,同样走 §5.7 模板
 
-7. **失败恢复 / Reconcile Job**(应用启动 + 每天一次):
+8. **失败恢复 / Reconcile Job**(应用启动 + 每天一次):
    - `status IN ('pending','processing')` 且 `createdAt < now - 1h` → 删 staging、标 `failed`
    - `_staging/` 内无对应 DB row 的目录 → 删
    - 不处理 `trashed`(用户主导,见 §6.5)
 
-8. **对外可见性**:所有业务查询默认 `WHERE status = 'ready'`;`trashed` 仅在垃圾桶 endpoint 可见;`failed` / `purged` / `pending` / `processing` 对用户完全隐藏
+9. **对外可见性**:所有业务查询默认 `WHERE status = 'ready'`;`trashed` 仅在垃圾桶 endpoint 可见;`failed` / `purged` / `pending` / `processing` 对用户完全隐藏
+
+### 6.2.1 Attach existing media to entry(独立端点,Codex 第八轮 finding #1 修法)
+
+不重新上传字节,把**已有的 mediaId** 挂到一个 entry 上,是一个独立语义,不应通过 upload + 客户端哈希实现。
+
+`POST /api/entries/[entryId]/media/[mediaId]/attach`
+
+走 §5.7 `withAuthorizedResource` 模板,**两个 target 都走 loader**:
+
+1. **认证** → 401
+2. **mediaId loader**(§6.3 同款 JOIN babies):`SELECT m.id, m.babyId, m.status, m.uploadedBy, b.status AS babyStatus FROM media m JOIN babies b ON b.id = m.babyId WHERE m.id = ?`;`m.status != 'ready'` OR `b.status != 'active'` → 404;`assertPermission(userId, 'media:read', { mediaId, babyId: m.babyId })`,失败 → 404
+3. **entryId loader**:`SELECT id, babyId, status, authorId FROM entries WHERE id = ?`;非 active → 404;跨宝宝(`entry.babyId !== media.babyId`)→ 404;`assertPermission(userId, 'entry:write', { entryId, authorId, babyId })`,失败 → 404
+4. **写**:`INSERT OR IGNORE INTO entry_media (entryId, mediaId, attachedBy=userId, attachedAt=now)`,返回 200 `{ attached: true, alreadyExisted: <bool> }`
+
+**关键不变量**:此端点**完全不接受 contentHash**,也不能用任何客户端声明字段决定授权。哈希只在 §6.2 的服务端流式计算中出现,从不作为身份/可见性证明。
+
+`DELETE /api/entries/[entryId]/media/[mediaId]/attach`(detach):同上两个 loader + `assertPermission(userId, 'entry:write', ...)` → `DELETE FROM entry_media WHERE entryId=? AND mediaId=?`。媒体本身不动(只断关联)。
 
 ### 6.3 输出流程(走 §5.7 模板 + 父链 join)
 
@@ -719,10 +778,16 @@ data/media/
 - **联合状态闸门**:必须同时 `m.status === 'ready'` **AND** `b.status === 'active'` → 任一失败走 §5.6 统一 404
   > 关键:防止 baby 被软删后,持有 mediaId 的客户端通过直链绕过 timeline/gallery 的父链过滤继续下载照片
 - `size` 参数白名单校验(`thumb|large|original`),非法 → 400
-- 通过授权后才拼绝对路径(从 DB `relativePath`),流式输出:
+- 通过授权后才拼绝对路径(从 DB `relativePath`),流式输出。**响应头硬性要求**(Codex 第八轮 finding #2 修法):
+  - `Content-Type`:**从 DB 中服务端嗅探后存的 `media.mimeType` 读出**,绝不来自客户端 / URL / filename 推断
+  - `X-Content-Type-Options: nosniff`:阻断浏览器内容嗅探兜底
+  - `Content-Security-Policy: default-src 'none'; sandbox`:即便某个 MIME 失误被歧义解释,沙箱化阻断脚本执行(媒体响应不需要任何 JS 上下文)
+  - `Content-Disposition: inline; filename="<sanitized>"` for `size=thumb|large`(画廊内联展示)
+  - `Content-Disposition: attachment; filename="<sanitized>"` for `size=original`(强制下载,防御性 — 即便嗅探漏判,浏览器也不会直接渲染)
   - `Cache-Control: private, max-age=31536000, immutable`
-  - `Content-Type` 从 mime
   - 支持 `Range` 请求
+
+> filename sanitize:strip 控制字符、CR/LF、双引号;按 RFC 5987 用 `filename*=UTF-8''<percent-encoded>` 兼容非 ASCII。绝不让 filename 进入路径拼接(落盘只用 `mediaId`)。
 
 ### 6.3.1 所有 media route loader 统一要求
 
@@ -905,8 +970,9 @@ WHERE e.status = 'active' AND b.status = 'active';
 
 **软删 entry 时**:
 - entry `status='trashed'`
-- 其关联 media `entryId` **不**置 NULL(还原时需要恢复关系)
-- 若 entry 还原 → 关联 media 自动重新挂上
+- 关联的 `entry_media` 行**不**删除(还原时需要恢复关系);仅当 entry **硬删(purge)** 时才级联 `DELETE FROM entry_media WHERE entryId=?`(见 §6A.3)
+- 软删期间 entry detail 查询走父链可见性过滤(`status='active'`),其 entry_media 行自然不被读到
+- 若 entry 还原 → 关联 media 自动重新挂上(因 entry_media 行还在)
 
 **硬删 baby 时**(§6A.3 已说,这里强化):
 - 必须先确认该 baby 下所有 entries/media 已全部 trashed,否则拒绝(409)
@@ -1470,8 +1536,8 @@ services:
 37. **跨宝宝 entryId 上传拒绝**(finding #1):editor 上传时 multipart `babyId=A`,`entryId=<B 宝宝的 entry>` → `entry.babyId !== loaded baby.id` → 404,无 staging,无 DB 写
 38. **trashed entryId 上传拒绝**:multipart entryId 指向已 trashed 的 entry → 404
 39. **未授权 entryId 上传拒绝**:editor1 上传时 multipart 塞 editor2 作者的 entryId → `entry:write` 权限失败 → 404
-40. **合法 entryId 上传成功**:editor 上传带自己作者的 active entryId → media.entryId 写入正确、可在该 entry 详情看到
-41. **无 entryId 上传成功**:multipart 不传 entryId → 上传成功、`media.entryId IS NULL`
+40. **合法 entryId 上传成功**:editor 上传带自己作者的 active entryId → `entry_media (entryId, mediaId)` 行被写入(attachedBy=editor)、可在该 entry 详情看到该 media
+41. **无 entryId 上传成功**:multipart 不传 entryId → 上传成功、`SELECT COUNT(*) FROM entry_media WHERE mediaId=<新 media>` = 0;该 media 仅在画廊可见
 42. **清洗后 DB 无 trashed 元数据**(finding #2):
     - 制造数据:owner 软删 mediaX(filename=`secret.jpg`)+ owner 软删 entryY + owner 软删 babyZ
     - 触发备份 → 拿到 zip → 解压 db
@@ -1501,7 +1567,7 @@ services:
     - 触发备份 → snapshot sanitize 应**成功提交事务**,不抛 FK 错误
     - 验证备份后 DB:
       - babyA、mediaX、entryY 均不在(随父链清理)
-      - babyB 在,mediaW 在,`mediaW.entryId IS NULL`(其 entry 被删但媒体保留)
+      - babyB 在,mediaW 在;`SELECT COUNT(*) FROM entry_media WHERE mediaId=W` = 0(挂载关系被 Stage A2 切;其 entry 被 Stage A3 删;媒体本身保留)
 48. **直链下载越过软删 baby 被拒**(finding #2):
     - editor 持有 mediaX 的 URL,babyA 是 mediaX 的父
     - owner 软删 babyA → `babies.status='trashed'`,mediaX 自身仍 `ready`(独立生命周期)
@@ -1535,6 +1601,32 @@ services:
 57. **硬删 media 时 entry_media 级联**:owner purge mediaX → 事务内 `DELETE FROM entry_media WHERE mediaId=X`、media 状态变 purged、相关 entries 仍 active(详情页不再列出该 media)
 
 58. **裸照片(无 entry)上传与查询**:editor 上传不带 entryId → media 写入,`entry_media` 无新行;画廊正常显示;进入任何 entry 详情都看不到它
+
+**Codex 第八轮新增**(上传信任边界):
+
+59. **客户端伪造 contentHash 不能伪冒拥有**(finding #1 关键):
+    - 现有 ready mediaX 内容 hash = H_real(只有真实文件持有者能算出)
+    - 攻击者 editor2(无 mediaX 访问历史)POST upload,multipart 带 `filename=evil.jpg` + 任意字节内容(其真实 hash ≠ H_real)
+    - **当前 spec 接受**:无 `contentHash` 字段;服务端必收字节流式 hash;不会去查 H_real → 无 dedupe 副作用、无 `entry_media` 行被插入
+    - 即便攻击者凑出了真碰撞文件 → 等同于"持有该字节",dedupe 合法
+60. **不上传字节仅声明哈希被拒**(finding #1):构造 multipart 请求只有 `clientUploadId`/`babyId` 但 file part 为空 → 400 "missing file"
+61. **服务端 hash 与 client 声明 hash 概念分离**:multipart 即便混入 `contentHash` 字段也会被忽略(见 §6.2 step 1 ownership-style 字段列表);抓 DB 中 `media.contentHash` 验证 = sha256(磁盘 original 文件)
+62. **MIME 嗅探拒 SVG**(finding #2):上传一个真 SVG(含 `<script>`)claim 任意 mimeType → file-type 嗅探 → `image/svg+xml` 不在白名单 → 422,无 DB 行(或 row 标 failed),无 staging 残留
+63. **MIME 嗅探拒 HTML 伪装图片**:上传 `<html><script>alert(1)</script></html>` 字节但声明 `mimeType=image/jpeg` + `filename=evil.jpg` → file-type 嗅探得 `text/html` → 422
+64. **MIME 嗅探拒可疑扩展名**:上传真 JPEG 但 filename=`evil.html` → 后处理 sanitize filename + 派生扩展从嗅探 → 最终落盘 `original.jpg` + `media.mimeType='image/jpeg'`;后续 Content-Disposition 也用 sanitized filename
+65. **响应头 nosniff + sandbox + sniffed Content-Type**(finding #2):
+    - 上传一张合法 JPEG → `GET /api/media/X?size=original`
+    - 断言响应头存在:`X-Content-Type-Options: nosniff`、`Content-Security-Policy: default-src 'none'; sandbox`、`Content-Disposition: attachment; filename=...`、`Content-Type: image/jpeg`(从 DB 嗅探结果)
+    - 同一 media `?size=thumb` → `Content-Disposition: inline; ...`(画廊渲染需要)
+66. **Attach 端点独立、拒 contentHash**(finding #1 / §6.2.1):
+    - editor 在两个 entry A、B 间想共享 mediaX(不重传字节)→ `POST /api/entries/B/media/X/attach` → 200
+    - 同一请求若 body 含 `contentHash` 字段 → 被忽略(服务端不读)
+    - editor 对**别人家庭**的 entryC 调 attach → entry loader 404
+    - editor 对**别人宝宝**的 entryD 调 attach(媒体 babyId ≠ entry babyId)→ 404
+    - editor 对 trashed media 调 attach → media loader 联合状态闸门 → 404
+67. **Attach 幂等**:同一 attach 调两次 → 第二次 `alreadyExisted: true`、`entry_media` 仍 1 行
+68. **Detach 端点**:`DELETE /api/entries/A/media/X/attach` → `entry_media` 行没了、media 本体不动、画廊仍可见
+69. **流式上传超限**:在上传中途累计字节超 `maxPhotoBytes` → 中止连接、删 staging、`status='failed'`、返回 413(防止攻击者用大文件耗尽磁盘)
 
 ### 11.4 视觉回归
 
@@ -1594,12 +1686,14 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | **Editor 通过直接 API 还原 owner 软删的内容**(UI 过滤被绕过) | §5.4 矩阵 restore 加 `deletedBy === userId` 约束;§5.5.2 UI 过滤 ≠ API 授权原则;E2E 用例 #34 |
 | **`entryId` 上传时无 loader,可跨宝宝/跨权限挂载** | §5.5.1 Target field 完整枚举表 + 通用 loader 模板;§6.2 step 2.4 显式 entryId loader;E2E 用例 #37-41 |
 | **备份 DB 快照保留 trashed/purged/failed 行元数据** | §10.4 step 4 在 snapshot 上执行 sanitize SQL + VACUUM,与文件清单一一对应;还原前校验清洗不变量;E2E 用例 #42-45 |
-| **Sanitize SQL 误删挂在 trashed entry 上的 ready media** | §10.4 step 4.2 改为对 `media.entryId` 仅 UPDATE NULL,不 DELETE 媒体行;E2E 用例 #46 |
+| **Sanitize SQL 误删挂在 trashed entry 上的 ready media** | §10.4 Stage A2 仅 `DELETE FROM entry_media WHERE entryId IN <将删 entry>`(N:M 模型下断关联不动媒体);媒体本体仅在父 baby trashed 时随 Stage B 走;E2E 用例 #46 |
 | **entryId loader SQL 引用 entries 中不存在的列** | §6.2 step 2.4 & §5.5.1 表统一:entry loader 仅 SELECT `id, babyId, status, authorId`,跨家庭由跨宝宝隐含 |
 | **Sanitize SQL 顺序违反 FK 约束(在 trashed baby 有 ready media 时备份失败)** | §10.4 step 4 重排:先删 trashed baby 下的子,再删自身非干净的子,最后删父 babies;E2E 用例 #47 |
 | **媒体直链下载越过软删 baby**(已外泄 URL 仍可访问 trashed baby 的照片) | §6.3 `loadMediaForRead` 改为 JOIN babies + 联合状态闸门;§6.3.1 所有 media route loader 同款统一;§6A.4 引入 16 项父链强制清单 + 自定义 ESLint rule 拦截;E2E 用例 #48-51 |
 | **Sanitize SQL 漏切 entries 的 inbound FK(entry_milestones / 旧 media.entryId)→ 普通 trashed entry 备份失败** | §10.4 step 4 改为按 **inbound FK 拓扑分 Stage A/B/C** 删除,删每张表前先扫所有引用它的 FK 列;E2E 用例 #52 |
 | **Dedupe 命中 ready 后丢失 entryId attachment 意图(`media.entryId` 单字段限制)** | §3 schema 改为 N:M:新增 `entry_media` join table,删 `media.entryId` 字段;§6.2 dedupe 分支加 `INSERT OR IGNORE INTO entry_media`(幂等 attach);§6A.3 硬删时级联清理 entry_media;一张照片可同时挂多个 entry;E2E 用例 #53-58 |
+| **客户端声明的 contentHash 被当成"持有该文件的证据"→ Dedupe 攻击 oracle / 跨权限挂载** | §6.2 完全删除客户端 `contentHash` 字段,服务端必须流式收字节后自己 hash;dedupe 分支移到 step 4(服务端 hash 完成后);"已有 mediaId 挂 entry"独立成 §6.2.1 `POST /api/entries/[entryId]/media/[mediaId]/attach`,要求 `media:read + entry:write` 双 loader;E2E 用例 #59-61, #66-68 |
+| **客户端声明的 mimeType 被原样存 + 服务输出 → XSS / 内容混淆**(SVG 含 script、HTML 伪装图片) | §6.2 step 3 加 file-type magic-byte 嗅探 + Sharp/ffprobe 二次确认 + 严格白名单(SVG/HTML/JS 一律 422);`media.mimeType` 存服务端嗅探结果;§6.3 输出 `Content-Type` 从 DB sniffed 字段;响应头加 `X-Content-Type-Options: nosniff` + `Content-Security-Policy: default-src 'none'; sandbox` + `original` 下载强制 `Content-Disposition: attachment`;扩展名也从嗅探派生;E2E 用例 #62-65 |
 
 ---
 
@@ -1693,6 +1787,24 @@ PRAGMA temp_store = MEMORY;
 - **inbound FK 全扫**:任何要删的表 T,删除前必须扫整个 schema 找出所有 `FK → T.id` 的列,事先 DELETE / UPDATE 它们;这是"先切子后删父"原则的完整版,不只看 outbound 而要看 inbound
 - **单字段表达 N:M 是 spec 级别错误**:任何"客户端可能同时引用资源 A 和 B 的同一份"的语义,必须用 join table。当出现"dedupe + 不同 target"的冲突时,根因往往是 schema 强制了 1:1
 - **大改 schema 趁早**:N:M 改造在 spec 阶段是改几行 SQL,实施后再改是噩梦;Codex review 把"语义 vs 实现冲突"早暴露出来,值回票价
+
+### 15.9 第八轮(2026-05-16)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| Ready dedupe 信任客户端声明的 `contentHash`(攻击 oracle:可探测哈希存在、跨权限把不属于自己的 media 挂到自己的 entry) | high | §6.2 完全移除客户端 `contentHash` 字段、dedupe 改为服务端流式 hash 完成**之后**才执行(step 4);新增 §6.2.1 `POST /api/entries/[entryId]/media/[mediaId]/attach` 独立端点处理"已有 mediaId 挂载到 entry"语义,要求 `media:read + entry:write` 双 loader,完全不接受哈希;E2E 用例 #59-61, #66-68 |
+| 上传接受客户端声明的 `mimeType` 原样存,服务输出时 `Content-Type` 也用同一字段(SVG/HTML 伪装图片 → XSS / 内容混淆) | high | §6.2 step 3 加 file-type magic-byte 嗅探 + Sharp/ffprobe 二次确认 + 硬编码白名单(SVG/HTML/JS 一律 422);扩展名从嗅探派生;`media.mimeType` 存服务端结果;§6.3 输出头加 `X-Content-Type-Options: nosniff` + `Content-Security-Policy: default-src 'none'; sandbox` + `size=original` 强制 `Content-Disposition: attachment`;E2E 用例 #62-65 |
+| 残留 `media.entryId` 引用(N:M 改造后 §6.2 loader 文字、§6A.5 软删 entry、E2E 用例 #40/#41/#46 还在写老字段) | medium | 全部改为对 `entry_media` 行的操作:§6.2 step 2.4 末尾改"写入 `entry_media.entryId`";§6A.5 改"`entry_media` 行不删除,仅 entry hard purge 时级联";E2E #40/#41/#46 改断言 join 表行而非 media 列 |
+
+**元教训沉淀**:
+- **客户端声明的哈希不是 capability,不是 authorization token**:任何"承认你拥有这份字节"的副作用(dedupe 命中、attach、200 with mediaId)必须等服务端自己流式 hash 之后才允许发出。哈希在客户端只能用作"我猜这是同一个"的提示,在服务端只能作为**已收字节后**的查表键
+- **MIME 嗅探 + 白名单 + nosniff + sandbox 是四件套**,缺一不可。任何一个绕过都可能让浏览器执行存储型 XSS:
+  - 嗅探:阻断 SVG/HTML 伪装图片
+  - 白名单:正向圈定,而非黑名单
+  - `nosniff`:阻断浏览器嗅探兜底
+  - `sandbox`/`Content-Disposition: attachment`:即便前三层失误也不让 JS 在主域执行
+- **上传与挂载是两个语义**:`upload`(送字节)和 `attach`(声明引用)合并到同一个端点必然产生"用客户端字段做权威"的诱惑。拆开后,attach 端点只能用 mediaId 作 target field,与所有其他 target field 走相同的 loader 模板,概念清晰、可审计
+- **"渐进改稿"必须收尾验证(第 3 次出现同类问题)**:第五轮、第七轮、第八轮都暴露过同一模式的残留引用。决定永久原则:**任何数据模型变更必须在提交前做全文 grep**(`grep -n "media\.entryId" spec.md`),且这个 grep 命令本身写进 §10.4 的"Spec 提交前 checklist"
 
 ---
 
