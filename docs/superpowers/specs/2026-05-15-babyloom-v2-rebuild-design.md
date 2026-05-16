@@ -247,30 +247,48 @@ entry_media {
 }
 
 // 媒体文件
+// 状态分两段:
+//   阶段 1(pending/processing/failed):服务端尚未完成嗅探/落盘,派生字段允许 NULL
+//   阶段 2(ready/trashed/purged):服务端已 commit,派生字段必须齐(CHECK 约束)
 media {
   id: text PK,                  // uuid,同时作为文件名
   babyId: text NOT NULL FK,
   uploadedBy: text NOT NULL FK, // 上传者 userId,用于"editor 仅可删自己上传的"判定
-  type: text NOT NULL,          // 'photo' | 'video'
-  filename: text NOT NULL,      // 用户原始文件名(展示用)
-  mimeType: text NOT NULL,
-  sizeBytes: integer NOT NULL,
-  width: integer,
-  height: integer,
-  durationSec: integer,         // 仅视频
-  relativePath: text NOT NULL,  // '<babyId>/<year>/<month>'
-  contentHash: text NOT NULL,   // sha256(原文件),幂等键
+  filename: text NOT NULL,      // 用户原始文件名(展示用),sanitize 后存
   status: text NOT NULL,        // 完整状态机见 §6.5
                                 // 'pending' | 'processing' | 'ready' | 'trashed' | 'purged' | 'failed'
                                 // 仅 ready 对外可见;trashed 仅在垃圾桶 UI 可见
   clientUploadId: text,         // 客户端幂等 token(仅 pending/processing 阶段使用)
-  takenAt: integer,             // 从 EXIF,fallback createdAt
   createdAt: integer NOT NULL,
   deletedAt: integer,           // 进入 trashed 的时间
   deletedBy: text FK,           // 软删触发者
   purgedAt: integer,            // 进入 purged 的时间
   purgedBy: text FK,            // 硬删触发者(owner 或 system)
-  // 见 §3.1 索引:partial UNIQUE 仅对 status='ready' 生效
+
+  // —— 派生字段:pending/processing/failed 阶段允许 NULL,由服务端在 §6.2 step 3-6 填充 ——
+  type: text,                   // 'photo' | 'video' — 嗅探后定
+  mimeType: text,               // 服务端嗅探结果(见 §6.2 step 3 白名单)
+  sizeBytes: integer,           // 服务端流式累计结果
+  contentHash: text,            // 服务端流式 sha256 结果,幂等键
+  width: integer,
+  height: integer,
+  durationSec: integer,         // 仅视频
+  relativePath: text,           // 'media/<babyId>/<year>/<month>/<mediaId>' — commit 时定
+  takenAt: integer,             // 从 EXIF,fallback createdAt
+
+  // —— Status-aware 完整性约束(Codex 第九轮 finding #1 修法) ——
+  CHECK (
+    status IN ('pending', 'processing', 'failed')
+    OR (
+      -- ready / trashed / purged 必须字段齐全
+      type         IS NOT NULL
+      AND mimeType     IS NOT NULL
+      AND sizeBytes    IS NOT NULL
+      AND contentHash  IS NOT NULL
+      AND relativePath IS NOT NULL
+    )
+  )
+  // 见 §3.1 索引:partial UNIQUE 仅对 status='ready' 生效(且因 ready 必有 contentHash,索引可正常构建)
 }
 
 // 会话(better-auth 自动管理)
@@ -694,7 +712,7 @@ data/media/
    | 无命中 | 走新 row |
 
 3. **服务端 — Stream + Stage + 服务端权威 hash + MIME 嗅探**(对"走新 row"分支):
-   - 在事务内 `INSERT INTO media (id=uuid, status='pending', babyId, clientUploadId, uploadedBy, filename, createdAt)` —— **`contentHash` / `mimeType` / `sizeBytes` 字段先留空,后面服务端填**
+   - 在事务内 `INSERT INTO media (id=uuid, status='pending', babyId, clientUploadId, uploadedBy, filename, createdAt)` —— 派生字段 `type / mimeType / sizeBytes / contentHash / width / height / durationSec / relativePath` 留 NULL,符合 §3 schema 中 status-aware CHECK(pending/processing/failed 阶段允许 NULL)
    - 流式接收 multipart body 文件部分写入 `data/media/_staging/<mediaId>/raw.bin`(扩展名先用中性 `.bin`,等嗅探后再决定),**边写边算 sha256 + 累计 bytes**
    - 落字节上限阈值(从 config 读,默认 photo 50MB / video 500MB);流式累计超限 → 中止 + 删 staging + `status='failed'` + 413
    - 写完后:
@@ -730,8 +748,15 @@ data/media/
 
 6. **服务端 — Commit(原子)**:
    - 确保目标目录存在(`data/media/<babyId>/<year>/<month>/<mediaId>/`)
-   - 用 `fs.rename` 把 staging 目录所有文件移到最终位置(同文件系统原子)
-   - 事务内 `status='ready'`、写 `relativePath`、`takenAt`(`width/height/durationSec/contentHash/mimeType/sizeBytes` 已在步骤 3 写入)
+   - 用 `fs.rename` 把 staging 目录所有文件(`original.<ext>` + `large.webp` + `thumb.webp`,视频则 + `poster.webp`)移到最终位置(同文件系统原子)
+   - 事务内一次性写齐 §3 status-aware CHECK 要求的所有派生字段:
+     - `status='ready'`
+     - `type`(photo/video,从步骤 3 嗅探派生)
+     - `mimeType`(步骤 3 嗅探结果)
+     - `sizeBytes`、`contentHash`(步骤 3 流式结果)
+     - `width`、`height`、`durationSec`(步骤 3 metadata)
+     - `relativePath`(`media/<babyId>/<year>/<month>/<mediaId>`)
+     - `takenAt`(EXIF 或 createdAt)
    - **若提供 entryId**:同事务 `INSERT OR IGNORE INTO entry_media (entryId=entry.id, mediaId, attachedBy=userId, attachedAt=now)`
    - 此刻 partial unique index 才生效;**若此时检测到约束冲突**(极端并发:两个独立请求同一文件同时 commit),保留一个 `ready`,另一个回滚为 `failed`、删 staging,客户端可重试(下次走步骤 4 dedupe 分支 + attach)
 
@@ -777,17 +802,32 @@ data/media/
   **绝不读客户端 babyId**
 - **联合状态闸门**:必须同时 `m.status === 'ready'` **AND** `b.status === 'active'` → 任一失败走 §5.6 统一 404
   > 关键:防止 baby 被软删后,持有 mediaId 的客户端通过直链绕过 timeline/gallery 的父链过滤继续下载照片
-- `size` 参数白名单校验(`thumb|large|original`),非法 → 400
-- 通过授权后才拼绝对路径(从 DB `relativePath`),流式输出。**响应头硬性要求**(Codex 第八轮 finding #2 修法):
-  - `Content-Type`:**从 DB 中服务端嗅探后存的 `media.mimeType` 读出**,绝不来自客户端 / URL / filename 推断
-  - `X-Content-Type-Options: nosniff`:阻断浏览器内容嗅探兜底
-  - `Content-Security-Policy: default-src 'none'; sandbox`:即便某个 MIME 失误被歧义解释,沙箱化阻断脚本执行(媒体响应不需要任何 JS 上下文)
-  - `Content-Disposition: inline; filename="<sanitized>"` for `size=thumb|large`(画廊内联展示)
-  - `Content-Disposition: attachment; filename="<sanitized>"` for `size=original`(强制下载,防御性 — 即便嗅探漏判,浏览器也不会直接渲染)
-  - `Cache-Control: private, max-age=31536000, immutable`
-  - 支持 `Range` 请求
+- `size` 参数白名单校验(`thumb|large|original|poster`),非法 → 400
+  - 视频 media 的 `?size=thumb|large` 自动等价于 `?size=poster`(画廊封面)
+  - 图片 media 的 `?size=poster` → 400(无此变体)
+- 通过授权后才拼绝对路径(从 DB `relativePath` + size 决定文件名),流式输出。
 
-> filename sanitize:strip 控制字符、CR/LF、双引号;按 RFC 5987 用 `filename*=UTF-8''<percent-encoded>` 兼容非 ASCII。绝不让 filename 进入路径拼接(落盘只用 `mediaId`)。
+**响应头硬性要求 — Per-variant Content-Type**(Codex 第八轮 finding #2 + 第九轮 finding #2 修法):
+
+派生文件(thumb/large/poster)固定为 WebP(由 Sharp 在 §6.2 step 5 生成,见 §6.2 处理流程),与原图 MIME 解耦。**响应头按 size 派生**:
+
+| `size` 参数 | 实际文件名 | `Content-Type` | `Content-Disposition` |
+|---|---|---|---|
+| `original`(photo) | `original.<sniffed-ext>` | **DB `media.mimeType`**(原图嗅探结果,如 `image/jpeg`) | `attachment; filename*=UTF-8''<sanitized>` |
+| `original`(video) | `original.<sniffed-ext>` | **DB `media.mimeType`**(如 `video/mp4`) | `attachment; filename*=UTF-8''<sanitized>` |
+| `large`(photo only) | `large.webp` | **硬编码 `image/webp`** | `inline; filename*=UTF-8''<sanitized>.webp` |
+| `thumb`(photo only) | `thumb.webp` | **硬编码 `image/webp`** | `inline; filename*=UTF-8''<sanitized>.webp` |
+| `poster`(video only) | `poster.webp` | **硬编码 `image/webp`** | `inline; filename*=UTF-8''<sanitized>.webp` |
+
+> **关键不变量**:`Content-Type` **不是** per-media 属性,而是 **per-variant** 属性。同一个 mediaId 在不同 `size` 下返回不同字节、不同 MIME,缓存键也因此天然分离(URL 里的 `size` 参数即缓存键的一部分)。
+
+**其余响应头**(对所有 variant 通用):
+- `X-Content-Type-Options: nosniff`:阻断浏览器内容嗅探兜底
+- `Content-Security-Policy: default-src 'none'; sandbox`:即便某个 MIME 失误被歧义解释,沙箱化阻断脚本执行(媒体响应不需要任何 JS 上下文)
+- `Cache-Control: private, max-age=31536000, immutable`
+- 支持 `Range` 请求(视频 `original` 必备;图片派生也支持 — Sharp 输出的 WebP 可被 byte range 访问)
+
+> filename sanitize:strip 控制字符、CR/LF、双引号;按 RFC 5987 用 `filename*=UTF-8''<percent-encoded>` 兼容非 ASCII。绝不让 filename 进入路径拼接(落盘只用 `mediaId`)。派生变体的 filename 在用户 filename 后拼 `.webp` 后缀(便于下载场景识别)。
 
 ### 6.3.1 所有 media route loader 统一要求
 
@@ -1628,6 +1668,30 @@ services:
 68. **Detach 端点**:`DELETE /api/entries/A/media/X/attach` → `entry_media` 行没了、media 本体不动、画廊仍可见
 69. **流式上传超限**:在上传中途累计字节超 `maxPhotoBytes` → 中止连接、删 staging、`status='failed'`、返回 413(防止攻击者用大文件耗尽磁盘)
 
+**Codex 第九轮新增**(schema/flow 对账 + per-variant 输出):
+
+70. **Pending row 可插入**(finding #1 反例):用 better-sqlite3 真实 schema + `PRAGMA foreign_keys=ON` + status-aware CHECK 启用,执行 §6.2 step 3 的 `INSERT (id, status='pending', babyId, clientUploadId, uploadedBy, filename, createdAt)` → 成功(派生字段 NULL 被 CHECK 放行)
+71. **Ready row 缺字段被 CHECK 拒**(status-aware CHECK 反向验证):直接 SQL `INSERT (id, status='ready', babyId, uploadedBy, filename, createdAt)`(派生字段全 NULL)→ `SQLITE_CONSTRAINT_CHECK` 抛错,行未插入
+72. **Failed/trashed/purged row 字段完整性矩阵**:
+    - failed 阶段允许 NULL(因为可能在 step 3 嗅探失败时就停)→ INSERT 成功
+    - 由 ready → trashed 转移:派生字段保留(只动 `status` + `deletedAt` + `deletedBy`)→ CHECK 通过
+    - 由 ready → purged 转移:派生字段保留(审计需要)+ 文件被物理删除 → DB CHECK 通过、磁盘 `data/media/<babyId>/.../original.*` 不存在
+73. **Per-variant Content-Type — JPEG 原图**(finding #2 核心):上传 1×1 JPEG → 服务端嗅探 `image/jpeg`,Sharp 派生 `large.webp` / `thumb.webp`
+    - `GET /api/media/X?size=original` → `Content-Type: image/jpeg`、字节是 JPEG 头
+    - `GET /api/media/X?size=large` → `Content-Type: image/webp`、字节是 WebP 头
+    - `GET /api/media/X?size=thumb` → `Content-Type: image/webp`、字节是 WebP 头
+    - 所有三个响应都有 `X-Content-Type-Options: nosniff`
+74. **Per-variant Content-Type — HEIC 原图**:上传 HEIC → DB `mimeType='image/heic'`、Sharp 派生 WebP
+    - `?size=original` → `image/heic`;`?size=thumb` → `image/webp`
+    - 验证 macOS Safari 不会因 nosniff + 错误 MIME 拒绝渲染缩略图
+75. **Per-variant Content-Type — MP4 视频**:上传 MP4 → DB `mimeType='video/mp4'`、ffmpeg 抓 `poster.webp`
+    - `?size=original` → `video/mp4`、支持 Range
+    - `?size=poster` → `image/webp`
+    - `?size=thumb`(视频别名)→ `image/webp`(等同 poster)
+    - `?size=large`(视频别名)→ `image/webp`(等同 poster)
+76. **Per-variant 非法组合 — 图片请求 poster**:`GET /api/media/<photoId>?size=poster` → 400(无此变体)
+77. **缓存键隔离**:对同一 mediaId 连续请求 `?size=original` 和 `?size=thumb` → 客户端缓存(Cache-Control: immutable)按完整 URL key,两份缓存互不污染
+
 ### 11.4 视觉回归
 
 Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
@@ -1694,6 +1758,8 @@ Playwright screenshots,关键页 3 个断点(375 / 768 / 1024):
 | **Dedupe 命中 ready 后丢失 entryId attachment 意图(`media.entryId` 单字段限制)** | §3 schema 改为 N:M:新增 `entry_media` join table,删 `media.entryId` 字段;§6.2 dedupe 分支加 `INSERT OR IGNORE INTO entry_media`(幂等 attach);§6A.3 硬删时级联清理 entry_media;一张照片可同时挂多个 entry;E2E 用例 #53-58 |
 | **客户端声明的 contentHash 被当成"持有该文件的证据"→ Dedupe 攻击 oracle / 跨权限挂载** | §6.2 完全删除客户端 `contentHash` 字段,服务端必须流式收字节后自己 hash;dedupe 分支移到 step 4(服务端 hash 完成后);"已有 mediaId 挂 entry"独立成 §6.2.1 `POST /api/entries/[entryId]/media/[mediaId]/attach`,要求 `media:read + entry:write` 双 loader;E2E 用例 #59-61, #66-68 |
 | **客户端声明的 mimeType 被原样存 + 服务输出 → XSS / 内容混淆**(SVG 含 script、HTML 伪装图片) | §6.2 step 3 加 file-type magic-byte 嗅探 + Sharp/ffprobe 二次确认 + 严格白名单(SVG/HTML/JS 一律 422);`media.mimeType` 存服务端嗅探结果;§6.3 输出 `Content-Type` 从 DB sniffed 字段;响应头加 `X-Content-Type-Options: nosniff` + `Content-Security-Policy: default-src 'none'; sandbox` + `original` 下载强制 `Content-Disposition: attachment`;扩展名也从嗅探派生;E2E 用例 #62-65 |
+| **媒体 schema NOT NULL 派生字段与两阶段上传冲突(pending row 插不进)** | §3 schema 把 `type/mimeType/sizeBytes/contentHash/relativePath/width/height/durationSec` 改为 NULLABLE;加 status-aware `CHECK`:ready/trashed/purged 必须字段齐;§6.2 step 3 显式说明 INSERT 时派生字段留 NULL;step 6 commit 时一次性写齐;E2E 用例 #70-72 |
+| **派生 WebP 缩略图被以原图 MIME 返回 → 浏览器拒渲染 + 缓存污染** | §6.3 输出契约改为 **per-variant Content-Type 表**:`original` 用 DB `mimeType`,`thumb/large/poster` 硬编码 `image/webp`;视频 `?size=thumb\|large` 自动等价 poster;图片请求 poster → 400;E2E 用例 #73-77 |
 
 ---
 
@@ -1805,6 +1871,18 @@ PRAGMA temp_store = MEMORY;
   - `sandbox`/`Content-Disposition: attachment`:即便前三层失误也不让 JS 在主域执行
 - **上传与挂载是两个语义**:`upload`(送字节)和 `attach`(声明引用)合并到同一个端点必然产生"用客户端字段做权威"的诱惑。拆开后,attach 端点只能用 mediaId 作 target field,与所有其他 target field 走相同的 loader 模板,概念清晰、可审计
 - **"渐进改稿"必须收尾验证(第 3 次出现同类问题)**:第五轮、第七轮、第八轮都暴露过同一模式的残留引用。决定永久原则:**任何数据模型变更必须在提交前做全文 grep**(`grep -n "media\.entryId" spec.md`),且这个 grep 命令本身写进 §10.4 的"Spec 提交前 checklist"
+
+### 15.10 第九轮(2026-05-16)— 已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| `media` schema 派生字段(`type/mimeType/sizeBytes/contentHash/relativePath`)NOT NULL,但 §6.2 两阶段上传在 step 3 就 INSERT pending row(派生字段尚未生成)→ 第一次 INSERT 即 NOT NULL violation,整个上传流程跑不起来 | high | §3 schema 派生字段改 NULLABLE + status-aware `CHECK(status IN pending/processing/failed OR <派生字段全非空>)`;§6.2 step 3 显式声明 INSERT 时派生字段留 NULL;step 6 commit 时一次性写齐;E2E 用例 #70-72 |
+| §6.3 规定 `Content-Type` 单读 `media.mimeType`,但 §6.2 step 5 用 Sharp 派生 WebP 缩略图 → JPEG 原图的 `?size=thumb` 会返回 WebP 字节配 `image/jpeg` 头 + nosniff → 浏览器拒渲染、缓存被污染 | high | §6.3 输出契约改为 **per-variant 表**:`original` 用 DB `mimeType`,`thumb/large/poster` 硬编码 `image/webp`;视频 thumb/large 自动等价 poster;图片请求 poster → 400;E2E 用例 #73-77 |
+
+**元教训沉淀**:
+- **Schema 与 flow 必须双向对账,不只是字段名**:每加一个 status 值或改一个写入路径,都要列出该路径在 INSERT/UPDATE 时填的字段集合,与 schema 的 NOT NULL/CHECK 约束对账。`grep` 不够,要把 "INSERT (字段集合) for status X" 列成表,逐项核对。永久原则:**spec 内任何 status 状态机必须配一张"该状态下必填字段表"**
+- **派生资源是独立资源,输出契约必须 per-variant**:`media` 行代表的是 `{original, large, thumb, poster}` 一组字节,不是一份字节。任何"单值"的输出契约(Content-Type、Cache-Control、Content-Disposition)必须先问"这值在派生间是否相同"。若不同,就必须用表格列出来,而不是写一个"`Content-Type` 从 DB 读"的笼统规则
+- **CHECK 约束是免费的不变量**:SQLite CHECK 约束几乎无开销,能把"业务逻辑保证的不变量"提升到 DB 层强制。每次发现"业务上某状态必须有某字段"时,优先用 CHECK,不要靠应用层纪律
 
 ---
 
