@@ -1,7 +1,7 @@
 import { eq, and } from 'drizzle-orm';
 import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getDb } from '@/lib/db/client';
-import { users, accounts } from '@/lib/db/schema';
+import { users, accounts, families, familyMembers } from '@/lib/db/schema';
 import { loadConfig } from '@/lib/config/load';
 
 export interface BootstrapOwnerOptions {
@@ -33,8 +33,10 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
 
   const existing = db.select().from(users).where(eq(users.role, 'owner')).all();
   const now = new Date();
+  const nowMs = Date.now();
   const passwordHash = hashPassword(config.owner.password);
   const internalEmail = ownerInternalEmail(config.owner.username);
+  let ownerUserId: string;
 
   if (existing.length === 0) {
     const userId = randomUUID();
@@ -61,45 +63,94 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
         updatedAt: now
       })
       .run();
-    return;
+    ownerUserId = userId;
+  } else {
+    const owner = existing[0];
+    db.update(users)
+      .set({
+        name: config.owner.nickname,
+        email: internalEmail,
+        username: config.owner.username,
+        updatedAt: now
+      })
+      .where(eq(users.id, owner.id))
+      .run();
+
+    const credAccount = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, owner.id), eq(accounts.providerId, 'credential')))
+      .all();
+    if (credAccount.length === 0) {
+      db.insert(accounts)
+        .values({
+          id: randomUUID(),
+          userId: owner.id,
+          providerId: 'credential',
+          accountId: internalEmail,
+          password: passwordHash,
+          createdAt: now,
+          updatedAt: now
+        })
+        .run();
+    } else {
+      db.update(accounts)
+        .set({
+          accountId: internalEmail,
+          password: passwordHash,
+          updatedAt: now
+        })
+        .where(eq(accounts.id, credAccount[0].id))
+        .run();
+    }
+    ownerUserId = owner.id;
   }
 
-  const owner = existing[0];
-  db.update(users)
-    .set({
-      name: config.owner.nickname,
-      email: internalEmail,
-      username: config.owner.username,
-      updatedAt: now
-    })
-    .where(eq(users.id, owner.id))
-    .run();
-
-  const credAccount = db
-    .select()
-    .from(accounts)
-    .where(and(eq(accounts.userId, owner.id), eq(accounts.providerId, 'credential')))
-    .all();
-  if (credAccount.length === 0) {
-    db.insert(accounts)
+  const existingFamilies = db.select().from(families).all();
+  let familyId: string;
+  if (existingFamilies.length === 0) {
+    familyId = randomUUID();
+    db.insert(families)
       .values({
-        id: randomUUID(),
-        userId: owner.id,
-        providerId: 'credential',
-        accountId: internalEmail,
-        password: passwordHash,
-        createdAt: now,
-        updatedAt: now
+        id: familyId,
+        name: config.family.name,
+        ownerUserId,
+        createdAt: nowMs,
+        updatedAt: nowMs
       })
       .run();
   } else {
-    db.update(accounts)
+    familyId = existingFamilies[0].id;
+    db.update(families)
       .set({
-        accountId: internalEmail,
-        password: passwordHash,
-        updatedAt: now
+        name: config.family.name,
+        ownerUserId,
+        updatedAt: nowMs
       })
-      .where(eq(accounts.id, credAccount[0].id))
+      .where(eq(families.id, familyId))
+      .run();
+  }
+
+  const existingMember = db
+    .select()
+    .from(familyMembers)
+    .where(eq(familyMembers.userId, ownerUserId))
+    .all();
+
+  if (existingMember.length === 0) {
+    db.insert(familyMembers)
+      .values({
+        id: randomUUID(),
+        familyId,
+        userId: ownerUserId,
+        role: 'owner',
+        joinedAt: nowMs
+      })
+      .run();
+  } else {
+    db.update(familyMembers)
+      .set({ familyId, role: 'owner' })
+      .where(eq(familyMembers.id, existingMember[0].id))
       .run();
   }
 }

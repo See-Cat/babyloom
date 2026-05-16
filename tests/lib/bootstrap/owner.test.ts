@@ -128,4 +128,109 @@ app:
     expect(accountRows).toHaveLength(1);
     expect(accountRows[0].accountId).toBe('bob@local.babyloom');
   });
+
+  it('creates exactly one family per config and a family_members row for the owner', async () => {
+    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { families, familyMembers, users } = await import('@/lib/db/schema');
+
+    const fams = db.select().from(families).all();
+    expect(fams).toHaveLength(1);
+    expect(fams[0].name).toBe('Alice Home');
+
+    const owner = db.select().from(users).all()[0];
+    const members = db.select().from(familyMembers).all();
+    expect(members).toHaveLength(1);
+    expect(members[0].familyId).toBe(fams[0].id);
+    expect(members[0].userId).toBe(owner.id);
+    expect(members[0].role).toBe('owner');
+  });
+
+  it('is idempotent across family + family_members too', async () => {
+    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    await bootstrapOwner({ dataDir });
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { families, familyMembers, accounts } = await import('@/lib/db/schema');
+
+    expect(db.select().from(families).all()).toHaveLength(1);
+    expect(db.select().from(familyMembers).all()).toHaveLength(1);
+    expect(
+      db.select().from(accounts).all().filter((a: any) => a.providerId === 'credential')
+    ).toHaveLength(1);
+  });
+
+  it('updates family.name if config.family.name changed', async () => {
+    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    await bootstrapOwner({ dataDir });
+
+    const { clearConfigCache } = await import('@/lib/config/load');
+    clearConfigCache();
+    writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: alice
+  password: longenoughpw
+  nickname: Alice
+family:
+  name: Renamed Family
+app:
+  baseUrl: http://localhost:3000
+  timezone: Asia/Shanghai
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+`);
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { families } = await import('@/lib/db/schema');
+    const fams = db.select().from(families).all();
+    expect(fams).toHaveLength(1);
+    expect(fams[0].name).toBe('Renamed Family');
+  });
+
+  it('after username change, the owner can sign in with the new internal email (Codex round-10 regression)', async () => {
+    const { bootstrapOwner, ownerInternalEmail, verifyPassword } = await import(
+      '@/lib/bootstrap/owner'
+    );
+    await bootstrapOwner({ dataDir });
+
+    const { clearConfigCache } = await import('@/lib/config/load');
+    clearConfigCache();
+    writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: bob
+  password: brandnewpassword
+  nickname: Bob
+family:
+  name: Test Family
+app:
+  baseUrl: http://localhost:3000
+  timezone: Asia/Shanghai
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+`);
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { eq, and } = await import('drizzle-orm');
+    const { db } = getDb({ dataDir });
+    const { users, accounts } = await import('@/lib/db/schema');
+
+    const owner = db.select().from(users).all()[0];
+    expect(owner.username).toBe('bob');
+    expect(owner.email).toBe(ownerInternalEmail('bob'));
+
+    const cred = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, owner.id), eq(accounts.providerId, 'credential')))
+      .get();
+    expect(cred?.password).toBeTruthy();
+    expect(verifyPassword('brandnewpassword', cred!.password!)).toBe(true);
+    expect(verifyPassword('longenoughpw', cred!.password!)).toBe(false);
+  });
 });
