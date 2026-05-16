@@ -1937,6 +1937,20 @@ PRAGMA temp_store = MEMORY;
 - **CI 规则用文本检索是反模式**:任何"静态防线"必须走 AST(或类型系统),substring 检测的判断面无限大、抗噪能力为零。永久原则:**lint rule 一律 AST 实现 + 负向 fixture 套**
 - **Spec ↔ Impl ↔ Plan 三方对账**:写新 plan 前必须 grep 当前真实 schema/接口,不能只读 spec。SPEC 是"应当如此",P0 实施可能已经偏离;P1 plan 若只对 SPEC 写,会与 impl 撕裂。永久原则:**plan 落笔前先 `grep -rn <关键 schema 字段> lib/` 对账真实状态**,并在 plan 头部声明"基于 P0 实施层 X 假设"
 
+### 15.12 第十一轮(2026-05-16)— P1 plan 二复查,已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| Plan Task 16 同时把 `eslint: ^9` 写进依赖却用 `.eslintrc.cjs` 格式 → ESLint 9 默认只读 flat config,`pnpm lint` 直接挂或被人临时绕过,主防线从未真正在 CI 跑过 | high | P1 plan Task 16 改用 `eslint.config.mjs` flat 格式;新增 Step 5 "verify rule actually loaded" 用 `--print-config` 证明 babyloom 规则被加载 |
+| Plan Task 16 AST 规则同时认 `withAuthorizedResource` 包装 **和** body 内裸 `assertPermission` 调用 → 后者无法验证可达性(`if(false)`、post-return 死代码、never-set debug header 都能绕过);全 control-flow analysis 又超出 lint rule 合理边界 | high | P1 plan Task 16 简化为 **template-only**:routes 唯一合法形状是 `export const METHOD = withAuthorizedResource(...)(handler)`,直调 `assertPermission` 在 route export 中一律拒绝(server actions / 内部 lib 不受影响);7 个 fixture 含 5 个负向(含 unreachable-call、wrong-wrapper)+ 1 个正向 + 1 个 config-loaded 验证。这把整类"可达性绕过"在源头消灭,无需控制流分析 |
+| Plan Task 18 e2e stranger fixture 写 `users.nickname` / `users.passwordHash`,与 P0 实施的 better-auth 4 表布局(`users` 仅 name/email/username/role,密码在 `accounts.password`)不一致 → typecheck 挂或 stranger 无法登录,**跨家庭 404 隔离的关键 E2E 用例不能执行**——这是第 4 次同类"渐进改稿没收尾" | medium | P1 plan Task 18 fixture 改用 P0 bootstrap 同款 user + accounts dual-write 模式;stranger 用 `ownerInternalEmail('stranger')` + `hashPassword`,登录走 better-auth `/api/auth/sign-in/email` 端点 |
+
+**元教训沉淀**:
+- **依赖升级前必须 grep breaking change 列表**:写 `eslint: ^9` 前应该已知 flat config 是 default。永久原则:**plan 引入 `^N.0.0` major 版本依赖必须配一行 inline 注释或独立小节说明已知 breaking change 兼容方式**;对 ESLint / Tailwind / Next 这类 monorepo 核心依赖,plan 必须显式声明用的是 v9 flat config / v4 CSS-first / 等
+- **静态防线必须穷举绕过路径**:AST 找 `CallExpression` 不等于"运行时必然发生"。Codex 一句 `if (false) await` 就揭穿了 round-10 的修法。永久原则:**lint/check 规则设计时必须列出至少 3 种"想象中最贱的绕过"作为 fixture,如果穷举太难就缩小规则约定面**(选择更窄但更可证的契约,比如 template-only 优于 "template-or-body-call")
+- **简化是最强的防线**:每多一种"合法形式"就多一类绕过。round-11 修法收益不只是"修了这个 bug",而是"消灭了整类 bug"——routes 只有一种合法形状,绕过自然不存在
+- **改 schema 物理布局后必须全 plan grep**(第 4 次重犯):round-9 → round-10 → round-11 已经连续三次出现"schema 改了但 plan 内某个 fixture/test/seed 没跟上"。固化为**强制 hook**:plan 文件 commit 前 pre-commit `grep -rn "<旧字段名>" docs/superpowers/plans/` 自检
+
 ---
 
 ## 16. 下一步

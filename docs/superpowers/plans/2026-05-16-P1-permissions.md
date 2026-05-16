@@ -1908,26 +1908,27 @@ git commit -m "test(P1): withPermission — ok / unauthorized / forbidden→not_
 
 ---
 
-## Task 16: ESLint custom rule — api-route-must-assert (AST-based)
+## Task 16: ESLint custom rule — api-route-must-assert (template-only, flat config)
 
-**Why:** Spec §5.5 says "lint 规则强制" — every `app/api/**/route.ts` must actually invoke `withAuthorizedResource(...)` or `await assertPermission(...)` in its protected exports. A bare `export async function GET()` that returns secret data must trip CI.
+**Why:** Spec §5.5 / §5.7 says every `app/api/**/route.ts` **must** go through the `withAuthorizedResource` route template — that's the only entry point that guarantees the §5.6 unified 404 + status gate + DB-authoritative loader order. A bare `export async function GET()` returning protected data must trip CI.
 
-**Codex round-10 finding #2 fix**: an earlier draft did `sourceText.includes('withAuthorizedResource')` which is bypassable via comments, unused imports, or unrelated helper references. Rule must walk the **AST** of each exported HTTP-method declaration and verify the **actual code path** contains the assertion call.
+**Codex round-11 finding #2 fix**: an earlier draft also accepted direct `assertPermission(...)` calls in route bodies. That opened a control-flow bypass — `if (false) await assertPermission(...)`, post-return dead code, or a never-set debug header could trick the lint AST walker. **The fix is to remove that path entirely**: routes have exactly one allowed shape — `export const METHOD = withAuthorizedResource(...)(...)` — and the rule rejects everything else. Direct `assertPermission` calls remain legal inside server actions / internal lib code; they are simply not allowed as the auth gate for an `app/api/**/route.ts` export.
+
+This is also philosophically aligned with §5.7 "所有 `/api/media/*` 和受保护 API Route **必须**套此模板".
+
+**Codex round-11 finding #1 fix**: ESLint 9 dropped legacy `.eslintrc.*` lookup by default. Use the flat-config format (`eslint.config.mjs`) so the rule actually loads under `pnpm lint`.
 
 **Rule algorithm**:
 
-For each file matching `/app/api/**/route.{ts,tsx}` (minus allowlist):
+For each file matching `/app/api/**/route.{ts,tsx,js,jsx}` (minus allowlist `auth/[...all]` and `health`):
 
 1. Visit every `ExportNamedDeclaration` whose declared name is in `{GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS}`.
-2. Get the **callable** the export resolves to:
-   - `export async function GET() { ... }` → callable is the function body itself
-   - `export const GET = ...expr` → callable is `expr` (or, if `expr` is `(args)(args)`, the innermost wrapped body)
-3. Determine if the export **uses the template** OR **calls assertPermission**:
-   - **Template form**: the export's initializer is a `CallExpression` whose callee chain starts with the identifier `withAuthorizedResource`. Pattern: `withAuthorizedResource(...)(...)` returns a function — accept any such expression.
-   - **Direct form**: the function body (statements + nested blocks within it, NOT inside nested function declarations) contains a `CallExpression` (optionally awaited) whose callee identifier name is `assertPermission`.
-4. If neither matches → report error on the export node.
+2. The export must be a **VariableDeclarator** whose `init` is a `CallExpression` and whose leftmost callee identifier is `withAuthorizedResource`. Pattern: `withAuthorizedResource(...)(...)` (the outer call returns a wrapped handler).
+3. Any other shape (FunctionDeclaration, ArrowFunctionExpression directly assigned, non-`withAuthorizedResource` initializer) → report error.
 
-Comments, unused imports, and identifiers in string literals are ignored by the AST walker by construction.
+Comments, unused imports, string literals, control-flow tricks (`if (false)`, dead code after `return`, conditional headers) are all ignored by construction — they live inside the handler body that the template wraps, but the **export itself** must be the wrapper call.
+
+Trade-off: developers can no longer write `export async function GET() { await assertPermission(...); ... }` in a route. They must wrap via `withAuthorizedResource`. Accepted — that's the spec's stated rule and the only one that's mechanically enforceable.
 
 **Files:**
 - Create: `eslint-rules/package.json`, `eslint-rules/index.js`, `eslint-rules/api-route-must-assert.js`
@@ -1966,7 +1967,8 @@ module.exports = {
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 
 // Walk a CallExpression's callee chain to find the leftmost Identifier.
-// withAuthorizedResource({...})(handler) → CallExpression(CallExpression(Identifier 'withAuthorizedResource'))
+//   withAuthorizedResource({...})(handler)
+//     → CallExpression( callee: CallExpression( callee: Identifier 'withAuthorizedResource' ) )
 function leftmostCalleeName(node) {
   let current = node;
   while (current && current.type === 'CallExpression') {
@@ -1975,82 +1977,16 @@ function leftmostCalleeName(node) {
   return current && current.type === 'Identifier' ? current.name : null;
 }
 
-// True iff `expr` is a CallExpression whose leftmost callee identifier is
-// `withAuthorizedResource`. Accepts any number of chained ()() applications.
-function isTemplateExpr(expr) {
-  if (!expr) return false;
-  return expr.type === 'CallExpression' && leftmostCalleeName(expr) === 'withAuthorizedResource';
-}
-
-// True iff `body` (FunctionDeclaration body or ArrowFunctionExpression body)
-// contains a (possibly awaited) call expression whose callee identifier is
-// `assertPermission`, NOT recursing into nested function declarations or
-// nested function expressions (those have their own auth scope).
-function bodyCallsAssertPermission(body) {
-  if (!body) return false;
-  let found = false;
-
-  function visit(node) {
-    if (!node || typeof node !== 'object' || found) return;
-    if (Array.isArray(node)) {
-      for (const child of node) visit(child);
-      return;
-    }
-    // Don't descend into nested function bodies — they're independent contexts
-    if (
-      node.type === 'FunctionDeclaration' ||
-      node.type === 'FunctionExpression' ||
-      node.type === 'ArrowFunctionExpression'
-    ) {
-      return;
-    }
-
-    if (node.type === 'CallExpression') {
-      const callee = node.callee;
-      if (callee && callee.type === 'Identifier' && callee.name === 'assertPermission') {
-        found = true;
-        return;
-      }
-    }
-
-    // Recurse into children (generic AST walk)
-    for (const key of Object.keys(node)) {
-      if (key === 'parent' || key === 'loc' || key === 'range') continue;
-      visit(node[key]);
-    }
-  }
-
-  // AwaitExpression around the call is handled by recursion (its `argument` is the CallExpression)
-  visit(body);
-  return found;
-}
-
-// Resolve an export to its callable definition.
-// `export async function GET() {...}` → FunctionDeclaration node
-// `export const GET = withAuthorizedResource(...)(...)` → CallExpression init
-// `export const GET = async (req) => {...}` → ArrowFunctionExpression init
-function inspectExport(decl) {
-  if (decl.type === 'FunctionDeclaration') {
-    return { kind: 'function', name: decl.id?.name, expr: null, body: decl.body };
-  }
-  if (decl.type === 'VariableDeclaration') {
-    // ExportNamedDeclaration's child VariableDeclaration may contain multiple
-    // declarators; we handle each at the caller.
-    return null;
-  }
-  return null;
-}
-
 module.exports = {
   meta: {
     type: 'problem',
     docs: {
       description:
-        'Every app/api/**/route.ts HTTP-method export must invoke withAuthorizedResource() or assertPermission() in its actual code path (not via comments / unused imports)'
+        'Every app/api/**/route.ts HTTP-method export must be `withAuthorizedResource(...)(handler)` — no other shape allowed.'
     },
     messages: {
-      missing:
-        'API route export "{{name}}" must be wrapped with withAuthorizedResource() OR its body must call assertPermission(). See spec §5.5.'
+      notWrapped:
+        'API route export "{{name}}" must be exported as `export const {{name}} = withAuthorizedResource(...)(handler)`. Direct function exports or other initializers are forbidden (spec §5.7). See docs/superpowers/specs/...#section-5-7.'
     },
     schema: []
   },
@@ -2063,38 +1999,35 @@ module.exports = {
     if (/\/app\/api\/auth\/\[\.\.\.all\]\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
     if (/\/app\/api\/health\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
 
-    function check(node, name, expr, body) {
-      // Case 1: export is `withAuthorizedResource(...)(...)` — accept
-      if (expr && isTemplateExpr(expr)) return;
-
-      // Case 2: function declaration body or arrow body calls assertPermission — accept
-      if (body && bodyCallsAssertPermission(body)) return;
-
-      // Case 3: export is an arrow function — inspect its body
-      if (expr && (expr.type === 'ArrowFunctionExpression' || expr.type === 'FunctionExpression')) {
-        if (bodyCallsAssertPermission(expr.body)) return;
-      }
-
-      context.report({ node, messageId: 'missing', data: { name } });
-    }
-
     return {
       ExportNamedDeclaration(node) {
         const decl = node.declaration;
         if (!decl) return;
 
+        // Reject `export async function GET(){...}` — must use const-with-wrapper
         if (decl.type === 'FunctionDeclaration') {
           const name = decl.id?.name;
-          if (!name || !HTTP_METHODS.has(name)) return;
-          check(node, name, null, decl.body);
+          if (name && HTTP_METHODS.has(name)) {
+            context.report({ node, messageId: 'notWrapped', data: { name } });
+          }
           return;
         }
 
-        if (decl.type === 'VariableDeclaration') {
-          for (const d of decl.declarations) {
-            const name = d.id?.type === 'Identifier' ? d.id.name : null;
-            if (!name || !HTTP_METHODS.has(name)) continue;
-            check(d, name, d.init, null);
+        if (decl.type !== 'VariableDeclaration') return;
+
+        for (const d of decl.declarations) {
+          const name = d.id?.type === 'Identifier' ? d.id.name : null;
+          if (!name || !HTTP_METHODS.has(name)) continue;
+
+          const init = d.init;
+          // Must be a CallExpression with leftmost callee = withAuthorizedResource
+          const ok =
+            init &&
+            init.type === 'CallExpression' &&
+            leftmostCalleeName(init) === 'withAuthorizedResource';
+
+          if (!ok) {
+            context.report({ node: d, messageId: 'notWrapped', data: { name } });
           }
         }
       }
@@ -2103,29 +2036,39 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 2: Write `.eslintrc.cjs`**
+**Why no body/reachability analysis**: Codex round 11 noted that any body-scan rule can be defeated with `if (false)` / post-return code / never-set header conditions, and that a full control-flow analysis is out of scope for an ESLint rule. By rejecting **everything except** the wrapper-call shape, the rule sidesteps the entire class of bypass — there's no body for the linter to misread. The wrapper itself (Task 12 `withAuthorizedResource`) is the trusted unit; its contract is covered by Task 13 unit tests.
+
+- [ ] **Step 2: Write `eslint.config.mjs`** (ESLint 9 flat config — `.eslintrc.*` is no longer loaded by default)
 
 ```javascript
-'use strict';
+import tseslint from '@typescript-eslint/parser';
+import babyloom from 'eslint-plugin-babyloom';
 
-const path = require('node:path');
-
-module.exports = {
-  root: true,
-  parser: '@typescript-eslint/parser',
-  parserOptions: {
-    ecmaVersion: 2022,
-    sourceType: 'module',
-    ecmaFeatures: { jsx: true }
+export default [
+  {
+    ignores: ['node_modules/**', '.next/**', 'lib/db/migrations/**', 'eslint-rules/**', 'test-data/**', 'test-results/**', 'playwright-report/**']
   },
-  plugins: ['babyloom'],
-  settings: {},
-  rules: {
-    'babyloom/api-route-must-assert': 'error'
-  },
-  ignorePatterns: ['node_modules', '.next', 'lib/db/migrations', 'eslint-rules']
-};
+  {
+    files: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tseslint,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true }
+      }
+    },
+    plugins: {
+      babyloom
+    },
+    rules: {
+      'babyloom/api-route-must-assert': 'error'
+    }
+  }
+];
 ```
+
+> If the file `.eslintrc.cjs` already exists from any earlier attempt, **delete it** — ESLint 9 will warn about it and may behave unpredictably if both exist.
 
 - [ ] **Step 3: Wire the local plugin into the dependency graph**
 
@@ -2150,51 +2093,86 @@ Modify `scripts`:
 
 (Replaces any prior `next lint`.)
 
-- [ ] **Step 5: Smoke test the rule against deliberately bad routes (4 negative fixtures)**
+- [ ] **Step 5: Verify the rule actually loaded (Codex round-11 finding #1 guard)**
 
-For each fixture below, the rule MUST fire. Codex round-10 finding #2 — substring detection would let fixtures 2/3/4 through silently.
+Before testing fixtures, confirm ESLint 9 picked up the flat config AND the custom rule:
+
+```bash
+pnpm lint --print-config app/api/babies/\[id\]/route.ts | grep -E '"babyloom/api-route-must-assert"\s*:\s*\[?\s*"?error"?' && echo "OK: rule installed" || echo "FAIL: rule NOT loaded"
+```
+
+Expected: `OK: rule installed`. If `FAIL`, the flat config didn't register the plugin — fix `eslint.config.mjs` before continuing.
+
+- [ ] **Step 6: Smoke test against 7 fixtures (5 must fire, 1 must pass, 1 must fire for unreachable bypass)**
+
+Codex round-10/11 findings — every shape that isn't `withAuthorizedResource(...)(...)` must be rejected, including the control-flow bypass attempts (`if (false)`, post-return) that an earlier draft allowed by accepting bare `assertPermission` calls.
 
 ```bash
 mkdir -p app/api/_rule_smoke
 
-# Fixture 1: Bare export, no auth at all
-cat > app/api/_rule_smoke/route.ts <<'EOF'
-export async function GET() {
-  return new Response('secret');
+run_fixture() {
+  local name="$1" expect="$2"  # expect = "fire" or "pass"
+  pnpm lint app/api/_rule_smoke/route.ts > /dev/null 2>&1
+  local rc=$?
+  if [ "$expect" = "fire" ] && [ $rc -ne 0 ]; then echo "OK: $name caught"
+  elif [ "$expect" = "pass" ] && [ $rc -eq 0 ]; then echo "OK: $name passed"
+  else echo "FAIL: $name (expected $expect, lint rc=$rc)"
+  fi
 }
-EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 1 passed" || echo "OK: fixture 1 caught"
 
-# Fixture 2: Comment-only reference (substring bypass attempt)
+# Fixture 1: bare function export — must fire
 cat > app/api/_rule_smoke/route.ts <<'EOF'
-// TODO: add withAuthorizedResource later
+export async function GET() { return new Response('secret'); }
+EOF
+run_fixture "1 bare-fn" fire
+
+# Fixture 2: comment-only reference — must fire
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+// withAuthorizedResource later — TODO
 // assertPermission needs to go here
-export async function GET() {
-  return new Response('secret');
-}
+export async function GET() { return new Response('secret'); }
 EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 2 passed" || echo "OK: fixture 2 caught"
+run_fixture "2 comment-bypass" fire
 
-# Fixture 3: Unused import (substring bypass attempt)
+# Fixture 3: unused imports — must fire
 cat > app/api/_rule_smoke/route.ts <<'EOF'
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
 import { assertPermission } from '@/lib/permissions/assert';
+export async function GET() { return new Response('secret'); }
+EOF
+run_fixture "3 unused-imports" fire
+
+# Fixture 4: direct assertPermission inside function body — must fire (round-11 finding #2)
+# This shape is forbidden even with a real call; routes MUST use the wrapper.
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+import { assertPermission } from '@/lib/permissions/assert';
 export async function GET() {
+  await assertPermission('user-id', 'baby:read');
   return new Response('secret');
 }
 EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 3 passed" || echo "OK: fixture 3 caught"
+run_fixture "4 direct-call-bare-fn" fire
 
-# Fixture 4: assertPermission mentioned only in a string literal
+# Fixture 5: arrow assigned to const, not wrapper — must fire (covers control-flow bypass attempts)
+# A reachability-aware rule would have to chase `if (false)` / post-return etc.
+# Template-only short-circuits the whole class.
 cat > app/api/_rule_smoke/route.ts <<'EOF'
-export async function GET() {
-  const msg = 'assertPermission is great but not actually called here';
-  return new Response(msg);
-}
+import { assertPermission } from '@/lib/permissions/assert';
+export const GET = async () => {
+  if (false) await assertPermission('user-id', 'baby:read');
+  return new Response('secret');
+};
 EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 4 passed" || echo "OK: fixture 4 caught"
+run_fixture "5 arrow-unreachable-call" fire
 
-# Positive: actual template use must pass
+# Fixture 6: const-assigned non-wrapper call — must fire
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+import { someOtherWrapper } from '@/lib/permissions/route-template';
+export const GET = someOtherWrapper({ action: 'baby:read' })(async () => new Response('ok'));
+EOF
+run_fixture "6 wrong-wrapper" fire
+
+# Fixture 7 (positive): real template use — must pass
 cat > app/api/_rule_smoke/route.ts <<'EOF'
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
 export const GET = withAuthorizedResource({
@@ -2203,38 +2181,31 @@ export const GET = withAuthorizedResource({
   toResource: () => ({})
 })(async () => new Response('ok'));
 EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "OK: positive fixture passed" || echo "FAIL: positive fixture rejected"
-
-# Positive: direct assertPermission call must pass
-cat > app/api/_rule_smoke/route.ts <<'EOF'
-import { assertPermission } from '@/lib/permissions/assert';
-export async function POST(req: Request) {
-  await assertPermission('user-id', 'member:manage');
-  return new Response('ok');
-}
-EOF
-pnpm lint app/api/_rule_smoke/route.ts && echo "OK: direct-call fixture passed" || echo "FAIL: direct-call fixture rejected"
+run_fixture "7 template-positive" pass
 
 rm -rf app/api/_rule_smoke
 ```
 
-Expected output (all 6 lines):
+Expected output (all 7 lines):
 ```
-OK: fixture 1 caught
-OK: fixture 2 caught
-OK: fixture 3 caught
-OK: fixture 4 caught
-OK: positive fixture passed
-OK: direct-call fixture passed
+OK: 1 bare-fn caught
+OK: 2 comment-bypass caught
+OK: 3 unused-imports caught
+OK: 4 direct-call-bare-fn caught
+OK: 5 arrow-unreachable-call caught
+OK: 6 wrong-wrapper caught
+OK: 7 template-positive passed
 ```
 
 If any line starts with `FAIL`, the rule is broken — fix it before continuing.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add eslint-rules/ .eslintrc.cjs package.json pnpm-lock.yaml
-git commit -m "feat(P1): ESLint plugin babyloom + api-route-must-assert rule"
+git add eslint-rules/ eslint.config.mjs package.json pnpm-lock.yaml
+# Also delete any legacy config that may have been left over
+git rm -f .eslintrc.cjs 2>/dev/null || true
+git commit -m "feat(P1): ESLint flat config + babyloom/api-route-must-assert (template-only)"
 ```
 
 ---
@@ -2318,6 +2289,8 @@ The simplest mechanism: have a `tests/e2e/fixtures.ts` that, after the playwrigh
 
 Create `tests/e2e/fixtures.ts`:
 
+> **Codex round-11 finding #3 fix**: the stranger account MUST be seeded into both `users` AND `accounts.password` (providerId='credential') — the same physical layout `bootstrapOwner` uses (spec §3.2). An earlier draft wrote `nickname`/`passwordHash` directly into `users`, which doesn't exist in the better-auth 4-table schema and would either typecheck-fail or leave the stranger unable to log in (making the 404-vs-cross-family E2E vacuous).
+
 ```typescript
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
@@ -2328,13 +2301,14 @@ export async function seedE2eExtras() {
 
   const { getDb } = await import('@/lib/db/client');
   const { db } = getDb({ dataDir });
-  const { users, families, familyMembers, babies } = await import('@/lib/db/schema');
-  const { hashPassword } = await import('@/lib/bootstrap/owner');
+  const { users, accounts, families, babies } = await import('@/lib/db/schema');
+  const { hashPassword, ownerInternalEmail } = await import('@/lib/bootstrap/owner');
 
   const owner = db.select().from(users).all().find((u: any) => u.role === 'owner');
-  if (!owner) throw new Error('owner not bootstrapped');
+  if (!owner) throw new Error('owner not bootstrapped — run global-setup first');
   const family = db.select().from(families).all()[0];
 
+  // Ensure one active baby in the owner's family for the cross-family 404 test
   let baby = db.select().from(babies).all()[0];
   if (!baby) {
     const id = randomUUID();
@@ -2353,26 +2327,51 @@ export async function seedE2eExtras() {
     baby = db.select().from(babies).all()[0];
   }
 
-  // A "stranger" user account that is NOT in the family — used to test 404 on
-  // cross-family read attempts.
-  let stranger = db.select().from(users).all().find((u: any) => u.username === 'stranger');
+  // A "stranger" user account that is NOT in any family_members row —
+  // used to verify the 404 (not 403, not 200) cross-tenant isolation path.
+  // Must follow the SAME physical layout as bootstrapOwner (spec §3.2):
+  //   users  : id, name, email, emailVerified, username, role, timestamps
+  //   accounts: providerId='credential', accountId=email, password=scrypt hash
+  const strangerUsername = 'stranger';
+  const strangerPassword = 'strangerpw1';
+  const strangerEmail = ownerInternalEmail(strangerUsername);
+
+  let stranger = db.select().from(users).all().find((u: any) => u.username === strangerUsername);
   if (!stranger) {
     const id = randomUUID();
+    const now = new Date();
     db.insert(users)
       .values({
         id,
-        username: 'stranger',
-        nickname: 'Stranger',
-        role: 'editor',
-        passwordHash: hashPassword('strangerpw'),
-        createdAt: Date.now(),
-        updatedAt: Date.now()
-      } as any)
+        name: 'Stranger',
+        email: strangerEmail,
+        emailVerified: true,
+        username: strangerUsername,
+        role: 'editor', // role on users is informational; family_members is authoritative
+        createdAt: now,
+        updatedAt: now
+      })
       .run();
-    stranger = db.select().from(users).all().find((u: any) => u.username === 'stranger');
+    db.insert(accounts)
+      .values({
+        id: randomUUID(),
+        userId: id,
+        providerId: 'credential',
+        accountId: strangerEmail,
+        password: hashPassword(strangerPassword),
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+    stranger = db.select().from(users).all().find((u: any) => u.username === strangerUsername);
   }
 
-  return { babyId: baby.id, strangerCreds: { username: 'stranger', password: 'strangerpw' } };
+  // Stranger logs in via email (better-auth sign-in-email path), not username.
+  // Test code should use { email: strangerEmail, password: strangerPassword }.
+  return {
+    babyId: baby.id,
+    strangerCreds: { email: strangerEmail, password: strangerPassword }
+  };
 }
 ```
 
@@ -2384,7 +2383,7 @@ import { seedE2eExtras } from './fixtures';
 
 test.describe('GET /api/babies/[id] permission gating', () => {
   let babyId: string;
-  let strangerCreds: { username: string; password: string };
+  let strangerCreds: { email: string; password: string };
 
   test.beforeAll(async () => {
     const seed = await seedE2eExtras();
@@ -2417,13 +2416,24 @@ test.describe('GET /api/babies/[id] permission gating', () => {
   });
 
   test('non-family user → 404 (not 403)', async ({ page, request }) => {
-    await page.goto('/login');
-    await page.fill('input[name="username"]', strangerCreds.username);
-    await page.fill('input[name="password"]', strangerCreds.password);
-    await page.click('button[type="submit"]');
-    // login may succeed (account exists) — but the API should still 404
-    const cookies = await page.context().cookies();
-    const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
+    // Stranger logs in via email — username login is the owner's own flow only
+    // (P0 login form was username-based for owner-only ergonomics; stranger
+    // uses better-auth's email sign-in endpoint directly, OR if the login form
+    // accepts both, this still works.)
+    //
+    // If the login form only accepts username, swap to a direct API call:
+    //   await request.post('/api/auth/sign-in/email', { data: strangerCreds });
+    //   const cookies = await request.storageState();
+    //
+    // Reference implementation assumes the login form supports email; if not,
+    // adapt to better-auth's sign-in-email endpoint.
+    const signIn = await request.post('/api/auth/sign-in/email', {
+      data: strangerCreds
+    });
+    expect(signIn.status()).toBeLessThan(400);
+    // Extract cookies from the sign-in response
+    const setCookies = signIn.headers()['set-cookie'] ?? '';
+    const cookieHeader = setCookies.split(/,(?=\s*\w+=)/).map((c) => c.split(';')[0].trim()).join('; ');
 
     const res = await request.get(`/api/babies/${babyId}`, {
       headers: { cookie: cookieHeader }
