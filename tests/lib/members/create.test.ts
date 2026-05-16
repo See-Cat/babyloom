@@ -1,0 +1,150 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { and, eq } from 'drizzle-orm';
+
+async function freshFamily(dataDir: string) {
+  writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: owner
+  password: ownerpassword
+  nickname: Owner
+family:
+  name: Test
+app:
+  baseUrl: http://localhost:3000
+  timezone: Asia/Shanghai
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+`);
+  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { clearConfigCache } = await import('@/lib/config/load');
+  resetDbForTesting();
+  clearConfigCache();
+  const { runMigrations } = await import('@/lib/db/migrate');
+  runMigrations(dataDir);
+  const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+  await bootstrapOwner({ dataDir });
+  const { getDb } = await import('@/lib/db/client');
+  const { db } = getDb({ dataDir });
+  const { families } = await import('@/lib/db/schema');
+  return { familyId: db.select().from(families).all()[0].id };
+}
+
+describe('createMember', () => {
+  let dataDir: string;
+  let familyId: string;
+
+  beforeEach(async () => {
+    dataDir = mkdtempSync(join(tmpdir(), 'babyloom-create-member-'));
+    ({ familyId } = await freshFamily(dataDir));
+  });
+
+  it('creates user + credential account + family_members in one go', async () => {
+    const { createMember } = await import('@/lib/members/create');
+    const { userId, memberId, email } = await createMember({
+      dataDir,
+      familyId,
+      username: 'alice',
+      password: 'alicepass',
+      nickname: 'Alice',
+      role: 'editor'
+    });
+    expect(email).toBe('alice@local.babyloom');
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { users, accounts, familyMembers } = await import('@/lib/db/schema');
+
+    const u = db.select().from(users).where(eq(users.id, userId)).get();
+    expect(u?.username).toBe('alice');
+    expect(u?.role).toBe('editor');
+
+    const cred = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.providerId, 'credential')))
+      .get();
+    expect(cred?.password).toBeTruthy();
+    expect(cred?.accountId).toBe(email);
+
+    const m = db.select().from(familyMembers).where(eq(familyMembers.id, memberId)).get();
+    expect(m?.role).toBe('editor');
+    expect(m?.familyId).toBe(familyId);
+  });
+
+  it('rejects duplicate username', async () => {
+    const { createMember } = await import('@/lib/members/create');
+    await createMember({
+      dataDir,
+      familyId,
+      username: 'alice',
+      password: 'p1longenuf',
+      nickname: 'A',
+      role: 'editor'
+    });
+    await expect(
+      createMember({
+        dataDir,
+        familyId,
+        username: 'alice',
+        password: 'p2longenuf',
+        nickname: 'A2',
+        role: 'viewer'
+      })
+    ).rejects.toThrow(/username_taken/);
+  });
+
+  it('the created member can sign in with the chosen password', async () => {
+    const { createMember } = await import('@/lib/members/create');
+    const { verifyPassword } = await import('@/lib/bootstrap/owner');
+    await createMember({
+      dataDir,
+      familyId,
+      username: 'bob',
+      password: 'bobsecure',
+      nickname: 'Bob',
+      role: 'viewer'
+    });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { accounts, users } = await import('@/lib/db/schema');
+    const u = db.select().from(users).where(eq(users.username, 'bob')).get();
+    const cred = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, u!.id), eq(accounts.providerId, 'credential')))
+      .get();
+    expect(verifyPassword('bobsecure', cred!.password!)).toBe(true);
+    expect(verifyPassword('wrong', cred!.password!)).toBe(false);
+  });
+
+  it('resetMemberPassword updates accounts.password only', async () => {
+    const { createMember, resetMemberPassword } = await import('@/lib/members/create');
+    const { verifyPassword } = await import('@/lib/bootstrap/owner');
+    const { userId } = await createMember({
+      dataDir,
+      familyId,
+      username: 'carol',
+      password: 'oldlongenuf',
+      nickname: 'C',
+      role: 'editor'
+    });
+    resetMemberPassword({ dataDir, userId, newPassword: 'newlongenuf' });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { accounts, users } = await import('@/lib/db/schema');
+    const cred = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, userId), eq(accounts.providerId, 'credential')))
+      .get();
+    expect(verifyPassword('newlongenuf', cred!.password!)).toBe(true);
+    expect(verifyPassword('oldlongenuf', cred!.password!)).toBe(false);
+
+    const u = db.select().from(users).where(eq(users.id, userId)).get();
+    expect(u?.username).toBe('carol');
+  });
+});
