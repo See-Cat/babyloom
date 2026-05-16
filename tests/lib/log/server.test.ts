@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -32,5 +32,14 @@ describe('createLogger', () => {
     expect(logger.bindings?.()).toBeDefined();
     // Smoke: should not throw when logging an object with a `password` field
     expect(() => logger.info({ password: 'secret123', user: 'a' }, 'login')).not.toThrow();
+  });
+
+  it('writes daily log files named app-YYYY-MM-DD.log', async () => {
+    const { createLogger } = await import('@/lib/log/server');
+    const logger = createLogger({ dataDir, level: 'info' });
+    logger.info('startup complete');
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const files = readdirSync(join(dataDir, 'logs'));
+    expect(files.some((file) => /^app-\d{4}-\d{2}-\d{2}\.log$/.test(file))).toBe(true);
   });
 });

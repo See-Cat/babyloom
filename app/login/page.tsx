@@ -20,10 +20,10 @@ export default function LoginPage() {
       <form action={onSubmit} className="w-full max-w-sm flex flex-col gap-4">
         <h1 className="text-2xl font-semibold text-center">登录 Babyloom</h1>
         <input
-          name="email"
-          type="email"
+          name="username"
+          type="text"
           required
-          placeholder="邮箱"
+          placeholder="用户名"
           className="border rounded px-3 py-2"
         />
         <input

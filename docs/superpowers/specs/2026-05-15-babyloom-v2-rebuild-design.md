@@ -329,7 +329,7 @@ sessions { id, userId, expiresAt, ipAddress, userAgent, ... }
 
 owner:
   username: papa                  # 登录用户名(改这个 = 改 owner 的用户名)
-  password: "your-password-here"  # 明文密码,启动时 bcrypt 哈希进 DB
+  password: "your-password-here"  # 明文密码,启动时 scrypt 哈希进 DB
   nickname: "爸爸"                # 显示名
 
 family:
@@ -337,8 +337,15 @@ family:
 
 app:
   baseUrl: "http://nas.local"     # 用于生成绝对 URL(可选)
+  secret: "change-me-at-least-32-chars" # better-auth session/signing secret,生产必填
   timezone: "Asia/Shanghai"       # 默认 Asia/Shanghai
 ```
+
+P0 使用 better-auth 的 email/password provider,但产品语义仍是**用户名登录**:
+- UI 与 `config.yaml` 只暴露 `owner.username`。
+- better-auth 需要的 email 是内部实现细节,由服务端派生:`<username>@local.babyloom`。
+- `username` 改动时,启动 bootstrap 同步更新 owner 的 internal email 与 credential accountId。
+- 用户永远不需要知道或输入这个 internal email。
 
 ### 4.3 启动行为
 
@@ -347,11 +354,11 @@ app:
 1. **读取 `data/config.yaml`**
    - 文件不存在 → 写 `config.example.yaml` 到 data 目录 → 打印错误并退出
    - YAML 解析失败 → 打印错误并退出(`level: fatal`)
-2. **Zod 校验**(`username` 非空、密码长度 ≥ 6 等)
+2. **Zod 校验**(`username` 非空、密码长度 ≥ 6、`app.secret` 长度 ≥ 32 等)
 3. **与 DB 对账**:
-   - DB 无 owner → 创建 owner user + family
-   - DB 已有 owner 且 username 相同 → 更新 `passwordHash` 和 `nickname`(实现"改文件重置密码")
-   - DB 已有 owner 但 username 不同 → 更新现有 owner 的 username(保持身份连续)
+  - DB 无 owner → 创建 owner user + family
+  - DB 已有 owner 且 username 相同 → 更新 credential password hash 和 `nickname`(实现"改文件重置密码")
+  - DB 已有 owner 但 username 不同 → 更新现有 owner 的 username 与 internal email(保持身份连续)
 4. **启动完成**,记录 `info` 日志
 
 ### 4.4 配置文件改动不热加载
@@ -361,7 +368,7 @@ app:
 ### 4.5 安全
 
 - 文件应 `chmod 600`(部署文档说明)
-- 启动后立即 bcrypt 哈希进 DB,DB 中只有 hash
+- 启动后立即 scrypt 哈希进 DB,DB 中只有 hash
 - 明文存在文件中是 owner 与 NAS 物理拥有者等价的前提下的合理取舍
 
 ---

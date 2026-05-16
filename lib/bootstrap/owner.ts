@@ -23,6 +23,10 @@ export function verifyPassword(password: string, stored: string): boolean {
   return timingSafeEqual(actual, expected);
 }
 
+export function ownerInternalEmail(username: string): string {
+  return `${username}@local.babyloom`;
+}
+
 export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void> {
   const config = loadConfig({ dataDir: opts.dataDir });
   const { db } = getDb({ dataDir: opts.dataDir });
@@ -30,14 +34,15 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
   const existing = db.select().from(users).where(eq(users.role, 'owner')).all();
   const now = new Date();
   const passwordHash = hashPassword(config.owner.password);
+  const internalEmail = ownerInternalEmail(config.owner.username);
 
   if (existing.length === 0) {
     const userId = randomUUID();
     db.insert(users)
       .values({
         id: userId,
-        name: config.owner.displayName,
-        email: config.owner.email,
+        name: config.owner.nickname,
+        email: internalEmail,
         emailVerified: true,
         username: config.owner.username,
         role: 'owner',
@@ -50,7 +55,7 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
         id: randomUUID(),
         userId,
         providerId: 'credential',
-        accountId: config.owner.email,
+        accountId: internalEmail,
         password: passwordHash,
         createdAt: now,
         updatedAt: now
@@ -62,8 +67,8 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
   const owner = existing[0];
   db.update(users)
     .set({
-      name: config.owner.displayName,
-      email: config.owner.email,
+      name: config.owner.nickname,
+      email: internalEmail,
       username: config.owner.username,
       updatedAt: now
     })
@@ -81,7 +86,7 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
         id: randomUUID(),
         userId: owner.id,
         providerId: 'credential',
-        accountId: config.owner.email,
+        accountId: internalEmail,
         password: passwordHash,
         createdAt: now,
         updatedAt: now
@@ -90,7 +95,7 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
   } else {
     db.update(accounts)
       .set({
-        accountId: config.owner.email,
+        accountId: internalEmail,
         password: passwordHash,
         updatedAt: now
       })

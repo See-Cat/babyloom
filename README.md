@@ -14,9 +14,14 @@ mkdir -p data
 cat > data/config.yaml <<'EOF'
 owner:
   username: owner
-  password: <at-least-8-chars>
-  email: owner@example.com
-  displayName: Owner
+  password: <at-least-6-chars>
+  nickname: Owner
+family:
+  name: 我们家
+app:
+  baseUrl: http://localhost:3000
+  secret: <at-least-32-chars-random-string>
+  timezone: Asia/Shanghai
 log:
   level: info
 EOF
@@ -24,7 +29,7 @@ chmod 600 data/config.yaml
 pnpm dev
 ```
 
-Open http://localhost:3000, log in with the email + password from `data/config.yaml`.
+Open http://localhost:3000, log in with the username + password from `data/config.yaml`.
 
 ## Tests
 

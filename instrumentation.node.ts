@@ -4,6 +4,8 @@ import { createLogger } from '@/lib/log/server';
 import { runMigrations } from '@/lib/db/migrate';
 import { bootstrapOwner } from '@/lib/bootstrap/owner';
 
+let startupPromise: Promise<void> | null = null;
+
 export async function startup() {
   const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
 
@@ -19,4 +21,9 @@ export async function startup() {
   log.info({ owner: config.owner.username }, 'owner ensured');
 
   log.info('startup complete');
+}
+
+export function ensureStartup() {
+  startupPromise ??= startup();
+  return startupPromise;
 }

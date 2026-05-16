@@ -7,7 +7,7 @@ test('unauthenticated visit redirects to /login', async ({ page }) => {
 
 test('owner can log in with config credentials', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[name="email"]', 'e2e@example.com');
+  await page.fill('input[name="username"]', 'e2eowner');
   await page.fill('input[name="password"]', 'e2epassword');
   await page.click('button[type="submit"]');
   await expect(page).toHaveURL('/');
@@ -16,10 +16,10 @@ test('owner can log in with config credentials', async ({ page }) => {
 
 test('wrong password shows error', async ({ page }) => {
   await page.goto('/login');
-  await page.fill('input[name="email"]', 'e2e@example.com');
+  await page.fill('input[name="username"]', 'e2eowner');
   await page.fill('input[name="password"]', 'wrongpassword');
   await page.click('button[type="submit"]');
-  await expect(page.getByText('邮箱或密码错误')).toBeVisible();
+  await expect(page.getByText('用户名或密码错误')).toBeVisible();
 });
 
 test('health endpoint returns ok', async ({ request }) => {

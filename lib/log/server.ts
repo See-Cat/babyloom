@@ -16,9 +16,15 @@ const REDACT_PATHS = [
   '*.authorization',
   'cookie',
   '*.cookie',
+  'passwordHash',
+  '*.passwordHash',
   'apiKey',
   '*.apiKey'
 ];
+
+function todayLogFile(logsDir: string): string {
+  return join(logsDir, `app-${new Date().toISOString().slice(0, 10)}.log`);
+}
 
 export function createLogger(opts: LoggerOptions): Logger {
   const logsDir = join(opts.dataDir, 'logs');
@@ -38,12 +44,10 @@ export function createLogger(opts: LoggerOptions): Logger {
           options: { destination: 1 }
         },
         {
-          target: 'pino-roll',
+          target: 'pino/file',
           level: opts.level,
           options: {
-            file: join(logsDir, 'app'),
-            frequency: 'daily',
-            extension: '.log',
+            destination: todayLogFile(logsDir),
             mkdir: true
           }
         }

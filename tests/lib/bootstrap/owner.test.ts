@@ -13,8 +13,13 @@ describe('bootstrapOwner', () => {
 owner:
   username: alice
   password: longenoughpw
-  email: alice@example.com
-  displayName: Alice
+  nickname: Alice
+family:
+  name: Alice Home
+app:
+  baseUrl: http://localhost:3000
+  secret: local-test-secret-123456789012345
+  timezone: Asia/Shanghai
 log:
   level: info
 `);
@@ -37,6 +42,8 @@ log:
     expect(userRows).toHaveLength(1);
     expect(userRows[0].username).toBe('alice');
     expect(userRows[0].role).toBe('owner');
+    expect(userRows[0].name).toBe('Alice');
+    expect(userRows[0].email).toBe('alice@local.babyloom');
 
     const accountRows = db
       .select()
@@ -45,6 +52,7 @@ log:
       .all();
     expect(accountRows).toHaveLength(1);
     expect(accountRows[0].providerId).toBe('credential');
+    expect(accountRows[0].accountId).toBe('alice@local.babyloom');
     expect(accountRows[0].password).not.toBe('longenoughpw');
     expect(accountRows[0].password!.length).toBeGreaterThan(20);
   });
@@ -76,8 +84,11 @@ log:
 owner:
   username: alice
   password: brandnewpassword
-  email: alice@example.com
-  displayName: Alice
+  nickname: Alice
+family:
+  name: Alice Home
+app:
+  secret: local-test-secret-123456789012345
 log:
   level: info
 `);
@@ -85,5 +96,36 @@ log:
 
     const secondHash = db.select().from(accounts).all()[0].password;
     expect(secondHash).not.toBe(firstHash);
+  });
+
+  it('updates username and internal email without creating a new owner', async () => {
+    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    await bootstrapOwner({ dataDir });
+
+    const { clearConfigCache } = await import('@/lib/config/load');
+    clearConfigCache();
+    writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: bob
+  password: longenoughpw
+  nickname: Bob
+family:
+  name: Bob Home
+app:
+  secret: local-test-secret-123456789012345
+`);
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { users, accounts } = await import('@/lib/db/schema');
+    const userRows = db.select().from(users).all();
+    const accountRows = db.select().from(accounts).all();
+    expect(userRows).toHaveLength(1);
+    expect(userRows[0].username).toBe('bob');
+    expect(userRows[0].email).toBe('bob@local.babyloom');
+    expect(userRows[0].name).toBe('Bob');
+    expect(accountRows).toHaveLength(1);
+    expect(accountRows[0].accountId).toBe('bob@local.babyloom');
   });
 });

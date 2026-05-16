@@ -4,6 +4,7 @@ import { nextCookies } from 'better-auth/next-js';
 import { getDb } from '@/lib/db/client';
 import { users, sessions, accounts, verifications } from '@/lib/db/schema';
 import { hashPassword, verifyPassword } from '@/lib/bootstrap/owner';
+import { loadConfig } from '@/lib/config/load';
 
 export interface AuthOptions {
   dataDir: string;
@@ -11,8 +12,11 @@ export interface AuthOptions {
 
 function createAuth(opts: AuthOptions) {
   const { db } = getDb({ dataDir: opts.dataDir });
+  const config = loadConfig({ dataDir: opts.dataDir });
 
   return betterAuth({
+    baseURL: config.app.baseUrl,
+    secret: config.app.secret,
     database: drizzleAdapter(db, {
       provider: 'sqlite',
       schema: { user: users, session: sessions, account: accounts, verification: verifications }
@@ -32,12 +36,13 @@ function createAuth(opts: AuthOptions) {
   });
 }
 
-let cachedAuth: ReturnType<typeof createAuth> | null = null;
+let cachedAuth: { dataDir: string; auth: ReturnType<typeof createAuth> } | null = null;
 
 export function getAuth(opts: AuthOptions) {
-  if (cachedAuth) return cachedAuth;
-  cachedAuth = createAuth(opts);
-  return cachedAuth;
+  if (cachedAuth && cachedAuth.dataDir === opts.dataDir) return cachedAuth.auth;
+  const auth = createAuth(opts);
+  cachedAuth = { dataDir: opts.dataDir, auth };
+  return auth;
 }
 
 export function resetAuthForTesting() {

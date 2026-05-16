@@ -1,0 +1,15 @@
+owner:
+  username: owner
+  password: change-me
+  nickname: Owner
+
+family:
+  name: 我们家
+
+app:
+  baseUrl: http://localhost:3000
+  secret: change-me-at-least-32-characters-long
+  timezone: Asia/Shanghai
+
+log:
+  level: info
