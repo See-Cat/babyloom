@@ -57,6 +57,26 @@ tests/
 
 ---
 
+## Task 0: Verify P2a prerequisites
+
+**Why (review I1 fix):** P2b assumes (a) `lib/permissions/action-template.ts` exists with `withAuthorizedAction`, (b) the ESLint rule accepts both `withAuthorizedResource` and `withAuthorizedAction`, and (c) entries + milestones + entry_milestones schemas are migrated. If P2a is incomplete, P2b's lint/test/typecheck steps fail in misleading ways. Verify before starting.
+
+- [ ] **Step 1: Verify P2a deliverables exist**
+
+```bash
+test -f lib/permissions/action-template.ts && echo "OK: action-template exists" || echo "FAIL: P2a action-template missing"
+pnpm test tests/lib/permissions/action-template.test.ts > /dev/null 2>&1 && echo "OK: action-template tests pass" || echo "FAIL: action-template tests not passing"
+pnpm lint app/api/babies/route.ts > /dev/null 2>&1 && echo "OK: ESLint accepts withAuthorizedAction" || echo "FAIL: ESLint rule does not accept withAuthorizedAction"
+sqlite3 ./data/db/babyloom.sqlite ".schema entries" | grep -q "CREATE TABLE" && echo "OK: entries table exists" || echo "FAIL: entries table missing (run pnpm db:migrate)"
+sqlite3 ./data/db/babyloom.sqlite ".schema milestones" | grep -q "CREATE TABLE" && echo "OK: milestones table exists" || echo "FAIL: milestones table missing"
+```
+
+Expected: 5 lines all start with `OK:`. If any starts with `FAIL:`, **stop and complete P2a first**.
+
+- [ ] **Step 2: No commit** — this is a pre-flight check only.
+
+---
+
 ## Task 1: Shared createMember helper
 
 **Why:** Bootstrap (`bootstrapOwner`) and the new `POST /api/family-members` endpoint both need to write a `users` row + `accounts` credential row + `family_members` row in one transaction. P1 inlined this in bootstrap; copy-pasting it into the API route would be a schema-drift trap. Refactor it out **first**, before the API route depends on the pattern.
@@ -356,6 +376,14 @@ case 'milestones': {
   break;
 }
 case 'users': {
+  // Review I2 — IMPORTANT: this branch is only safe for action='member:manage'.
+  // Do NOT extend usage to baby-scoped actions (baby:read/write/etc) — the
+  // default resource mapping below returns only `targetUserId` with no
+  // `babyId`, which means assertPermission's cross-family baby check is
+  // skipped. The cross-family guard for member:manage is enforced separately
+  // in assertPermission (Task 3) by looking up the target user's family_members
+  // row. If you need user-loader semantics for a different action, add a new
+  // table key (e.g. 'users:as_baby_parent') with the appropriate resource mapping.
   const { users } = await import('@/lib/db/schema');
   row = db.select().from(users).where(eq(users.id, opts.id)).get();
   break;
@@ -645,10 +673,18 @@ const patchSchema = z.object({
 export const PATCH = withAuthorizedResource({
   action: 'member:manage',
   loader: loadMember,
-  getStatus: () => 'present',
-  allowedStatuses: ['present'],
+  // Round-12 status gate (review C1 fix): even though family_members / milestones
+  // currently have no `status` column, read row.status with a default of 'active'
+  // so a future schema column auto-engages the gate instead of silently leaking
+  // trashed rows through this route.
+  getStatus: (row: any) => row.status ?? 'active',
+  allowedStatuses: ['active'],
   toResource: (row) => ({ targetUserId: row.userId })
 })(async (req, _ctx, row) => {
+  // Review I5: owner-immutability check MUST run before body parsing.
+  // If a future refactor moves body parsing up, a malformed body against an
+  // owner row would return 400 (validation) instead of 409 — which leaks
+  // owner-existence to attackers probing user IDs. Keep this order.
   if (row.role === 'owner') {
     return Response.json({ error: 'cannot_modify_owner_via_api' }, { status: 409 });
   }
@@ -677,18 +713,33 @@ export const PATCH = withAuthorizedResource({
 export const DELETE = withAuthorizedResource({
   action: 'member:manage',
   loader: loadMember,
-  getStatus: () => 'present',
-  allowedStatuses: ['present'],
+  // Round-12 status gate (review C1 fix): even though family_members / milestones
+  // currently have no `status` column, read row.status with a default of 'active'
+  // so a future schema column auto-engages the gate instead of silently leaking
+  // trashed rows through this route.
+  getStatus: (row: any) => row.status ?? 'active',
+  allowedStatuses: ['active'],
   toResource: (row) => ({ targetUserId: row.userId })
 })(async (_req, _ctx, row) => {
   if (row.role === 'owner') {
     return Response.json({ error: 'cannot_delete_owner' }, { status: 409 });
   }
   const { db } = getDb({ dataDir });
-  // Delete family_members row only. users + accounts remain.
-  // The removed user can still sign in but every protected endpoint will
-  // return 404 (assertPermission throws not_family_member).
-  db.delete(familyMembers).where(eq(familyMembers.id, row.memberId)).run();
+  const { sessions } = await import('@/lib/db/schema');
+  // Review I4 fix: also revoke existing sessions atomically. Without this,
+  // a removed editor whose session cookie is still valid can keep hitting
+  // /api/auth/* with a live session — and although every protected endpoint
+  // returns 404 (assertPermission throws not_family_member), the session
+  // itself surviving is a stale-credential surprise.
+  //
+  // We KEEP users + accounts rows (preserves entry authorship history).
+  // Known limitation: username + email remain globally unique, so the same
+  // person cannot be re-added under the same username without manual DB
+  // cleanup. Document in admin UI tooltip.
+  db.transaction((tx) => {
+    tx.delete(sessions).where(eq(sessions.userId, row.userId)).run();
+    tx.delete(familyMembers).where(eq(familyMembers.id, row.memberId)).run();
+  });
   return Response.json({ removed: row.userId });
 });
 ```
@@ -832,8 +883,12 @@ const patchSchema = z.object({
 export const PATCH = withAuthorizedResource({
   action: 'milestone:manage',
   loader: loadMilestone,
-  getStatus: () => 'present',
-  allowedStatuses: ['present'],
+  // Round-12 status gate (review C1 fix): even though family_members / milestones
+  // currently have no `status` column, read row.status with a default of 'active'
+  // so a future schema column auto-engages the gate instead of silently leaking
+  // trashed rows through this route.
+  getStatus: (row: any) => row.status ?? 'active',
+  allowedStatuses: ['active'],
   toResource: () => ({})
 })(async (req, _ctx, row) => {
   if (row.familyId === null) {
@@ -855,8 +910,12 @@ export const PATCH = withAuthorizedResource({
 export const DELETE = withAuthorizedResource({
   action: 'milestone:manage',
   loader: loadMilestone,
-  getStatus: () => 'present',
-  allowedStatuses: ['present'],
+  // Round-12 status gate (review C1 fix): even though family_members / milestones
+  // currently have no `status` column, read row.status with a default of 'active'
+  // so a future schema column auto-engages the gate instead of silently leaking
+  // trashed rows through this route.
+  getStatus: (row: any) => row.status ?? 'active',
+  allowedStatuses: ['active'],
   toResource: () => ({})
 })(async (_req, _ctx, row) => {
   if (row.familyId === null) {
@@ -875,6 +934,85 @@ export const DELETE = withAuthorizedResource({
 pnpm lint app/api/milestones/\[id\]/route.ts
 git add app/api/milestones/\[id\]/route.ts
 git commit -m "feat(P2b): PATCH/DELETE /api/milestones/[id] (owner-only, system-immutable)"
+```
+
+---
+
+## Task 7b: Extend withAuthorizedResource handler signature to thread `userId`
+
+**Why (review C3 fix):** Task 8/11 handlers need the authenticated `userId` to (a) look up the caller's family for milestone validation, (b) stamp `deletedBy` on trash, etc. Today the wrapper has `userId` but doesn't pass it to the handler — handlers must re-call `getSessionUserId(req)`, which is redundant work *and* invites copy-paste of an entire auth dance into every handler. Worse: every place that "needs userId" becomes an opportunity to silently skip the recall and use a client-supplied field instead (spec §5.5.1 Ownership-field violation).
+
+Backward-compatible: existing handlers that ignore the 4th arg keep working unchanged.
+
+**Files:**
+- Modify: `lib/permissions/route-template.ts`
+- Modify: `tests/lib/permissions/route-template.test.ts`
+
+- [ ] **Step 1: Update handler signature**
+
+Change the wrapper's inner `handler` type and its invocation:
+
+```typescript
+export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
+  return function wrap(
+    handler: (
+      req: NextRequest,
+      ctx: { params: { id: string } },
+      row: R,
+      userId: string                    // NEW: trusted, server-derived userId
+    ) => Promise<Response>
+  ) {
+    return async function route(req: NextRequest, ctx: { params: Promise<{ id: string }> }): Promise<Response> {
+      // ... existing pipeline unchanged ...
+      // At the final step, pass userId to the handler:
+      return await handler(req, { params }, row, userId);
+    };
+  };
+}
+```
+
+- [ ] **Step 2: Add a test asserting userId is threaded**
+
+In `tests/lib/permissions/route-template.test.ts`, add:
+
+```typescript
+it('Codex review C3: wrapper threads userId to handler', async () => {
+  vi.doMock('@/lib/permissions/session', () => ({
+    getSessionUserId: async () => ctx.ownerId
+  }));
+  let receivedUserId: string | null = null;
+  const { withAuthorizedResource } = await import('@/lib/permissions/route-template');
+  const { getDb } = await import('@/lib/db/client');
+  const { babies } = await import('@/lib/db/schema');
+  const { eq } = await import('drizzle-orm');
+  const { db } = getDb({ dataDir });
+
+  const route = withAuthorizedResource({
+    action: 'baby:read',
+    loader: async (id) => db.select().from(babies).where(eq(babies.id, id)).get() ?? null,
+    getStatus: (row: any) => row.status,
+    allowedStatuses: ['active'],
+    toResource: (row: any) => ({ babyId: row.id })
+  })(async (_req, _ctx, _row, userId) => {
+    receivedUserId = userId;
+    return new Response(JSON.stringify({ ok: true }));
+  });
+  await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) } as any);
+  expect(receivedUserId).toBe(ctx.ownerId);
+  vi.doUnmock('@/lib/permissions/session');
+});
+```
+
+- [ ] **Step 3: Verify existing routes still work** (P2a sample route + P2b earlier tasks ignore the 4th arg — TypeScript-compatible since handler can have fewer params)
+
+Run: `pnpm test tests/lib/permissions/route-template.test.ts && pnpm typecheck`
+Expected: all green; existing tests still pass.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add lib/permissions/route-template.ts tests/lib/permissions/route-template.test.ts
+git commit -m "feat(P2b): withAuthorizedResource threads userId to handler (4th arg)"
 ```
 
 ---
@@ -946,23 +1084,83 @@ db.transaction((tx) => {
 
 - [ ] **Step 2: Update PATCH in `app/api/entries/[id]/route.ts`**
 
-Add `milestoneIds` to patchSchema. In the handler:
+Add `milestoneIds` to patchSchema:
 
 ```typescript
-if (parsed.data.milestoneIds !== undefined) {
-  // Validate per same rules as POST (look up caller's family via row.babyId → baby.familyId)
-  const callerMember = db.select().from(familyMembers).where(eq(familyMembers.userId, /* userId */)).get();
-  // ... reject 404 if any milestoneId doesn't validate ...
-  db.transaction((tx) => {
-    tx.delete(entryMilestones).where(eq(entryMilestones.entryId, row.id)).run();
-    for (const m of validMilestones) {
-      tx.insert(entryMilestones).values({ entryId: row.id, milestoneId: m.id }).run();
-    }
-  });
-}
+const patchSchema = z.object({
+  content: z.string().min(1).max(10000).optional(),
+  occurredAt: z.number().int().optional(),
+  milestoneIds: z.array(z.string().regex(UUID_RE)).optional()
+});
 ```
 
-Note: `userId` is not in the wrapper handler signature. Get it via `getSessionUserId(req)` at the top of the handler.
+PATCH handler now uses the 4-arg signature added in Task 7b (`userId` threaded by wrapper). Full code (review C2 fix — no placeholders):
+
+```typescript
+import { inArray, isNull, or, eq, and } from 'drizzle-orm';
+import { entryMilestones, milestones, familyMembers } from '@/lib/db/schema';
+
+export const PATCH = withAuthorizedResource({
+  action: 'entry:write',
+  loader: loadEntry,
+  getStatus: (row) => row.status,
+  allowedStatuses: ['active'],
+  toResource: toEntryResource
+})(async (req, _ctx, row, userId) => {  // 4th arg from Task 7b
+  let body: unknown;
+  try { body = await req.json(); } catch { return jsonBadRequest('invalid_json'); }
+  const parsed = patchSchema.safeParse(body);
+  if (!parsed.success) return jsonBadRequest('validation');
+
+  const { db } = getDb({ dataDir });
+
+  // Cross-family milestone validation (review C2 — full code, not a stub)
+  let validMilestones: { id: string }[] = [];
+  if (parsed.data.milestoneIds !== undefined) {
+    const callerMember = db
+      .select({ familyId: familyMembers.familyId })
+      .from(familyMembers)
+      .where(eq(familyMembers.userId, userId))
+      .get();
+    if (!callerMember) return jsonNotFound();
+
+    if (parsed.data.milestoneIds.length > 0) {
+      validMilestones = db
+        .select({ id: milestones.id })
+        .from(milestones)
+        .where(
+          and(
+            inArray(milestones.id, parsed.data.milestoneIds),
+            or(isNull(milestones.familyId), eq(milestones.familyId, callerMember.familyId))
+          )
+        )
+        .all();
+      // Any mismatch (missing milestone, cross-family attempt, bogus UUID) → 404
+      if (validMilestones.length !== parsed.data.milestoneIds.length) return jsonNotFound();
+    }
+  }
+
+  // Apply all changes in one transaction (content + milestones must be atomic
+  // so a half-applied PATCH can't leave the entry in an inconsistent state)
+  db.transaction((tx) => {
+    const setFields: Record<string, unknown> = { updatedAt: Date.now() };
+    if (parsed.data.content !== undefined) setFields.content = parsed.data.content;
+    if (parsed.data.occurredAt !== undefined) setFields.occurredAt = parsed.data.occurredAt;
+    tx.update(entries).set(setFields).where(eq(entries.id, row.id)).run();
+
+    if (parsed.data.milestoneIds !== undefined) {
+      // Replace-strategy: clear existing rows, then insert new ones
+      tx.delete(entryMilestones).where(eq(entryMilestones.entryId, row.id)).run();
+      for (const m of validMilestones) {
+        tx.insert(entryMilestones).values({ entryId: row.id, milestoneId: m.id }).run();
+      }
+    }
+  });
+  return Response.json({ updated: row.id });
+});
+```
+
+Apply the same `(req, _ctx, row, userId)` signature update to the trash/restore endpoints in Tasks 11/12 if they need `userId` (`deletedBy` stamping) — Task 11 entry trash already does, so update its handler signature accordingly when implementing (no longer needs the `getSessionUserId(req)` line shown there).
 
 - [ ] **Step 3: Update GET in `app/api/entries/[id]/route.ts` to surface attached milestones**
 
@@ -984,7 +1182,21 @@ return Response.json({
 });
 ```
 
-- [ ] **Step 4: Lint + commit**
+- [ ] **Step 4: Verify no entry-GET consumer breaks** (review I6 fix)
+
+Adding `milestones` to GET response is technically additive (existing consumers ignore unknown fields in JSON), but if any consumer destructures the response with TypeScript strict shape, it may break. Sweep:
+
+```bash
+grep -rn "GET.*'/api/entries/'\|fetch.*'/api/entries/'\|/api/entries/\${" app/ tests/ | grep -v "/edit/\|/new/" | head -20
+```
+
+For each match, verify the consumer either:
+- Accesses only fields that already existed (`content`, `occurredAt`, `babyId`, `authorId`, `createdAt`, `updatedAt`), OR
+- Uses optional access on the new `milestones` field
+
+Expected matches: P2a's `/entry/[id]/page.tsx` (read in P2b Task 9 to surface chips), the entry detail E2E in `tests/e2e/entries.spec.ts`. Confirm those handle the optional field.
+
+- [ ] **Step 5: Lint + commit**
 
 ```bash
 pnpm lint app/api/entries/route.ts app/api/entries/\[id\]/route.ts
@@ -1801,6 +2013,50 @@ test.describe.serial('milestones', () => {
     const body = await list.json();
     expect(body.milestones.some((m: any) => m.id === milestoneId)).toBe(false);
   });
+
+  // Review I3 fix: negative matrix tests — non-owners must NOT be able to create
+  // or delete milestones. Without these, a regression in OWNER_ONLY_ACTIONS
+  // would silently widen access (the P1 lesson — owner-happy-path is not coverage).
+  test('editor cannot create a milestone (404, not 403)', async ({ request }) => {
+    // Pre-seed an editor in the family via owner's session
+    await request.post('/api/family-members', {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { username: 'msedit', password: 'mseditpass1', nickname: 'MS-Edit', role: 'editor' }
+    });
+    const editorCookie = await (async () => {
+      const r = await request.post('/api/auth/sign-in/email', {
+        data: { email: 'msedit@local.babyloom', password: 'mseditpass1' }
+      });
+      const sc = r.headers()['set-cookie'] ?? '';
+      return sc.split(/,(?=\s*\w+=)/).map((c: string) => c.split(';')[0].trim()).join('; ');
+    })();
+    const res = await request.post('/api/milestones', {
+      headers: { cookie: editorCookie, 'content-type': 'application/json' },
+      data: { name: 'Editor attempt', icon: '🚫' }
+    });
+    expect(res.status()).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('not_found');
+  });
+
+  test('viewer cannot create a milestone (404)', async ({ request }) => {
+    await request.post('/api/family-members', {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { username: 'msview', password: 'msviewpass1', nickname: 'MS-View', role: 'viewer' }
+    });
+    const viewerCookie = await (async () => {
+      const r = await request.post('/api/auth/sign-in/email', {
+        data: { email: 'msview@local.babyloom', password: 'msviewpass1' }
+      });
+      const sc = r.headers()['set-cookie'] ?? '';
+      return sc.split(/,(?=\s*\w+=)/).map((c: string) => c.split(';')[0].trim()).join('; ');
+    })();
+    const res = await request.post('/api/milestones', {
+      headers: { cookie: viewerCookie, 'content-type': 'application/json' },
+      data: { name: 'Viewer attempt', icon: '🚫' }
+    });
+    expect(res.status()).toBe(404);
+  });
 });
 ```
 
@@ -1868,6 +2124,44 @@ test.describe.serial('entry edit', () => {
     });
     expect(res.status()).toBe(404);
   });
+
+  // Review I3 fix: matrix negative tests on entry:write
+  test('viewer cannot PATCH entry (404)', async ({ request }) => {
+    await request.post('/api/family-members', {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { username: 'eeview', password: 'eeviewpass1', nickname: 'EE-View', role: 'viewer' }
+    });
+    const r = await request.post('/api/auth/sign-in/email', {
+      data: { email: 'eeview@local.babyloom', password: 'eeviewpass1' }
+    });
+    const sc = r.headers()['set-cookie'] ?? '';
+    const viewerCookie = sc.split(/,(?=\s*\w+=)/).map((c: string) => c.split(';')[0].trim()).join('; ');
+
+    const res = await request.patch(`/api/entries/${entryId}`, {
+      headers: { cookie: viewerCookie, 'content-type': 'application/json' },
+      data: { content: 'viewer tries to edit' }
+    });
+    expect(res.status()).toBe(404);
+  });
+
+  test('editor cannot PATCH another author\'s entry (404)', async ({ request }) => {
+    await request.post('/api/family-members', {
+      headers: { cookie, 'content-type': 'application/json' },
+      data: { username: 'eeedit', password: 'eeeditpass1', nickname: 'EE-Edit', role: 'editor' }
+    });
+    const r = await request.post('/api/auth/sign-in/email', {
+      data: { email: 'eeedit@local.babyloom', password: 'eeeditpass1' }
+    });
+    const sc = r.headers()['set-cookie'] ?? '';
+    const editorCookie = sc.split(/,(?=\s*\w+=)/).map((c: string) => c.split(';')[0].trim()).join('; ');
+
+    // entryId was authored by owner (in beforeAll). Editor isn't author → must reject.
+    const res = await request.patch(`/api/entries/${entryId}`, {
+      headers: { cookie: editorCookie, 'content-type': 'application/json' },
+      data: { content: 'editor tries to hijack' }
+    });
+    expect(res.status()).toBe(404);
+  });
 });
 ```
 
@@ -1885,7 +2179,7 @@ git commit -m "test(P2b): E2E milestones admin + entry edit + milestone attachme
 
 - [ ] `pnpm typecheck` exits 0
 - [ ] `pnpm test` — P2a's 43 + 4 (createMember) + 2 (target-loaders milestones) + 1 (assert target_not_in_family) = **50 passing**
-- [ ] `pnpm test:e2e` — P2a's 22 + members (6) + milestones (3) + entry-edit (3) = **34 passing**
+- [ ] `pnpm test:e2e` — P2a's 22 + members (6) + milestones (5 = 3 base + 2 matrix negatives) + entry-edit (5 = 3 base + 2 matrix negatives) = **38 passing**
 - [ ] `pnpm lint` — 0 errors; all new `app/api/**/route.ts` files use `withAuthorizedAction` or `withAuthorizedResource` (verified by lint rule)
 - [ ] Fresh boot → owner login → `/profile` lists "宝宝管理 / 成员管理 / 里程碑设置" links
 - [ ] Owner visits `/profile/members` → creates editor → editor logs in successfully → editor visits `/profile/members` → gets 404 (no access)
