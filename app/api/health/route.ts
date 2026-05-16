@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { resolve } from 'node:path';
 import { getDb } from '@/lib/db/client';
 
-const dataDir = process.env.BABYLOOM_DATA_DIR ?? resolve(process.cwd(), 'data');
+const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
 
 export async function GET() {
   try {

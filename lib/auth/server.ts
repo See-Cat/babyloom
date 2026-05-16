@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { nextCookies } from 'better-auth/next-js';
 import { getDb } from '@/lib/db/client';
 import { users, sessions, accounts, verifications } from '@/lib/db/schema';
 import { hashPassword, verifyPassword } from '@/lib/bootstrap/owner';
@@ -30,7 +31,8 @@ export function getAuth(opts: AuthOptions) {
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24
-    }
+    },
+    plugins: [nextCookies()]
   });
 
   return cachedAuth;

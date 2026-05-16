@@ -5,7 +5,7 @@ import { runMigrations } from '@/lib/db/migrate';
 import { bootstrapOwner } from '@/lib/bootstrap/owner';
 
 export async function startup() {
-  const dataDir = process.env.BABYLOOM_DATA_DIR ?? resolve(process.cwd(), 'data');
+  const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
 
   const config = loadConfig({ dataDir });
   const log = createLogger({ dataDir, level: config.log.level }).child({ module: 'startup' });

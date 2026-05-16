@@ -14,7 +14,7 @@ export function runMigrations(dataDir: string) {
 // CLI entrypoint
 const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
-  const dataDir = process.env.BABYLOOM_DATA_DIR ?? resolve(process.cwd(), 'data');
+  const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
   runMigrations(dataDir);
   console.log(`Migrations applied at ${dataDir}/db/babyloom.sqlite`);
 }

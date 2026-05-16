@@ -5,7 +5,7 @@ import { headers } from 'next/headers';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 
-const dataDir = process.env.BABYLOOM_DATA_DIR ?? resolve(process.cwd(), 'data');
+const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
 
 export async function loginAction(formData: FormData): Promise<{ error?: string } | void> {
   const email = String(formData.get('email') ?? '');
