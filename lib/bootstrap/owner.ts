@@ -1,7 +1,7 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getDb } from '@/lib/db/client';
-import { users } from '@/lib/db/schema';
+import { users, accounts } from '@/lib/db/schema';
 import { loadConfig } from '@/lib/config/load';
 
 export interface BootstrapOwnerOptions {
@@ -28,18 +28,30 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
   const { db } = getDb({ dataDir: opts.dataDir });
 
   const existing = db.select().from(users).where(eq(users.role, 'owner')).all();
-  const now = Date.now();
+  const now = new Date();
   const passwordHash = hashPassword(config.owner.password);
 
   if (existing.length === 0) {
+    const userId = randomUUID();
     db.insert(users)
       .values({
-        id: randomUUID(),
-        username: config.owner.username,
+        id: userId,
+        name: config.owner.displayName,
         email: config.owner.email,
-        displayName: config.owner.displayName,
+        emailVerified: true,
+        username: config.owner.username,
         role: 'owner',
-        passwordHash,
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+    db.insert(accounts)
+      .values({
+        id: randomUUID(),
+        userId,
+        providerId: 'credential',
+        accountId: config.owner.email,
+        password: passwordHash,
         createdAt: now,
         updatedAt: now
       })
@@ -50,12 +62,39 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
   const owner = existing[0];
   db.update(users)
     .set({
-      username: config.owner.username,
+      name: config.owner.displayName,
       email: config.owner.email,
-      displayName: config.owner.displayName,
-      passwordHash,
+      username: config.owner.username,
       updatedAt: now
     })
     .where(eq(users.id, owner.id))
     .run();
+
+  const credAccount = db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.userId, owner.id), eq(accounts.providerId, 'credential')))
+    .all();
+  if (credAccount.length === 0) {
+    db.insert(accounts)
+      .values({
+        id: randomUUID(),
+        userId: owner.id,
+        providerId: 'credential',
+        accountId: config.owner.email,
+        password: passwordHash,
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+  } else {
+    db.update(accounts)
+      .set({
+        accountId: config.owner.email,
+        password: passwordHash,
+        updatedAt: now
+      })
+      .where(eq(accounts.id, credAccount[0].id))
+      .run();
+  }
 }

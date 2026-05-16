@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mkdtempSync, writeFileSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { eq } from 'drizzle-orm';
 
 describe('bootstrapOwner', () => {
   let dataDir: string;
@@ -25,19 +26,27 @@ log:
     runMigrations(dataDir);
   });
 
-  it('creates the owner user if no user exists', async () => {
+  it('creates the owner user + credential account if no user exists', async () => {
     const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
-    const { users } = await import('@/lib/db/schema');
-    const rows = db.select().from(users).all();
-    expect(rows).toHaveLength(1);
-    expect(rows[0].username).toBe('alice');
-    expect(rows[0].role).toBe('owner');
-    expect(rows[0].passwordHash).not.toBe('longenoughpw');
-    expect(rows[0].passwordHash.length).toBeGreaterThan(20);
+    const { users, accounts } = await import('@/lib/db/schema');
+    const userRows = db.select().from(users).all();
+    expect(userRows).toHaveLength(1);
+    expect(userRows[0].username).toBe('alice');
+    expect(userRows[0].role).toBe('owner');
+
+    const accountRows = db
+      .select()
+      .from(accounts)
+      .where(eq(accounts.userId, userRows[0].id))
+      .all();
+    expect(accountRows).toHaveLength(1);
+    expect(accountRows[0].providerId).toBe('credential');
+    expect(accountRows[0].password).not.toBe('longenoughpw');
+    expect(accountRows[0].password!.length).toBeGreaterThan(20);
   });
 
   it('is idempotent — second call does not create duplicate', async () => {
@@ -47,8 +56,9 @@ log:
 
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
-    const { users } = await import('@/lib/db/schema');
+    const { users, accounts } = await import('@/lib/db/schema');
     expect(db.select().from(users).all()).toHaveLength(1);
+    expect(db.select().from(accounts).all()).toHaveLength(1);
   });
 
   it('updates the owner password if config.yaml changed', async () => {
@@ -57,10 +67,9 @@ log:
 
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
-    const { users } = await import('@/lib/db/schema');
-    const firstHash = db.select().from(users).all()[0].passwordHash;
+    const { accounts } = await import('@/lib/db/schema');
+    const firstHash = db.select().from(accounts).all()[0].password;
 
-    // Rewrite config with new password
     const { clearConfigCache } = await import('@/lib/config/load');
     clearConfigCache();
     writeFileSync(join(dataDir, 'config.yaml'), `
@@ -74,7 +83,7 @@ log:
 `);
     await bootstrapOwner({ dataDir });
 
-    const secondHash = db.select().from(users).all()[0].passwordHash;
+    const secondHash = db.select().from(accounts).all()[0].password;
     expect(secondHash).not.toBe(firstHash);
   });
 });
