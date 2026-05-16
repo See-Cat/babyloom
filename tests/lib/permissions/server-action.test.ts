@@ -53,7 +53,10 @@ describe('withPermission server action wrapper', () => {
     }));
     const { withPermission } = await import('@/lib/permissions/server-action');
     const wrapped = withPermission(
-      { action: 'member:manage', resolveResource: async () => undefined },
+      {
+        action: 'member:manage',
+        resolveResource: async (_payload: { msg: string }) => undefined
+      },
       async (userId, payload: { msg: string }) => ({ userId, payload })
     );
     const res = await wrapped({ msg: 'hi' });
