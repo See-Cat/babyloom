@@ -9,6 +9,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   // better-auth stores session token in cookie 'better-auth.session_token'
   const hasSession = req.cookies.has('better-auth.session_token');
   if (!hasSession) {

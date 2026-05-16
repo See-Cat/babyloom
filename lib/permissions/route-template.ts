@@ -34,7 +34,7 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
   ) {
     return async function route(
       req: NextRequest,
-      ctx: { params: Promise<{ id: string }> | { id: string } }
+      ctx: { params: Promise<{ id: string }> }
     ): Promise<Response> {
       try {
         const params = await Promise.resolve(ctx.params);

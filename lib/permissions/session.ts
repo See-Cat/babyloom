@@ -7,6 +7,9 @@ const dataDir = process.env.BABYLOOM_DATA_DIR
   : resolve(process.cwd(), 'data');
 
 export async function getSessionUserId(req: Request): Promise<string> {
+  if (!req.headers.get('cookie')) {
+    throw new UnauthorizedError();
+  }
   const auth = getAuth({ dataDir });
   const session = await auth.api.getSession({ headers: req.headers });
   if (!session?.user?.id) {

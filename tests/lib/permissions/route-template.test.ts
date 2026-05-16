@@ -88,7 +88,7 @@ describe('withAuthorizedResource', () => {
 
   it('returns 404 for non-UUID id', async () => {
     const route = await buildWrapped('baby:read');
-    const res = await route(mockReq(), { params: { id: 'bad-id' } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: 'bad-id' }) });
     expect(res.status).toBe(404);
   });
 
@@ -100,7 +100,7 @@ describe('withAuthorizedResource', () => {
       }
     }));
     const route = await buildWrapped('baby:read');
-    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(401);
     vi.doUnmock('@/lib/permissions/session');
   });
@@ -110,7 +110,7 @@ describe('withAuthorizedResource', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read');
-    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe(ctx.babyId);
@@ -122,7 +122,7 @@ describe('withAuthorizedResource', () => {
       getSessionUserId: async () => randomUUID()
     }));
     const route = await buildWrapped('baby:read');
-    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
@@ -134,7 +134,7 @@ describe('withAuthorizedResource', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read');
-    const res = await route(mockReq(), { params: { id: randomUUID() } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: randomUUID() }) });
     expect(res.status).toBe(404);
     vi.doUnmock('@/lib/permissions/session');
   });
@@ -153,7 +153,7 @@ describe('withAuthorizedResource', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read', ['active']);
-    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
@@ -174,7 +174,7 @@ describe('withAuthorizedResource', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read', ['trashed']);
-    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(200);
     vi.doUnmock('@/lib/permissions/session');
   });
