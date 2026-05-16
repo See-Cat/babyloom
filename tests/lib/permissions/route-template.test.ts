@@ -178,4 +178,30 @@ describe('withAuthorizedResource', () => {
     expect(res.status).toBe(200);
     vi.doUnmock('@/lib/permissions/session');
   });
+
+  it('Codex review C3: wrapper threads userId to handler', async () => {
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    let receivedUserId: string | null = null;
+    const { withAuthorizedResource } = await import('@/lib/permissions/route-template');
+    const { getDb } = await import('@/lib/db/client');
+    const { babies } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const { db } = getDb({ dataDir });
+
+    const route = withAuthorizedResource({
+      action: 'baby:read',
+      loader: async (id) => db.select().from(babies).where(eq(babies.id, id)).get() ?? null,
+      getStatus: (row: any) => row.status,
+      allowedStatuses: ['active'],
+      toResource: (row: any) => ({ babyId: row.id })
+    })(async (_req, _ctx, _row, userId) => {
+      receivedUserId = userId;
+      return new Response(JSON.stringify({ ok: true }));
+    });
+    await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) } as any);
+    expect(receivedUserId).toBe(ctx.ownerId);
+    vi.doUnmock('@/lib/permissions/session');
+  });
 });

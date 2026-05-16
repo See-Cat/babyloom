@@ -30,7 +30,12 @@ export interface WithAuthorizedResourceOpts<R> {
 //   6. Hand off trusted row to handler
 export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
   return function wrap(
-    handler: (req: NextRequest, ctx: { params: { id: string } }, row: R) => Promise<Response>
+    handler: (
+      req: NextRequest,
+      ctx: { params: { id: string } },
+      row: R,
+      userId: string
+    ) => Promise<Response>
   ) {
     return async function route(
       req: NextRequest,
@@ -61,7 +66,7 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
 
         await assertPermission(userId, opts.action, opts.toResource(row));
 
-        return await handler(req, { params: params }, row);
+        return await handler(req, { params: params }, row, userId);
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
         throw e;
