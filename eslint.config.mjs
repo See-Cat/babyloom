@@ -1,0 +1,33 @@
+import tseslint from '@typescript-eslint/parser';
+import babyloom from 'eslint-plugin-babyloom';
+
+export default [
+  {
+    ignores: [
+      'node_modules/**',
+      '.next/**',
+      'lib/db/migrations/**',
+      'eslint-rules/**',
+      'test-data/**',
+      'test-results/**',
+      'playwright-report/**'
+    ]
+  },
+  {
+    files: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
+    languageOptions: {
+      parser: tseslint,
+      parserOptions: {
+        ecmaVersion: 2022,
+        sourceType: 'module',
+        ecmaFeatures: { jsx: true }
+      }
+    },
+    plugins: {
+      babyloom
+    },
+    rules: {
+      'babyloom/api-route-must-assert': 'error'
+    }
+  }
+];
