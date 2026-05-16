@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+:root {
+  /* placeholder tokens — full Animal Crossing palette lands in P5 */
+  --color-surface: oklch(98% 0 0);
+  --color-text: oklch(18% 0 0);
+}
+
+html, body {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, sans-serif;
+}
