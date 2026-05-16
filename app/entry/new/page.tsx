@@ -7,12 +7,32 @@ function NewEntryForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const babyId = sp.get('babyId') ?? '';
+  const [milestones, setMilestones] = useState<{ id: string; name: string; icon: string }[]>([]);
+  const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
     if (!babyId) router.replace('/timeline');
   }, [babyId, router]);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch('/api/milestones');
+      if (!res.ok) return;
+      const body = await res.json();
+      setMilestones(body.milestones);
+    })();
+  }, []);
+
+  function toggleMilestone(id: string) {
+    setSelectedMilestoneIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -22,7 +42,8 @@ function NewEntryForm() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         babyId,
-        content: String(formData.get('content') ?? '')
+        content: String(formData.get('content') ?? ''),
+        milestoneIds: Array.from(selectedMilestoneIds)
       })
     });
     setPending(false);
@@ -47,6 +68,25 @@ function NewEntryForm() {
           placeholder="今天发生了什么…"
           className="border rounded px-3 py-2 resize-none"
         />
+        {milestones.length > 0 && (
+          <div>
+            <p className="text-sm font-medium mb-2">里程碑</p>
+            <div className="flex flex-wrap gap-2">
+              {milestones.map((m) => (
+                <button
+                  key={m.id}
+                  type="button"
+                  onClick={() => toggleMilestone(m.id)}
+                  className={`px-3 py-1.5 text-sm border rounded ${
+                    selectedMilestoneIds.has(m.id) ? 'bg-black text-white' : ''
+                  }`}
+                >
+                  {m.icon} {m.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {error && <p className="text-red-600 text-sm">{error}</p>}
         <div className="flex gap-2 justify-end">
           <button type="button" onClick={() => router.back()} className="px-4 py-2 border rounded">
