@@ -1,0 +1,60 @@
+import { eq } from 'drizzle-orm';
+import Link from 'next/link';
+import { headers } from 'next/headers';
+import { notFound, redirect } from 'next/navigation';
+import { resolve } from 'node:path';
+import { getAuth } from '@/lib/auth/server';
+import { getDb } from '@/lib/db/client';
+import { babies, users } from '@/lib/db/schema';
+import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
+import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
+
+const dataDir = process.env.BABYLOOM_DATA_DIR
+  ? resolve(process.env.BABYLOOM_DATA_DIR)
+  : resolve(process.cwd(), 'data');
+
+export default async function EntryDetailPage({
+  params
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const auth = getAuth({ dataDir });
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user?.id) redirect('/login');
+
+  let entry: any;
+  try {
+    entry = await loadAndAssertTarget({
+      id,
+      table: 'entries',
+      allowedStatuses: ['active'],
+      requirePermission: { userId: session.user.id, action: 'entry:read' },
+      dataDir
+    });
+  } catch (e) {
+    if (e instanceof ForbiddenError || e instanceof NotFoundError) notFound();
+    throw e;
+  }
+
+  const { db } = getDb({ dataDir });
+  const author = db.select().from(users).where(eq(users.id, entry.authorId)).get();
+  const baby = db.select().from(babies).where(eq(babies.id, entry.babyId)).get();
+
+  return (
+    <main className="min-h-screen p-4 max-w-2xl mx-auto">
+      <Link href={`/timeline?babyId=${entry.babyId}`} className="text-sm opacity-60">
+        ← 时间线
+      </Link>
+      <article className="mt-4">
+        <header className="mb-4">
+          <p className="text-xs opacity-60">
+            {baby?.name} · {new Date(entry.occurredAt).toLocaleString('zh-CN')}
+          </p>
+          <p className="text-xs opacity-60">作者:{author?.name ?? '未知'}</p>
+        </header>
+        <p className="whitespace-pre-wrap text-base">{entry.content}</p>
+      </article>
+    </main>
+  );
+}
