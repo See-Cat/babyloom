@@ -4,9 +4,9 @@
 
 **Goal:** Land the full §5 permissions stack — `Action` enum, `assertPermission`, `loadAndAssertTarget` target loader, `withAuthorizedResource` API route template, `withPermission` server action wrapper, unified 404/401 response helpers, and a custom ESLint rule that forces every protected API route through the template. Extend P0's bootstrap to also create the single family and owner `family_members` row. End state: any future endpoint (P2-P4) can be guarded by importing these primitives; the ESLint rule fails CI on bare `route.ts` exports.
 
-**Architecture:** All permission logic lives in `lib/permissions/`. The full §5.4 Action enum is defined up front even though only `baby:*` and `member:manage` actions are exercised in P1 — naming the rest now prevents drift later. `assertPermission` performs: (a) load `family_members` row, (b) optional `baby_member_permissions` override, (c) ownership matrix check, (d) throw `ForbiddenError` on fail. Every protected entry point catches `ForbiddenError` and converts to **unified 404** (§5.6) — never 403. The ESLint rule walks `app/api/**/route.ts` ASTs and rejects any HTTP-method export whose handler body doesn't reference `withAuthorizedResource` (or `assertPermission` for non-resource endpoints).
+**Architecture:** All permission logic lives in `lib/permissions/`. The full §5.4 Action enum is defined up front even though only `baby:*` and `member:manage` actions are exercised in P1 — naming the rest now prevents drift later. `assertPermission` performs: (a) load `family_members` row, (b) optional `baby_member_permissions` override, (c) ownership matrix check, (d) throw `ForbiddenError` on fail. Every protected entry point catches `ForbiddenError` and converts to **unified 404** (§5.6) — never 403. The ESLint rule walks `app/api/**/route.ts` ASTs and rejects any HTTP-method export that is not exactly `export const METHOD = withAuthorizedResource(...)(...)`.
 
-**Tech Stack additions:** `@typescript-eslint/utils` + `eslint` for the custom rule. Everything else inherited from P0.
+**Tech Stack additions:** `eslint`, `@typescript-eslint/parser`, and the local `eslint-plugin-babyloom` file dependency for the custom rule. Everything else inherited from P0.
 
 **Scope boundaries (NOT in P1):**
 - No entries / media / milestones tables (P2 / P3)
@@ -40,9 +40,10 @@ lib/
 │   ├── target-loaders.ts                  # NEW: loadAndAssertTarget generic loader
 │   ├── route-template.ts                  # NEW: withAuthorizedResource HOF for API routes
 │   └── server-action.ts                   # NEW: withPermission HOF for server actions
-├── api/
-│   └── babies/
-│       └── [id]/route.ts                  # NEW (smoke test): GET /api/babies/[id] using the template
+app/
+└── api/
+    └── babies/
+        └── [id]/route.ts                  # NEW (smoke test): GET /api/babies/[id] using the template
 tests/
 ├── lib/
 │   ├── bootstrap/
@@ -58,7 +59,7 @@ eslint-rules/
 ├── package.json                           # NEW: local pkg for the rule
 ├── index.js                               # NEW: rule registrar
 └── api-route-must-assert.js               # NEW: the AST walker
-.eslintrc.cjs                              # NEW: enable @typescript-eslint + local rule
+eslint.config.mjs                          # NEW: ESLint 9 flat config enabling @typescript-eslint + local rule
 ```
 
 ---
@@ -99,7 +100,8 @@ export const familyMembers = sqliteTable(
     joinedAt: integer('joined_at').notNull()
   },
   (t) => ({
-    uniqFamilyUser: uniqueIndex('uq_family_member_family_user').on(t.familyId, t.userId)
+    uniqFamilyUser: uniqueIndex('uq_family_member_family_user').on(t.familyId, t.userId),
+    byUser: index('ix_family_members_user').on(t.userId)
   })
 );
 
@@ -228,7 +230,7 @@ Open `tests/lib/bootstrap/owner.test.ts` and add the following test cases at the
 
     const fams = db.select().from(families).all();
     expect(fams).toHaveLength(1);
-    expect(fams[0].name).toBe('Test Family');
+    expect(fams[0].name).toBe('Alice Home');
 
     const owner = db.select().from(users).all()[0];
     const members = db.select().from(familyMembers).all();
@@ -341,10 +343,10 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 ```
 
-- [ ] **Step 2: Run tests to verify new ones fail, old ones still pass**
+- [ ] **Step 2: Run tests to verify the family bootstrap tests fail, old invariants still pass**
 
 Run: `pnpm test tests/lib/bootstrap/owner.test.ts`
-Expected: the three new tests fail (families table empty); existing tests pass.
+Expected: the new family/family_members tests fail because `bootstrapOwner` does not create those rows yet; existing P0 tests and the username/password regression test pass.
 
 - [ ] **Step 3: Extend `lib/bootstrap/owner.ts`** — ADDITIVE only
 
@@ -435,7 +437,7 @@ const nowMs = Date.now();
 - [ ] **Step 4: Run tests**
 
 Run: `pnpm test tests/lib/bootstrap/owner.test.ts`
-Expected: P0's 3 base tests + 4 new P1 tests = 7 passing.
+Expected: P0's 4 base tests + 4 new P1 tests = 8 passing.
 
 - [ ] **Step 5: Commit**
 
@@ -1677,6 +1679,8 @@ describe('withAuthorizedResource', () => {
   let ctx: Awaited<ReturnType<typeof seed>>;
 
   beforeEach(async () => {
+    vi.resetModules();
+    vi.doUnmock('@/lib/permissions/session');
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-route-'));
     ctx = await seed(dataDir);
     process.env.BABYLOOM_DATA_DIR = dataDir;
@@ -1923,6 +1927,8 @@ describe('withPermission server action wrapper', () => {
   let ctx: Awaited<ReturnType<typeof seed>>;
 
   beforeEach(async () => {
+    vi.resetModules();
+    vi.doUnmock('@/lib/permissions/session');
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-action-'));
     ctx = await seed(dataDir);
     process.env.BABYLOOM_DATA_DIR = dataDir;
@@ -2017,7 +2023,7 @@ Trade-off: developers can no longer write `export async function GET() { await a
 
 **Files:**
 - Create: `eslint-rules/package.json`, `eslint-rules/index.js`, `eslint-rules/api-route-must-assert.js`
-- Create: `.eslintrc.cjs`
+- Create: `eslint.config.mjs`
 
 - [ ] **Step 1: Write the local rule package**
 
@@ -2207,7 +2213,7 @@ Modify `scripts`:
 Before testing fixtures, confirm ESLint 9 picked up the flat config AND the custom rule:
 
 ```bash
-pnpm lint --print-config app/api/babies/\[id\]/route.ts | grep -E '"babyloom/api-route-must-assert"\s*:\s*\[?\s*"?error"?' && echo "OK: rule installed" || echo "FAIL: rule NOT loaded"
+pnpm exec eslint --print-config app/api/babies/\[id\]/route.ts | grep -E '"babyloom/api-route-must-assert"\s*:\s*\[?\s*"?error"?' && echo "OK: rule installed" || echo "FAIL: rule NOT loaded"
 ```
 
 Expected: `OK: rule installed`. If `FAIL`, the flat config didn't register the plugin — fix `eslint.config.mjs` before continuing.
@@ -2237,7 +2243,7 @@ run_fixture "1 bare-fn" fire
 
 # Fixture 2: comment-only reference — must fire
 cat > app/api/_rule_smoke/route.ts <<'EOF'
-// withAuthorizedResource later — TODO
+// withAuthorizedResource mentioned in a comment does not count
 // assertPermission needs to go here
 export async function GET() { return new Response('secret'); }
 EOF
@@ -2406,18 +2412,18 @@ git commit -m "feat(P1): sample GET /api/babies/[id] using the route template"
 **Files:**
 - Create: `tests/e2e/permissions.spec.ts`
 
-- [ ] **Step 1: Extend the e2e global-setup config to also create a baby + a second-family stranger**
+- [ ] **Step 1: Extend the e2e setup to also create a baby + a non-member stranger**
 
 Update `playwright.config.ts` global-setup (or wherever P0 seeds the e2e DB) so that **after** owner bootstrap runs, the test fixtures also include:
 
 - one baby in the owner's family (record its ID somewhere the test can read it)
 - an `editor` user not added to any family (i.e. a stranger)
 
-The simplest mechanism: have a `tests/e2e/fixtures.ts` that, after the playwright webserver is up, hits a `tests/e2e/_fixtures_seed.ts` helper that uses the dev server's exported helpers. Concrete approach below.
+The simplest mechanism: have `tests/e2e/fixtures.ts` seed the same `test-data/e2e` SQLite DB after the Playwright webserver health check has already forced startup migrations/bootstrap to run.
 
 Create `tests/e2e/fixtures.ts`:
 
-> **Codex round-11 finding #3 fix**: the stranger account MUST be seeded into both `users` AND `accounts.password` (providerId='credential') — the same physical layout `bootstrapOwner` uses (spec §3.2). An earlier draft wrote `nickname`/`passwordHash` directly into `users`, which doesn't exist in the better-auth 4-table schema and would either typecheck-fail or leave the stranger unable to log in (making the 404-vs-cross-family E2E vacuous).
+> **Codex round-11 finding #3 fix**: the stranger account MUST be seeded into both `users` AND `accounts.password` (providerId='credential') — the same physical layout `bootstrapOwner` uses (spec §3.2). An earlier draft wrote `nickname`/`passwordHash` directly into `users`, which doesn't exist in the better-auth 4-table schema and would either typecheck-fail or leave the stranger unable to log in (making the 404-vs-non-member E2E vacuous).
 
 ```typescript
 import { randomUUID } from 'node:crypto';
@@ -2427,16 +2433,16 @@ export async function seedE2eExtras() {
   const dataDir = resolve(process.cwd(), 'test-data/e2e');
   process.env.BABYLOOM_DATA_DIR = dataDir;
 
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('../../lib/db/client');
   const { db } = getDb({ dataDir });
-  const { users, accounts, families, babies } = await import('@/lib/db/schema');
-  const { hashPassword, ownerInternalEmail } = await import('@/lib/bootstrap/owner');
+  const { users, accounts, families, babies } = await import('../../lib/db/schema');
+  const { hashPassword, ownerInternalEmail } = await import('../../lib/bootstrap/owner');
 
   const owner = db.select().from(users).all().find((u: any) => u.role === 'owner');
   if (!owner) throw new Error('owner not bootstrapped — run global-setup first');
   const family = db.select().from(families).all()[0];
 
-  // Ensure one active baby in the owner's family for the cross-family 404 test
+  // Ensure one active baby in the owner's family for the non-member 404 test
   let baby = db.select().from(babies).all()[0];
   if (!baby) {
     const id = randomUUID();
@@ -2543,29 +2549,15 @@ test.describe('GET /api/babies/[id] permission gating', () => {
     expect(body.name).toBe('E2E Baby');
   });
 
-  test('non-family user → 404 (not 403)', async ({ page, request }) => {
-    // Stranger logs in via email — username login is the owner's own flow only
-    // (P0 login form was username-based for owner-only ergonomics; stranger
-    // uses better-auth's email sign-in endpoint directly, OR if the login form
-    // accepts both, this still works.)
-    //
-    // If the login form only accepts username, swap to a direct API call:
-    //   await request.post('/api/auth/sign-in/email', { data: strangerCreds });
-    //   const cookies = await request.storageState();
-    //
-    // Reference implementation assumes the login form supports email; if not,
-    // adapt to better-auth's sign-in-email endpoint.
+  test('non-family user → 404 (not 403)', async ({ request }) => {
+    // Stranger logs in via better-auth's email endpoint. The Playwright
+    // APIRequestContext keeps cookies from this response for later calls.
     const signIn = await request.post('/api/auth/sign-in/email', {
       data: strangerCreds
     });
     expect(signIn.status()).toBeLessThan(400);
-    // Extract cookies from the sign-in response
-    const setCookies = signIn.headers()['set-cookie'] ?? '';
-    const cookieHeader = setCookies.split(/,(?=\s*\w+=)/).map((c) => c.split(';')[0].trim()).join('; ');
 
-    const res = await request.get(`/api/babies/${babyId}`, {
-      headers: { cookie: cookieHeader }
-    });
+    const res = await request.get(`/api/babies/${babyId}`);
     expect(res.status()).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
@@ -2705,7 +2697,7 @@ git commit -m "fix(P1): bring legacy routes under api-route-must-assert"
 ## P1 Acceptance Checklist
 
 - [ ] `pnpm typecheck` exits 0
-- [ ] `pnpm test` — at least 37 passing (P0's 14 + P1's: 13 matrix [incl 3 round-10 regressions] + 6 target-loaders + 7 route-template [incl 2 round-12 status-gate regressions] + 3 server-action + 4 new bootstrap tests = 37 minimum)
+- [ ] `pnpm test` — at least 47 passing (P0's 14 + P1's: 13 matrix [incl 3 round-10 regressions] + 6 target-loaders + 7 route-template [incl 2 round-12 status-gate regressions] + 3 server-action + 4 new bootstrap tests = 47 minimum)
 - [ ] `pnpm test:e2e` — 9 passing (4 P0 + 5 P1)
 - [ ] `pnpm lint` — 0 errors against `app/**` and `lib/**`
 - [ ] A new file `app/api/_smoke/route.ts` containing just `export async function GET(){return new Response('x')}` causes `pnpm lint` to emit the `babyloom/api-route-must-assert` error
