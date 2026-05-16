@@ -17,6 +17,9 @@ const createSchema = z.object({
   content: z.string().min(1).max(10000),
   occurredAt: z.number().int().optional()
 });
+const createResourceSchema = z.object({
+  babyId: z.string().regex(UUID_RE)
+});
 
 export const GET = withAuthorizedAction({ action: 'baby:read' })(async (req, userId) => {
   const url = new URL(req.url);
@@ -59,7 +62,18 @@ export const GET = withAuthorizedAction({ action: 'baby:read' })(async (req, use
 
 export const POST = withAuthorizedAction({
   action: 'entry:write',
-  resolveResource: async (_req, userId) => ({ authorId: userId })
+  resolveResource: async (req, userId) => {
+    let body: unknown;
+    try {
+      body = await req.clone().json();
+    } catch {
+      return { authorId: userId };
+    }
+    const parsed = createResourceSchema.safeParse(body);
+    return parsed.success
+      ? { babyId: parsed.data.babyId, authorId: userId }
+      : { authorId: userId };
+  }
 })(async (req, userId) => {
   let body: unknown;
   try {
