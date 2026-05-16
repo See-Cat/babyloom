@@ -1,7 +1,50 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['better-sqlite3', 'pino', 'pino-roll']
+  serverExternalPackages: ['better-sqlite3', 'pino', 'pino-roll', 'bindings'],
+  webpack: (config, { isServer, nextRuntime, webpack }) => {
+    const isEdge = nextRuntime === 'edge';
+
+    // Native/Node-only deps must never enter the client or edge bundle.
+    if (!isServer || isEdge) {
+      config.resolve = config.resolve || {};
+      config.resolve.alias = {
+        ...(config.resolve.alias || {}),
+        'better-sqlite3': false,
+        'bindings': false,
+        'pino': false,
+        'pino-roll': false
+      };
+    }
+
+    if (isEdge) {
+      // Rewrite `node:foo` URI imports to bare `foo` so the alias-to-false
+      // below can stub them. Webpack's URI scheme handler rejects `node:`
+      // before alias resolution unless we replace it first.
+      config.plugins = config.plugins || [];
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+          resource.request = resource.request.replace(/^node:/, '');
+        })
+      );
+
+      // The edge compilation of instrumentation.ts pulls in modules whose
+      // dependencies (e.g. bindings → require('path')) cannot be resolved on
+      // edge. Stub built-in node modules in the edge bundle; the real startup
+      // code is gated by NEXT_RUNTIME==='nodejs'.
+      const NODE_BUILTINS = [
+        'fs', 'path', 'crypto', 'os', 'url', 'stream', 'util', 'buffer',
+        'events', 'http', 'https', 'net', 'tls', 'zlib', 'assert',
+        'child_process', 'worker_threads', 'module', 'perf_hooks',
+        'querystring', 'process'
+      ];
+      for (const m of NODE_BUILTINS) {
+        config.resolve.alias[m] = false;
+      }
+    }
+
+    return config;
+  }
 };
 
 export default nextConfig;
