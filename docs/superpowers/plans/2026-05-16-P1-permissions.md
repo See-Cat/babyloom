@@ -897,38 +897,56 @@ app:
 
   const { getDb } = await import('@/lib/db/client');
   const { db } = getDb({ dataDir });
-  const { users, families, familyMembers, babies, babyMemberPermissions } =
+  const { users, accounts, families, familyMembers, babies, babyMemberPermissions } =
     await import('@/lib/db/schema');
+  const { hashPassword, ownerInternalEmail } = await import('@/lib/bootstrap/owner');
 
   const ownerUser = db.select().from(users).all()[0];
   const family = db.select().from(families).all()[0];
 
-  // Add an editor + viewer in the same family
-  const now = Date.now();
-  const editorUserId = randomUUID();
-  const viewerUserId = randomUUID();
-  db.insert(users)
-    .values([
-      {
-        id: editorUserId,
-        username: 'editor',
-        nickname: 'Editor',
-        role: 'editor',
-        passwordHash: 'x',
-        createdAt: now,
-        updatedAt: now
-      } as typeof users.$inferInsert,
-      {
-        id: viewerUserId,
-        username: 'viewer',
-        nickname: 'Viewer',
-        role: 'viewer',
-        passwordHash: 'x',
-        createdAt: now,
-        updatedAt: now
-      } as typeof users.$inferInsert
-    ])
-    .run();
+  // Add an editor + viewer in the same family.
+  // Codex round-12 finding #3 — must follow the better-auth 4-table layout
+  // (spec §3.2): write to BOTH users (name/email/emailVerified/username/role)
+  // AND accounts (providerId='credential', password). Plain `passwordHash` on
+  // users does NOT exist in the physical schema. The seed must match what
+  // bootstrapOwner does or the matrix tests fail at insert time.
+  const nowMs = Date.now();
+  const nowDate = new Date(nowMs);
+
+  function seedMember(username: string, role: 'editor' | 'viewer') {
+    const userId = randomUUID();
+    const email = ownerInternalEmail(username);
+    db.insert(users)
+      .values({
+        id: userId,
+        name: username,
+        email,
+        emailVerified: true,
+        username,
+        role,
+        createdAt: nowDate,
+        updatedAt: nowDate
+      })
+      .run();
+    // accounts row only matters if the test logs in — matrix tests don't, but
+    // having it makes the seed re-usable for E2E too, and tests the dual-write
+    // path the way real users will exist on disk.
+    db.insert(accounts)
+      .values({
+        id: randomUUID(),
+        userId,
+        providerId: 'credential',
+        accountId: email,
+        password: hashPassword(`${username}-test-pw`),
+        createdAt: nowDate,
+        updatedAt: nowDate
+      })
+      .run();
+    return userId;
+  }
+
+  const editorUserId = seedMember('editor', 'editor');
+  const viewerUserId = seedMember('viewer', 'viewer');
 
   const editorMemberId = randomUUID();
   const viewerMemberId = randomUUID();
@@ -939,14 +957,14 @@ app:
         familyId: family.id,
         userId: editorUserId,
         role: 'editor',
-        joinedAt: now
+        joinedAt: nowMs
       },
       {
         id: viewerMemberId,
         familyId: family.id,
         userId: viewerUserId,
         role: 'viewer',
-        joinedAt: now
+        joinedAt: nowMs
       }
     ])
     .run();
@@ -961,8 +979,8 @@ app:
       birthday: '2024-01-01',
       gender: 'girl',
       status: 'active',
-      createdAt: now,
-      updatedAt: now
+      createdAt: nowMs,
+      updatedAt: nowMs
     })
     .run();
 
@@ -1507,6 +1525,8 @@ git commit -m "test(P1): loadAndAssertTarget edge cases for babies"
 **Files:**
 - Create: `lib/permissions/route-template.ts`
 
+> **Codex round-12 finding #1 fix**: the wrapper now owns the §5.7 status gate. `allowedStatuses` is **required** (not optional) so "I forgot" becomes a TypeScript error. The wrapper consults `getStatus(row)` after the loader returns and BEFORE `assertPermission`, returning a unified 404 if the row's status is not in the allowed set. Handlers never see a trashed/purged row.
+
 - [ ] **Step 1: Write `lib/permissions/route-template.ts`**
 
 ```typescript
@@ -1517,14 +1537,29 @@ import { jsonNotFound, jsonUnauthorized, UUID_RE } from './responses';
 import { getSessionUserId } from './session';
 import { assertPermission } from './assert';
 
+// `allowedStatuses` is REQUIRED — not optional. A route that genuinely has no
+// status column on its target table should pass a tuple containing the only
+// valid value (e.g. `['ok']`) explicitly, after pointing `getStatus` to a
+// constant. This forces every route author to make a status decision rather
+// than accidentally exposing trashed rows.
 export interface WithAuthorizedResourceOpts<R> {
   action: Action;
   loader: (id: string) => Promise<R | null>;
+  getStatus: (row: R) => string;
+  allowedStatuses: readonly string[];
   toResource: (row: R) => PermissionResource;
 }
 
-// Wraps a Next.js App Router handler. Every protected /api route MUST use this.
-// The ESLint rule babyloom/api-route-must-assert enforces it.
+// Wraps a Next.js App Router handler. Every protected /api route MUST use this
+// (enforced by ESLint rule babyloom/api-route-must-assert).
+//
+// Pipeline (spec §5.7):
+//   1. UUID shape       → 404 if malformed
+//   2. Session          → 401 if missing (the only non-404 negative)
+//   3. Load by id       → 404 if no row
+//   4. Status gate      → 404 if row.status not in allowedStatuses    (§5.6)
+//   5. assertPermission → ForbiddenError → 404 (§5.6)
+//   6. Hand off trusted row to handler
 export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
   return function wrap(
     handler: (req: NextRequest, ctx: { params: { id: string } }, row: R) => Promise<Response>
@@ -1534,11 +1569,9 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
       ctx: { params: Promise<{ id: string }> | { id: string } }
     ): Promise<Response> {
       try {
-        // 1. ID shape
         const params = await Promise.resolve(ctx.params);
         if (!UUID_RE.test(params.id)) return jsonNotFound();
 
-        // 2. Session — 401 is the one allowed exception to "unified 404"
         let userId: string;
         try {
           userId = await getSessionUserId(req);
@@ -1547,14 +1580,19 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
           throw e;
         }
 
-        // 3. DB-authoritative load
         const row = await opts.loader(params.id);
         if (!row) return jsonNotFound();
 
-        // 4. Permission against loaded row's fields (NEVER the request body)
+        // STATUS GATE (Codex round-12 finding #1): collapses status mismatch
+        // to unified 404 before authorization runs. Without this, a route
+        // handler that forgets `if (row.status !== 'active') return 404` will
+        // happily serve trashed rows after authorization passes — a
+        // resource-existence leak the spec §5.6 forbids.
+        const status = opts.getStatus(row);
+        if (!opts.allowedStatuses.includes(status)) return jsonNotFound();
+
         await assertPermission(userId, opts.action, opts.toResource(row));
 
-        // 5. Hand off to business handler with trusted row
         return await handler(req, { params: params }, row);
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
@@ -1644,7 +1682,10 @@ describe('withAuthorizedResource', () => {
     process.env.BABYLOOM_DATA_DIR = dataDir;
   });
 
-  async function buildWrapped(action: 'baby:read') {
+  async function buildWrapped(
+    action: 'baby:read',
+    allowedStatuses: readonly string[] = ['active']
+  ) {
     const { withAuthorizedResource } = await import('@/lib/permissions/route-template');
     const { getDb } = await import('@/lib/db/client');
     const { babies } = await import('@/lib/db/schema');
@@ -1654,6 +1695,8 @@ describe('withAuthorizedResource', () => {
     return withAuthorizedResource({
       action,
       loader: async (id: string) => db.select().from(babies).where(eq(babies.id, id)).get() ?? null,
+      getStatus: (row: any) => row.status,
+      allowedStatuses,
       toResource: (row: any) => ({ babyId: row.id })
     })(async (req, _ctx, row: any) => {
       return new Response(JSON.stringify({ ok: true, id: row.id }), {
@@ -1715,19 +1758,61 @@ describe('withAuthorizedResource', () => {
     expect(res.status).toBe(404);
     vi.doUnmock('@/lib/permissions/session');
   });
+
+  it('Codex round-12: status gate fires BEFORE assertPermission — trashed row returns unified 404 even for owner', async () => {
+    // Soft-delete the baby
+    const { getDb } = await import('@/lib/db/client');
+    const { babies } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const { db } = getDb({ dataDir });
+    db.update(babies)
+      .set({ status: 'trashed', deletedAt: Date.now(), deletedBy: ctx.ownerId })
+      .where(eq(babies.id, ctx.babyId))
+      .run();
+
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    const route = await buildWrapped('baby:read', ['active']);
+    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    expect(res.status).toBe(404);
+    const body = await res.json();
+    expect(body.error).toBe('not_found');
+    vi.doUnmock('@/lib/permissions/session');
+  });
+
+  it('Codex round-12: when allowedStatuses includes trashed, the same row IS served', async () => {
+    const { getDb } = await import('@/lib/db/client');
+    const { babies } = await import('@/lib/db/schema');
+    const { eq } = await import('drizzle-orm');
+    const { db } = getDb({ dataDir });
+    db.update(babies)
+      .set({ status: 'trashed', deletedAt: Date.now(), deletedBy: ctx.ownerId })
+      .where(eq(babies.id, ctx.babyId))
+      .run();
+
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    // Owner restore/trash UI loads the trashed baby explicitly
+    const route = await buildWrapped('baby:read', ['trashed']);
+    const res = await route(mockReq(), { params: { id: ctx.babyId } });
+    expect(res.status).toBe(200);
+    vi.doUnmock('@/lib/permissions/session');
+  });
 });
 ```
 
 - [ ] **Step 2: Run tests**
 
 Run: `pnpm test tests/lib/permissions/route-template.test.ts`
-Expected: 5 passing.
+Expected: 7 passing (5 base + 2 round-12 status-gate regressions).
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add tests/lib/permissions/route-template.test.ts
-git commit -m "test(P1): withAuthorizedResource template — 401 / 404 / 200 paths"
+git commit -m "test(P1): withAuthorizedResource template — 401 / 404 / 200 + status-gate"
 ```
 
 ---
@@ -2002,9 +2087,25 @@ module.exports = {
     return {
       ExportNamedDeclaration(node) {
         const decl = node.declaration;
-        if (!decl) return;
 
-        // Reject `export async function GET(){...}` — must use const-with-wrapper
+        // ─── Case A: `export specifier` form (Codex round-12 finding #2) ───
+        // Covers `const GET = ...; export { GET };` and re-exports.
+        // This shape has decl===null and specifiers!==[]. Reject any HTTP
+        // method name appearing as an exported specifier — the only legal
+        // route shape is a direct `export const METHOD = wrapper(...)(...)`.
+        if (!decl) {
+          for (const spec of node.specifiers ?? []) {
+            // ExportSpecifier: { type, local: Identifier, exported: Identifier }
+            const exportedName =
+              spec?.exported?.type === 'Identifier' ? spec.exported.name : null;
+            if (exportedName && HTTP_METHODS.has(exportedName)) {
+              context.report({ node: spec, messageId: 'notWrapped', data: { name: exportedName } });
+            }
+          }
+          return;
+        }
+
+        // ─── Case B: `export async function GET(){}` ──────────────────────
         if (decl.type === 'FunctionDeclaration') {
           const name = decl.id?.name;
           if (name && HTTP_METHODS.has(name)) {
@@ -2013,6 +2114,7 @@ module.exports = {
           return;
         }
 
+        // ─── Case C: `export const GET = withAuthorizedResource(...)(...)` ─
         if (decl.type !== 'VariableDeclaration') return;
 
         for (const d of decl.declarations) {
@@ -2020,7 +2122,6 @@ module.exports = {
           if (!name || !HTTP_METHODS.has(name)) continue;
 
           const init = d.init;
-          // Must be a CallExpression with leftmost callee = withAuthorizedResource
           const ok =
             init &&
             init.type === 'CallExpression' &&
@@ -2030,6 +2131,14 @@ module.exports = {
             context.report({ node: d, messageId: 'notWrapped', data: { name } });
           }
         }
+      },
+
+      // Belt-and-suspenders: also reject `export default` for HTTP methods
+      // (Next.js doesn't accept these for route methods, but defense in depth).
+      ExportDefaultDeclaration(node) {
+        // Default exports cannot be HTTP method handlers in App Router; ignore
+        // to avoid false positives in non-route files matching the path glob.
+        // (left intentionally empty — this branch documents the decision)
       }
     };
   }
@@ -2178,15 +2287,33 @@ import { withAuthorizedResource } from '@/lib/permissions/route-template';
 export const GET = withAuthorizedResource({
   action: 'baby:read',
   loader: async () => null,
+  getStatus: () => 'active',
+  allowedStatuses: ['active'],
   toResource: () => ({})
 })(async () => new Response('ok'));
 EOF
 run_fixture "7 template-positive" pass
 
+# Fixture 8: const + export specifier (Codex round-12 finding #2)
+# Without specifier handling, the previous rule version returned early on
+# decl===null and let this through.
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+const GET = async () => new Response('secret');
+export { GET };
+EOF
+run_fixture "8 specifier-bypass" fire
+
+# Fixture 9: rename via specifier — `export { localName as GET }`
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+const handler = async () => new Response('secret');
+export { handler as GET };
+EOF
+run_fixture "9 specifier-rename-bypass" fire
+
 rm -rf app/api/_rule_smoke
 ```
 
-Expected output (all 7 lines):
+Expected output (all 9 lines):
 ```
 OK: 1 bare-fn caught
 OK: 2 comment-bypass caught
@@ -2195,6 +2322,8 @@ OK: 4 direct-call-bare-fn caught
 OK: 5 arrow-unreachable-call caught
 OK: 6 wrong-wrapper caught
 OK: 7 template-positive passed
+OK: 8 specifier-bypass caught
+OK: 9 specifier-rename-bypass caught
 ```
 
 If any line starts with `FAIL`, the rule is broken — fix it before continuing.
@@ -2238,12 +2367,11 @@ async function loadBaby(id: string) {
 export const GET = withAuthorizedResource({
   action: 'baby:read',
   loader: loadBaby,
+  getStatus: (row) => row.status,
+  allowedStatuses: ['active'], // trashed/purged collapse to 404 in the wrapper
   toResource: (row) => ({ babyId: row.id })
 })(async (_req, _ctx, row) => {
-  if (row.status !== 'active') {
-    // hide trashed/purged from /api/babies/[id]; trash UI uses a different endpoint
-    return Response.json({ error: 'not_found' }, { status: 404 });
-  }
+  // No defensive status check here — the wrapper guarantees row.status === 'active'.
   return Response.json({
     id: row.id,
     name: row.name,
@@ -2577,7 +2705,7 @@ git commit -m "fix(P1): bring legacy routes under api-route-must-assert"
 ## P1 Acceptance Checklist
 
 - [ ] `pnpm typecheck` exits 0
-- [ ] `pnpm test` — at least 35 passing (P0's 14 + P1's: 13 matrix [incl 3 round-10 regressions] + 6 target-loaders + 5 route-template + 3 server-action + 4 new bootstrap tests = 35 minimum)
+- [ ] `pnpm test` — at least 37 passing (P0's 14 + P1's: 13 matrix [incl 3 round-10 regressions] + 6 target-loaders + 7 route-template [incl 2 round-12 status-gate regressions] + 3 server-action + 4 new bootstrap tests = 37 minimum)
 - [ ] `pnpm test:e2e` — 9 passing (4 P0 + 5 P1)
 - [ ] `pnpm lint` — 0 errors against `app/**` and `lib/**`
 - [ ] A new file `app/api/_smoke/route.ts` containing just `export async function GET(){return new Response('x')}` causes `pnpm lint` to emit the `babyloom/api-route-must-assert` error

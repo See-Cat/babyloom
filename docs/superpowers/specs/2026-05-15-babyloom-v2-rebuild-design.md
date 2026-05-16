@@ -1951,6 +1951,20 @@ PRAGMA temp_store = MEMORY;
 - **简化是最强的防线**:每多一种"合法形式"就多一类绕过。round-11 修法收益不只是"修了这个 bug",而是"消灭了整类 bug"——routes 只有一种合法形状,绕过自然不存在
 - **改 schema 物理布局后必须全 plan grep**(第 4 次重犯):round-9 → round-10 → round-11 已经连续三次出现"schema 改了但 plan 内某个 fixture/test/seed 没跟上"。固化为**强制 hook**:plan 文件 commit 前 pre-commit `grep -rn "<旧字段名>" docs/superpowers/plans/` 自检
 
+### 15.13 第十二轮(2026-05-16)— P1 plan 三复查,已修复
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| `withAuthorizedResource` wrapper 没实现 spec §5.7 第 4 步"状态闸门",sample route 不得不在 handler 内自己 `if (row.status !== 'active') 404` → 任何未来 route 忘记这两行就会**把 trashed/purged 资源直接返回给授权用户**(存在性泄露,违反 §5.6) | high | P1 plan Task 12 wrapper 接口加 `getStatus` + `allowedStatuses`(必传,非 optional);wrapper 在 loader 之后、assertPermission 之前做状态闸门;P1 Task 13 加 2 个回归测试(trashed → 404、allowedStatuses 含 trashed 时同 row → 200);P1 Task 17 sample route 删 handler 内 status check,改靠 wrapper 保证 |
+| ESLint 规则只看 `ExportNamedDeclaration.declaration`,漏 `const GET=...; export { GET };` 的 specifier 形式 → 已知 2 行就能绕过 CI 主防线 | high | P1 plan Task 16 规则加 Case A specifier 分支:遍历 `node.specifiers`,任何 exported.name 是 HTTP method 直接 report;P1 Task 16 fixture 加 #8(`export { GET }`)+ #9(`export { handler as GET }`)证明都触发 |
+| Task 9 assertPermission 矩阵测试的 seed 仍写 `users.nickname` / `passwordHash`(与 P0 实施的 better-auth 4 表布局冲突),核心 13 个矩阵测试 typecheck 挂或 runtime 挂——本来要支撑 P1 主防线的"完整 §5.4 覆盖"证据实际不可执行。**这是第 5 次同款 schema drift 重犯** | medium | P1 plan Task 9 seed 改为 user + accounts dual-write 模式(同 round-11 Task 18 fixture);editor/viewer 用 `ownerInternalEmail()` + `hashPassword()`;timestamp 用 `Date` 不是 `Date.now()`(因为 schema 是 `{ mode: 'timestamp' }`)|
+
+**元教训沉淀**:
+- **Lint 防线只保护它的契约,不能保护契约外的责任**:round-11 引以为豪的"template-only"在 wrapper 漏 step 时一样失效——lint 严是没用的,如果它保护的是个不完整的 wrapper。永久原则:**每条 lint 规则文档必须列出"它保证的不变量"和"它不保证的不变量"**,后者必须由 wrapper 自身/类型系统保证。Wrapper 的字段必传(`allowedStatuses` 而非 `allowedStatuses?`)是把"忘记"提升到类型错误的标准做法,优于 runtime check
+- **AST 节点形式数量 > 程序员直觉**:ECMAScript 的 `export` 至少有 5 种形式(declaration / specifier / default / namespace / from)。永久原则:**任何处理某类 AST 节点的 lint 规则必须显式枚举所有变体**,要么处理要么显式拒绝;不能"declaration 为 null 就 return"。Round-11 修法以为穷举完了 export 形式,实际只覆盖 2/5
+- **修一处后必须扫同款,纪律不能靠手动**(第 5 次重犯,本轮直接命中 Task 9):round-11 修 Task 18 stranger seed 时,Task 9 的同款代码就在视野内,但被跳过了。已经反复出现的失败模式不能再靠"我下次会注意",必须固化为**checklist 强制项**:所有"改 schema 物理布局"PR 必须运行 `grep -rn "<旧字段>" docs/` 并把输出贴在 commit 消息里证明扫过
+- **复查不是修复合格的证明**:连续 12 轮 review,每轮都改完都"以为这次干净了",每轮都被下一轮证明没扫干净。这本身是一个信号:**当一类错误连续 3 轮以上重犯,根因不是"细心不够",而是"流程缺失"——必须落到自动化/checklist,不能靠人的记忆**
+
 ---
 
 ## 16. 下一步
