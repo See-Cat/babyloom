@@ -9,14 +9,10 @@ export interface AuthOptions {
   dataDir: string;
 }
 
-let cachedAuth: ReturnType<typeof betterAuth> | null = null;
-
-export function getAuth(opts: AuthOptions) {
-  if (cachedAuth) return cachedAuth;
-
+function createAuth(opts: AuthOptions) {
   const { db } = getDb({ dataDir: opts.dataDir });
 
-  cachedAuth = betterAuth({
+  return betterAuth({
     database: drizzleAdapter(db, {
       provider: 'sqlite',
       schema: { user: users, session: sessions, account: accounts, verification: verifications }
@@ -34,7 +30,13 @@ export function getAuth(opts: AuthOptions) {
     },
     plugins: [nextCookies()]
   });
+}
 
+let cachedAuth: ReturnType<typeof createAuth> | null = null;
+
+export function getAuth(opts: AuthOptions) {
+  if (cachedAuth) return cachedAuth;
+  cachedAuth = createAuth(opts);
   return cachedAuth;
 }
 

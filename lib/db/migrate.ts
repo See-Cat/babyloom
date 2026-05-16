@@ -16,5 +16,5 @@ const isMain = import.meta.url === `file://${process.argv[1]}`;
 if (isMain) {
   const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
   runMigrations(dataDir);
-  console.log(`Migrations applied at ${dataDir}/db/babyloom.sqlite`);
+  process.stdout.write(`Migrations applied at ${dataDir}/db/babyloom.sqlite\n`);
 }
