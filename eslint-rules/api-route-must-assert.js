@@ -1,6 +1,7 @@
 'use strict';
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
+const ALLOWED_WRAPPERS = new Set(['withAuthorizedResource', 'withAuthorizedAction']);
 
 // Walk a CallExpression's callee chain to find the leftmost Identifier.
 //   withAuthorizedResource({...})(handler)
@@ -18,11 +19,11 @@ module.exports = {
     type: 'problem',
     docs: {
       description:
-        'Every app/api/**/route.ts HTTP-method export must be `withAuthorizedResource(...)(handler)` — no other shape allowed.'
+        'Every app/api/**/route.ts HTTP-method export must use an authorized route wrapper — no other shape allowed.'
     },
     messages: {
       notWrapped:
-        'API route export "{{name}}" must be exported as `export const {{name}} = withAuthorizedResource(...)(handler)`. Direct function exports or other initializers are forbidden (spec §5.7). See docs/superpowers/specs/...#section-5-7.'
+        'API route export "{{name}}" must be exported as `export const {{name}} = withAuthorizedResource(...)(handler)` OR `withAuthorizedAction(...)(handler)`. Direct function exports or other initializers are forbidden (spec §5.7).'
     },
     schema: []
   },
@@ -76,7 +77,7 @@ module.exports = {
           const ok =
             init &&
             init.type === 'CallExpression' &&
-            leftmostCalleeName(init) === 'withAuthorizedResource';
+            ALLOWED_WRAPPERS.has(leftmostCalleeName(init));
 
           if (!ok) {
             context.report({ node: d, messageId: 'notWrapped', data: { name } });
