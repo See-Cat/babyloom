@@ -10,8 +10,8 @@ test('owner can log in with config credentials', async ({ page }) => {
   await page.fill('input[name="username"]', 'e2eowner');
   await page.fill('input[name="password"]', 'e2epassword');
   await page.click('button[type="submit"]');
-  await expect(page).toHaveURL('/');
-  await expect(page.getByRole('heading', { name: 'Babyloom' })).toBeVisible();
+  await page.waitForURL(/\/(onboarding\/baby|timeline)$/);
+  await expect(page.getByRole('heading', { name: /第一个宝宝|时间线/ })).toBeVisible();
 });
 
 test('wrong password shows error', async ({ page }) => {

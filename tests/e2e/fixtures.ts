@@ -71,3 +71,20 @@ export async function seedE2eExtras() {
     strangerCreds: { email: strangerEmail, password: strangerPassword }
   };
 }
+
+export async function resetE2eDomainData() {
+  const dataDir = resolve(process.cwd(), 'test-data/e2e');
+  process.env.BABYLOOM_DATA_DIR = dataDir;
+
+  const { resetDbForTesting, getDb } = await import('../../lib/db/client');
+  resetDbForTesting();
+  const { db } = getDb({ dataDir });
+  const { babies, babyMemberPermissions, entries, entryMilestones, entryMedia } =
+    await import('../../lib/db/schema');
+
+  db.delete(entryMedia).run();
+  db.delete(entryMilestones).run();
+  db.delete(entries).run();
+  db.delete(babyMemberPermissions).run();
+  db.delete(babies).run();
+}

@@ -23,7 +23,7 @@ test.describe('GET /api/babies/[id] permission gating', () => {
     await page.fill('input[name="username"]', 'e2eowner');
     await page.fill('input[name="password"]', 'e2epassword');
     await page.click('button[type="submit"]');
-    await page.waitForURL('/');
+    await page.waitForURL('**/timeline');
 
     const cookies = await page.context().cookies();
     const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
@@ -54,7 +54,7 @@ test.describe('GET /api/babies/[id] permission gating', () => {
     await page.fill('input[name="username"]', 'e2eowner');
     await page.fill('input[name="password"]', 'e2epassword');
     await page.click('button[type="submit"]');
-    await page.waitForURL('/');
+    await page.waitForURL('**/timeline');
     const cookies = await page.context().cookies();
     const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
 
@@ -69,7 +69,7 @@ test.describe('GET /api/babies/[id] permission gating', () => {
     await page.fill('input[name="username"]', 'e2eowner');
     await page.fill('input[name="password"]', 'e2epassword');
     await page.click('button[type="submit"]');
-    await page.waitForURL('/');
+    await page.waitForURL('**/timeline');
     const cookies = await page.context().cookies();
     const cookieHeader = cookies.map((c) => `${c.name}=${c.value}`).join('; ');
 
