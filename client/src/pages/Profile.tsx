@@ -30,81 +30,74 @@ export default function Profile() {
   ];
 
   const menuItems = [
-    { icon: '🏷️', name: '里程碑', tag: '', path: '/milestones' },
-    { icon: '👨‍👩‍👧', name: '家庭成员', tag: '', path: '' },
-    { icon: '⚙️', name: '设置', tag: '', path: '' },
+    { icon: '🏷️', name: '里程碑', path: '/milestones' },
+    { icon: '👨‍👩‍👧', name: '家庭成员', path: '' },
+    { icon: '⚙️', name: '设置', path: '' },
   ];
 
+  const ageLabel = (() => {
+    if (!currentBaby?.birthDate) return null;
+    const years =
+      new Date().getFullYear() - new Date(currentBaby.birthDate).getFullYear();
+    return `${years} 岁`;
+  })();
+
   return (
-    <div className="profile-page">
-      <div className="profile-header">
-        <div className="profile-avatar">
+    <div className="ai-theme profile-page">
+      <div className="ai-profile-hero">
+        <div className="ai-profile-avatar">
           {currentBaby?.name?.[0] || '👶'}
         </div>
-        <div className="profile-name">{currentBaby?.name || '未选择宝宝'}</div>
-        {currentBaby?.birthDate && (
-          <div className="profile-meta">
-            {new Date().getFullYear() - new Date(currentBaby.birthDate).getFullYear()} 岁
-          </div>
-        )}
+        <div className="ai-profile-name">
+          {currentBaby?.name || '未选择宝宝'}
+        </div>
+        {ageLabel && <div className="ai-profile-meta">{ageLabel}</div>}
       </div>
 
-      <div className="profile-stats">
+      <div className="ai-profile-stats">
         {stats.map((stat) => (
-          <div key={stat.label} className="profile-stat">
-            <div className="profile-stat-number">{stat.value}</div>
-            <div className="profile-stat-label">{stat.label}</div>
+          <div key={stat.label} className="ai-stat-tile">
+            <div className="ai-stat-num">{stat.value}</div>
+            <div className="ai-stat-label">{stat.label}</div>
           </div>
         ))}
       </div>
 
       {babies.length > 1 && (
-        <div className="profile-section">
-          <div className="profile-section-title">切换宝宝</div>
-          {babies.map((baby) => (
-            <div
-              key={baby.id}
-              className="profile-row"
-              onClick={() => setCurrentBaby(baby)}
-              style={{
-                background:
-                  currentBaby?.id === baby.id
-                    ? 'var(--accent-light)'
-                    : 'transparent',
-              }}
-            >
-              <div className="profile-row-avatar">{baby.name[0]}</div>
-              <div className="profile-row-name">{baby.name}</div>
-              {currentBaby?.id === baby.id && (
-                <span
-                  style={{
-                    fontSize: 12,
-                    color: 'var(--accent)',
-                    fontWeight: 600,
-                  }}
+        <>
+          <div className="ai-divider" />
+          <div className="ai-section-title">切换宝宝</div>
+          <div className="ai-row-list">
+            {babies.map((baby) => {
+              const isActive = currentBaby?.id === baby.id;
+              return (
+                <div
+                  key={baby.id}
+                  className={`ai-row${isActive ? ' is-active' : ''}`}
+                  onClick={() => setCurrentBaby(baby)}
                 >
-                  当前
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
+                  <div className="ai-row-avatar">{baby.name[0]}</div>
+                  <div className="ai-row-name">{baby.name}</div>
+                  {isActive && <div className="ai-row-badge">当前</div>}
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
 
-      <div className="profile-section">
-        <div className="profile-section-title">更多</div>
+      <div className="ai-divider" />
+      <div className="ai-section-title">更多</div>
+      <div className="ai-row-list">
         {menuItems.map((item) => (
           <div
             key={item.name}
-            className="profile-row"
+            className="ai-row"
             onClick={() => item.path && navigate(item.path)}
           >
-            <div className="profile-row-avatar">{item.icon}</div>
-            <div className="profile-row-name">{item.name}</div>
-            {item.tag && (
-              <div className="profile-row-tag">{item.tag}</div>
-            )}
-            <div className="profile-row-arrow">{'>'}</div>
+            <div className="ai-row-avatar">{item.icon}</div>
+            <div className="ai-row-name">{item.name}</div>
+            <div className="ai-row-arrow">›</div>
           </div>
         ))}
       </div>

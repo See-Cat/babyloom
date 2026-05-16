@@ -1321,3 +1321,262 @@ html, body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ============================================================
+   Animal Island 主题 (PoC, scoped to .ai-theme)
+   仅在加了 .ai-theme 的页面生效，不影响全局
+   ============================================================ */
+.ai-theme {
+  --ai-bg: #f8f8f0;
+  --ai-surface: rgb(247, 243, 223);
+  --ai-surface-2: #fffaea;
+  --ai-fg: #794f27;
+  --ai-fg-body: #725d42;
+  --ai-muted: #9f927d;
+  --ai-disabled: #c4b89e;
+  --ai-border: #e8dcc4;
+
+  --ai-accent: #19c8b9;
+  --ai-accent-hover: #3dd4c6;
+  --ai-accent-active: #11a89b;
+  --ai-focus: #ffcc00;
+  --ai-success: #6fba2c;
+  --ai-warm: #d4865a;
+
+  --ai-shadow-c: #bdaea0;
+  --ai-shadow-input: #d4c9b4;
+
+  --ai-press: 0 5px 0 0 var(--ai-shadow-c);
+  --ai-press-hover: 0 6px 0 0 var(--ai-shadow-c);
+  --ai-press-active: 0 1px 0 0 var(--ai-shadow-c);
+  --ai-card-shadow: 0 4px 14px rgba(107, 92, 67, 0.18);
+  --ai-card-shadow-strong: 0 6px 18px rgba(107, 92, 67, 0.28);
+
+  --ai-r-pill: 50px;
+  --ai-r-card: 24px;
+  --ai-r-tile: 20px;
+  --ai-r-sm: 14px;
+
+  --ai-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ai-font: 'Nunito', 'Noto Sans SC', 'Zen Maru Gothic', system-ui, sans-serif;
+
+  background: var(--ai-bg);
+  font-family: var(--ai-font);
+  color: var(--ai-fg-body);
+  letter-spacing: 0.01em;
+}
+
+/* ---- Profile 页 ---- */
+.ai-theme.profile-page {
+  min-height: 100%;
+  padding: 12px 16px 100px;
+  background: var(--ai-bg);
+}
+
+/* 顶部头像卡：带 3D 阴影 + 装饰背景 */
+.ai-profile-hero {
+  position: relative;
+  background: var(--ai-surface);
+  border-radius: var(--ai-r-card);
+  padding: 28px 20px 24px;
+  text-align: center;
+  box-shadow: var(--ai-card-shadow);
+  border: 2px solid #efe6cf;
+  overflow: hidden;
+}
+
+.ai-profile-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 60px;
+  background: linear-gradient(180deg, rgba(25, 200, 185, 0.12), transparent);
+  pointer-events: none;
+}
+
+.ai-profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: var(--ai-surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+  font-family: var(--ai-font);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--ai-accent);
+  border: 3px solid #fff;
+  box-shadow: 0 4px 0 0 var(--ai-shadow-c), inset 0 -4px 0 0 rgba(0, 0, 0, 0.04);
+  position: relative;
+  z-index: 1;
+}
+
+.ai-profile-name {
+  font-family: var(--ai-font);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ai-fg);
+  letter-spacing: 0.02em;
+}
+
+.ai-profile-meta {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ai-fg);
+  background: var(--ai-focus);
+  border-radius: var(--ai-r-pill);
+  box-shadow: 0 2px 0 0 #d4a800;
+}
+
+/* 4 格统计：3D 按压瓦片 */
+.ai-profile-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ai-stat-tile {
+  background: var(--ai-surface);
+  border: 2px solid #efe6cf;
+  border-radius: var(--ai-r-tile);
+  padding: 14px 4px 12px;
+  text-align: center;
+  box-shadow: var(--ai-press);
+  transition: transform 0.18s var(--ai-ease), box-shadow 0.18s var(--ai-ease);
+  cursor: pointer;
+}
+
+.ai-stat-tile:active {
+  transform: translateY(4px);
+  box-shadow: var(--ai-press-active);
+}
+
+.ai-stat-num {
+  font-family: var(--ai-font);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--ai-accent);
+  line-height: 1;
+}
+
+.ai-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ai-muted);
+  margin-top: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* 波浪分割线 */
+.ai-divider {
+  height: 14px;
+  margin: 22px 4px 14px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 14' preserveAspectRatio='none'><path d='M0 7 Q 7.5 0, 15 7 T 30 7 T 45 7 T 60 7' fill='none' stroke='%23c4b89e' stroke-width='2' stroke-linecap='round'/></svg>");
+  background-repeat: repeat-x;
+  background-size: 60px 14px;
+  opacity: 0.7;
+}
+
+/* 区块标题：带前置小圆点 */
+.ai-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--ai-font);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ai-fg);
+  margin: 0 4px 10px;
+  letter-spacing: 0.02em;
+}
+
+.ai-section-title::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--ai-accent);
+  box-shadow: 0 2px 0 0 var(--ai-accent-active);
+}
+
+/* 列表卡：圆角 + 3D 按压 */
+.ai-row-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: var(--ai-surface);
+  border: 2px solid #efe6cf;
+  border-radius: var(--ai-r-tile);
+  box-shadow: var(--ai-press);
+  cursor: pointer;
+  transition: transform 0.18s var(--ai-ease), box-shadow 0.18s var(--ai-ease);
+}
+
+.ai-row:active {
+  transform: translateY(4px);
+  box-shadow: var(--ai-press-active);
+}
+
+.ai-row.is-active {
+  border-color: var(--ai-accent);
+  background: linear-gradient(180deg, #e6faf7 0%, var(--ai-surface) 100%);
+}
+
+.ai-row-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ai-fg);
+  background: var(--ai-surface-2);
+  border: 2px solid #fff;
+  box-shadow: 0 2px 0 0 var(--ai-shadow-c);
+  flex-shrink: 0;
+}
+
+.ai-row.is-active .ai-row-avatar {
+  background: var(--ai-accent);
+  color: #fff;
+  box-shadow: 0 2px 0 0 var(--ai-accent-active);
+}
+
+.ai-row-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ai-fg);
+}
+
+.ai-row-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--ai-accent);
+  padding: 4px 10px;
+  border-radius: var(--ai-r-pill);
+  box-shadow: 0 2px 0 0 var(--ai-accent-active);
+  letter-spacing: 0.04em;
+}
+
+.ai-row-arrow {
+  color: var(--ai-muted);
+  font-size: 16px;
+  font-weight: 800;
+}
