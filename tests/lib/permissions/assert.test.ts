@@ -147,6 +147,13 @@ describe('assertPermission §5.4 matrix', () => {
     ).rejects.toThrow(/forbidden/);
   });
 
+  it('editor cannot baby:write because baby management is owner only', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    await expect(
+      assertPermission(ctx.editorId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
+    ).rejects.toThrow(/owner_only/);
+  });
+
   it('editor can entry:trash own, cannot entry:trash others', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     await expect(

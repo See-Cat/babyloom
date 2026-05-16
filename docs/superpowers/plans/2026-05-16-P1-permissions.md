@@ -667,10 +667,11 @@ export interface AssertPermissionOptions {
   dataDir?: string;
 }
 
-// Owner-only actions (spec §5.4 right column).
+// Owner-only actions (spec §5.2 "管理宝宝/成员/里程碑/家庭" + §5.4 right column).
 // These IGNORE baby_member_permissions entirely — they go straight to the role matrix.
 // This is the §5.3 invariant: override is a scope gate, not an authorization grant.
 const OWNER_ONLY_ACTIONS = new Set<Action>([
+  'baby:write', // spec §5.2 "管理宝宝(增删/改资料)" — owner only (P2 errata)
   'baby:trash',
   'baby:restore',
   'baby:purge',
@@ -766,15 +767,11 @@ function checkOwnershipMatrix(
     case 'baby:purge':
     case 'member:manage':
     case 'family:manage':
+    case 'baby:write': // P2 errata: spec §5.2 "管理宝宝" owner only
     case 'milestone:manage':
     case 'system:logs':
     case 'system:backup':
       throw new ForbiddenError(action, 'owner_only');
-
-    // baby:write — editor allowed (consults baby_member_permissions)
-    case 'baby:write':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_write');
-      return;
 
     default:
       // Exhaustiveness — should never hit
