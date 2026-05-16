@@ -1,4 +1,11 @@
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+  sqliteTable,
+  text,
+  integer,
+  index,
+  uniqueIndex,
+  primaryKey
+} from 'drizzle-orm/sqlite-core';
 
 // User table — shape required by better-auth, plus our extensions (username, role).
 export const users = sqliteTable('user', {
@@ -125,5 +132,75 @@ export const babyMemberPermissions = sqliteTable(
   (t) => ({
     uniqBabyMember: uniqueIndex('uq_baby_member_perm').on(t.babyId, t.familyMemberId),
     byMember: index('ix_baby_member_perm_member').on(t.familyMemberId)
+  })
+);
+
+export const entries = sqliteTable(
+  'entries',
+  {
+    id: text('id').primaryKey(),
+    babyId: text('baby_id')
+      .notNull()
+      .references(() => babies.id, { onDelete: 'cascade' }),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => users.id),
+    content: text('content').notNull(),
+    occurredAt: integer('occurred_at').notNull(),
+    status: text('status').notNull(), // 'active' | 'trashed' | 'purged'
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    deletedAt: integer('deleted_at'),
+    deletedBy: text('deleted_by').references(() => users.id)
+  },
+  (t) => ({
+    byBabyStatusOccurred: index('ix_entries_baby_status_occurred').on(
+      t.babyId,
+      t.status,
+      t.occurredAt
+    ),
+    byStatusDeleted: index('ix_entries_status_deleted').on(t.status, t.deletedAt)
+  })
+);
+
+export const milestones = sqliteTable('milestones', {
+  id: text('id').primaryKey(),
+  familyId: text('family_id').references(() => families.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  icon: text('icon').notNull(),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: integer('created_at').notNull()
+});
+
+export const entryMilestones = sqliteTable(
+  'entry_milestones',
+  {
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => entries.id, { onDelete: 'cascade' }),
+    milestoneId: text('milestone_id')
+      .notNull()
+      .references(() => milestones.id, { onDelete: 'cascade' })
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.entryId, t.milestoneId] })
+  })
+);
+
+export const entryMedia = sqliteTable(
+  'entry_media',
+  {
+    entryId: text('entry_id')
+      .notNull()
+      .references(() => entries.id, { onDelete: 'cascade' }),
+    mediaId: text('media_id').notNull(),
+    attachedBy: text('attached_by')
+      .notNull()
+      .references(() => users.id),
+    attachedAt: integer('attached_at').notNull()
+  },
+  (t) => ({
+    pk: primaryKey({ columns: [t.entryId, t.mediaId] }),
+    byMedia: index('ix_entry_media_media').on(t.mediaId)
   })
 );
