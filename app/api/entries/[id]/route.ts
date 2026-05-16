@@ -1,10 +1,17 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
-import { babies, entries, entryMedia, entryMilestones } from '@/lib/db/schema';
+import {
+  babies,
+  entries,
+  entryMedia,
+  entryMilestones,
+  familyMembers,
+  milestones
+} from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { jsonBadRequest } from '@/lib/permissions/responses';
+import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -71,6 +78,14 @@ export const GET = withAuthorizedResource({
   allowedStatuses: ['active'],
   toResource: toEntryResource
 })(async (_req, _ctx, row) => {
+  const { db } = getDb({ dataDir });
+  const attached = db
+    .select({ id: milestones.id, name: milestones.name, icon: milestones.icon })
+    .from(entryMilestones)
+    .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
+    .where(eq(entryMilestones.entryId, row.id))
+    .all();
+
   return Response.json({
     id: row.id,
     babyId: row.babyId,
@@ -78,13 +93,15 @@ export const GET = withAuthorizedResource({
     content: row.content,
     occurredAt: row.occurredAt,
     createdAt: row.createdAt,
-    updatedAt: row.updatedAt
+    updatedAt: row.updatedAt,
+    milestones: attached
   });
 });
 
 const patchSchema = z.object({
   content: z.string().min(1).max(10000).optional(),
-  occurredAt: z.number().int().optional()
+  occurredAt: z.number().int().optional(),
+  milestoneIds: z.array(z.string().regex(UUID_RE)).optional()
 });
 
 export const PATCH = withAuthorizedResource({
@@ -93,7 +110,7 @@ export const PATCH = withAuthorizedResource({
   getStatus: (row) => row.status,
   allowedStatuses: ['active'],
   toResource: toEntryResource
-})(async (req, _ctx, row) => {
+})(async (req, _ctx, row, userId) => {
   let body: unknown;
   try {
     body = await req.json();
@@ -105,10 +122,43 @@ export const PATCH = withAuthorizedResource({
   if (!parsed.success) return jsonBadRequest('validation');
 
   const { db } = getDb({ dataDir });
-  db.update(entries)
-    .set({ ...parsed.data, updatedAt: Date.now() })
-    .where(eq(entries.id, row.id))
-    .run();
+  let validMilestones: { id: string }[] = [];
+  if (parsed.data.milestoneIds !== undefined) {
+    const callerMember = db
+      .select({ familyId: familyMembers.familyId })
+      .from(familyMembers)
+      .where(eq(familyMembers.userId, userId))
+      .get();
+    if (!callerMember) return jsonNotFound();
+
+    if (parsed.data.milestoneIds.length > 0) {
+      validMilestones = db
+        .select({ id: milestones.id })
+        .from(milestones)
+        .where(
+          and(
+            inArray(milestones.id, parsed.data.milestoneIds),
+            or(isNull(milestones.familyId), eq(milestones.familyId, callerMember.familyId))
+          )
+        )
+        .all();
+      if (validMilestones.length !== parsed.data.milestoneIds.length) return jsonNotFound();
+    }
+  }
+
+  db.transaction((tx) => {
+    const setFields: Record<string, unknown> = { updatedAt: Date.now() };
+    if (parsed.data.content !== undefined) setFields.content = parsed.data.content;
+    if (parsed.data.occurredAt !== undefined) setFields.occurredAt = parsed.data.occurredAt;
+    tx.update(entries).set(setFields).where(eq(entries.id, row.id)).run();
+
+    if (parsed.data.milestoneIds !== undefined) {
+      tx.delete(entryMilestones).where(eq(entryMilestones.entryId, row.id)).run();
+      for (const m of validMilestones) {
+        tx.insert(entryMilestones).values({ entryId: row.id, milestoneId: m.id }).run();
+      }
+    }
+  });
   return Response.json({ updated: row.id });
 });
 
