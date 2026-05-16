@@ -1,0 +1,48 @@
+{
+  "name": "babyloom",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx lib/db/migrate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "next": "15.0.3",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "drizzle-orm": "^0.36.0",
+    "better-sqlite3": "^12.0.0",
+    "better-auth": "^1.0.0",
+    "zod": "^3.23.0",
+    "js-yaml": "^4.1.0",
+    "pino": "^9.5.0",
+    "pino-roll": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.11",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.9.0",
+    "@types/react": "19.0.0",
+    "@types/react-dom": "19.0.0",
+    "drizzle-kit": "^0.28.0",
+    "typescript": "^5.6.3",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0",
+    "@vitest/ui": "^2.1.0",
+    "@playwright/test": "^1.48.0",
+    "tailwindcss": "^4.0.0",
+    "@tailwindcss/postcss": "^4.0.0",
+    "postcss": "^8.4.49"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "sharp"]
+  }
+}
