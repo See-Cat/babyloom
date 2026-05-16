@@ -203,12 +203,14 @@ git commit -m "feat(P1): migration for families/family_members/babies/baby_membe
 
 ## Task 3: Extend owner bootstrap — create family + owner family_member
 
-**Why:** Spec §4.3 step 3 says "DB 无 owner → 创建 owner user + family". The bootstrap currently only creates the user. Extend it to (a) ensure exactly one family exists named per `config.family.name`, (b) ensure the owner has a `family_members` row with role `owner` in that family.
+**Why:** Spec §4.3 step 3 says "DB 无 owner → 创建 owner user + family". P0 bootstrap creates the user + credential account. P1 extends it to also create exactly one `families` row (per `config.family.name`) and one `family_members` row putting the owner in that family.
+
+**Critical context** (Codex round-10 finding #3): the actual P0 schema follows better-auth's 4-table layout (spec §3.2). `users` has `name/email/username/role`; credentials live in `accounts.password` with `providerId='credential'`. The owner's email is internally derived as `${username}@local.babyloom`. **Task 3 must preserve all of this** — it only adds family + family_members maintenance, it does NOT rewrite the user/account logic.
 
 Idempotent (runs every boot).
 
 **Files:**
-- Modify: `lib/bootstrap/owner.ts`
+- Modify: `lib/bootstrap/owner.ts` (append family + family_members logic at end of `bootstrapOwner`)
 - Modify: `tests/lib/bootstrap/owner.test.ts`
 
 - [ ] **Step 1: Extend the test first — assert family + family_member exist after bootstrap**
@@ -243,10 +245,14 @@ Open `tests/lib/bootstrap/owner.test.ts` and add the following test cases at the
 
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
-    const { families, familyMembers } = await import('@/lib/db/schema');
+    const { families, familyMembers, accounts } = await import('@/lib/db/schema');
 
     expect(db.select().from(families).all()).toHaveLength(1);
     expect(db.select().from(familyMembers).all()).toHaveLength(1);
+    // Sanity: the P0 invariant — exactly one credential account — still holds
+    expect(
+      db.select().from(accounts).all().filter((a: any) => a.providerId === 'credential')
+    ).toHaveLength(1);
   });
 
   it('updates family.name if config.family.name changed', async () => {
@@ -276,12 +282,53 @@ app:
     expect(fams).toHaveLength(1);
     expect(fams[0].name).toBe('Renamed Family');
   });
+
+  it('after username change, the owner can sign in with the new internal email (Codex round-10 regression)', async () => {
+    const { bootstrapOwner, ownerInternalEmail, verifyPassword } = await import('@/lib/bootstrap/owner');
+    await bootstrapOwner({ dataDir });
+
+    // Change username + password in config
+    const { clearConfigCache } = await import('@/lib/config/load');
+    clearConfigCache();
+    writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: bob
+  password: brandnewpassword
+  nickname: Bob
+family:
+  name: Test Family
+app:
+  baseUrl: http://localhost:3000
+  timezone: Asia/Shanghai
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+`);
+    await bootstrapOwner({ dataDir });
+
+    const { getDb } = await import('@/lib/db/client');
+    const { eq, and } = await import('drizzle-orm');
+    const { db } = getDb({ dataDir });
+    const { users, accounts } = await import('@/lib/db/schema');
+
+    // user row updated
+    const owner = db.select().from(users).all()[0];
+    expect(owner.username).toBe('bob');
+    expect(owner.email).toBe(ownerInternalEmail('bob'));
+
+    // credential account password updated AND verifies the new password
+    const cred = db
+      .select()
+      .from(accounts)
+      .where(and(eq(accounts.userId, owner.id), eq(accounts.providerId, 'credential')))
+      .get();
+    expect(cred?.password).toBeTruthy();
+    expect(verifyPassword('brandnewpassword', cred!.password!)).toBe(true);
+    expect(verifyPassword('longenoughpw', cred!.password!)).toBe(false);
+  });
 ```
 
-Also update the existing `beforeEach` config writer to include `family` + `app` sections (it should match the spec-aligned config schema that P0's repair landed):
+Also confirm the existing P0 `beforeEach` already writes a config with `family` + `app` sections; if a stale test still uses the old `email/displayName` schema, update it to match the spec-aligned shape:
 
-```typescript
-    writeFileSync(join(dataDir, 'config.yaml'), `
+```yaml
 owner:
   username: alice
   password: longenoughpw
@@ -292,141 +339,103 @@ app:
   baseUrl: http://localhost:3000
   timezone: Asia/Shanghai
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
-`);
 ```
-
-(If the existing tests already include these sections, leave them be.)
 
 - [ ] **Step 2: Run tests to verify new ones fail, old ones still pass**
 
 Run: `pnpm test tests/lib/bootstrap/owner.test.ts`
 Expected: the three new tests fail (families table empty); existing tests pass.
 
-- [ ] **Step 3: Extend `lib/bootstrap/owner.ts`**
+- [ ] **Step 3: Extend `lib/bootstrap/owner.ts`** — ADDITIVE only
 
-Replace the body of `bootstrapOwner` so it returns the owner row + ensures family + family_members. Append helper functions and adjust the main function:
+P0's `bootstrapOwner` already correctly maintains `users` + `accounts.password` (credential) — do NOT rewrite that. **Append** family + family_members maintenance **after** the existing user/account section. Final shape:
 
 ```typescript
-import { eq } from 'drizzle-orm';
-import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
-import { getDb } from '@/lib/db/client';
-import { users, families, familyMembers } from '@/lib/db/schema';
-import { loadConfig } from '@/lib/config/load';
+// ── EXISTING (P0): preserve verbatim ────────────────────────────────────
+//   imports
+//   hashPassword, verifyPassword, ownerInternalEmail
+//   the user upsert + accounts.password upsert
+// ────────────────────────────────────────────────────────────────────────
 
-export interface BootstrapOwnerOptions {
-  dataDir: string;
+// Add these imports if not already present:
+import { families, familyMembers } from '@/lib/db/schema';
+
+// Modify bootstrapOwner to:
+//   1. Do its existing user + account work (unchanged)
+//   2. Capture the owner row's `id` returned from that work (refactor: the
+//      existing impl already knows `userId` — either in the insert branch
+//      from `randomUUID()` or in the update branch from `existing[0].id`).
+//      Pull it into a local `ownerUserId: string` available to step 3.
+//   3. Append the family + family_members logic below.
+
+// At the end of bootstrapOwner (replace the early `return` in the insert
+// branch with a fall-through so both branches reach this code):
+
+// 3. Ensure exactly one family exists, owned by this owner
+const existingFamilies = db.select().from(families).all();
+let familyId: string;
+if (existingFamilies.length === 0) {
+  familyId = randomUUID();
+  db.insert(families)
+    .values({
+      id: familyId,
+      name: config.family.name,
+      ownerUserId,
+      createdAt: now,
+      updatedAt: now
+    })
+    .run();
+} else {
+  familyId = existingFamilies[0].id;
+  db.update(families)
+    .set({
+      name: config.family.name,
+      ownerUserId,
+      updatedAt: now
+    })
+    .where(eq(families.id, familyId))
+    .run();
 }
 
-export function hashPassword(password: string): string {
-  const salt = randomBytes(16);
-  const derived = scryptSync(password, salt, 64);
-  return `scrypt$${salt.toString('hex')}$${derived.toString('hex')}`;
-}
+// 4. Ensure owner is a family_members row with role 'owner'
+const existingMember = db
+  .select()
+  .from(familyMembers)
+  .where(eq(familyMembers.userId, ownerUserId))
+  .all();
 
-export function verifyPassword(password: string, stored: string): boolean {
-  const [scheme, saltHex, hashHex] = stored.split('$');
-  if (scheme !== 'scrypt') return false;
-  const salt = Buffer.from(saltHex, 'hex');
-  const expected = Buffer.from(hashHex, 'hex');
-  const actual = scryptSync(password, salt, expected.length);
-  return timingSafeEqual(actual, expected);
-}
-
-export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void> {
-  const config = loadConfig({ dataDir: opts.dataDir });
-  const { db } = getDb({ dataDir: opts.dataDir });
-  const now = Date.now();
-  const passwordHash = hashPassword(config.owner.password);
-
-  // 1. Ensure owner user exists (or update fields)
-  const existingOwners = db.select().from(users).where(eq(users.role, 'owner')).all();
-  let ownerRow: typeof users.$inferSelect;
-
-  if (existingOwners.length === 0) {
-    const id = randomUUID();
-    db.insert(users)
-      .values({
-        id,
-        username: config.owner.username,
-        nickname: config.owner.nickname,
-        role: 'owner',
-        passwordHash,
-        createdAt: now,
-        updatedAt: now
-      } as typeof users.$inferInsert)
-      .run();
-    ownerRow = db.select().from(users).where(eq(users.id, id)).get()!;
-  } else {
-    ownerRow = existingOwners[0];
-    db.update(users)
-      .set({
-        username: config.owner.username,
-        nickname: config.owner.nickname,
-        passwordHash,
-        updatedAt: now
-      })
-      .where(eq(users.id, ownerRow.id))
-      .run();
-  }
-
-  // 2. Ensure exactly one family exists, owned by this owner
-  const existingFamilies = db.select().from(families).all();
-  let familyId: string;
-  if (existingFamilies.length === 0) {
-    familyId = randomUUID();
-    db.insert(families)
-      .values({
-        id: familyId,
-        name: config.family.name,
-        ownerUserId: ownerRow.id,
-        createdAt: now,
-        updatedAt: now
-      })
-      .run();
-  } else {
-    familyId = existingFamilies[0].id;
-    db.update(families)
-      .set({
-        name: config.family.name,
-        ownerUserId: ownerRow.id,
-        updatedAt: now
-      })
-      .where(eq(families.id, familyId))
-      .run();
-  }
-
-  // 3. Ensure owner is a family_members row with role 'owner'
-  const existingMember = db
-    .select()
-    .from(familyMembers)
-    .where(eq(familyMembers.userId, ownerRow.id))
-    .all();
-
-  if (existingMember.length === 0) {
-    db.insert(familyMembers)
-      .values({
-        id: randomUUID(),
-        familyId,
-        userId: ownerRow.id,
-        role: 'owner',
-        joinedAt: now
-      })
-      .run();
-  } else {
-    db.update(familyMembers)
-      .set({ familyId, role: 'owner' })
-      .where(eq(familyMembers.id, existingMember[0].id))
-      .run();
-  }
+if (existingMember.length === 0) {
+  db.insert(familyMembers)
+    .values({
+      id: randomUUID(),
+      familyId,
+      userId: ownerUserId,
+      role: 'owner',
+      joinedAt: now
+    })
+    .run();
+} else {
+  db.update(familyMembers)
+    .set({ familyId, role: 'owner' })
+    .where(eq(familyMembers.id, existingMember[0].id))
+    .run();
 }
 ```
 
-> **NOTE for the implementer:** The fields on `users` shown above (`username` / `nickname`) match the schema after the P0 spec-alignment fix. If the actual schema still has different field names (e.g. better-auth requires `name` / `email`), adapt the inserts accordingly — store `username` and `nickname` per the spec, derive an internal `email` like `${username}@local.babyloom` if better-auth requires it.
+**Type note**: P0's bootstrap uses `now = new Date()` (timestamp columns on users/accounts), but `families.createdAt` and `familyMembers.joinedAt` are plain `integer` columns (P1 Task 1 schema). Pass `Date.now()` for these — not `new Date()`. Add a local at the top of the function:
+
+```typescript
+const nowMs = Date.now();
+```
+
+…and use `nowMs` in the families/familyMembers writes (vs the existing `now: Date` for users/accounts).
+
+**Refactor reminder**: in the P0 insert branch, capture `ownerUserId = userId` immediately after the user insert. In the update branch, capture `ownerUserId = existing[0].id`. Both branches must then **fall through** to steps 3-4 (delete the existing `return` after the insert branch).
 
 - [ ] **Step 4: Run tests**
 
 Run: `pnpm test tests/lib/bootstrap/owner.test.ts`
-Expected: 6 passing.
+Expected: P0's 3 base tests + 4 new P1 tests = 7 passing.
 
 - [ ] **Step 5: Commit**
 
@@ -656,8 +665,26 @@ export interface AssertPermissionOptions {
   dataDir?: string;
 }
 
-// Map an Action to the (canRead | canWrite | canDelete) bit it needs against baby_member_permissions
+// Owner-only actions (spec §5.4 right column).
+// These IGNORE baby_member_permissions entirely — they go straight to the role matrix.
+// This is the §5.3 invariant: override is a scope gate, not an authorization grant.
+const OWNER_ONLY_ACTIONS = new Set<Action>([
+  'baby:trash',
+  'baby:restore',
+  'baby:purge',
+  'entry:purge',
+  'media:purge',
+  'member:manage',
+  'family:manage',
+  'milestone:manage',
+  'system:logs',
+  'system:backup'
+]);
+
+// Map an Action to the (canRead | canWrite | canDelete) bit it needs against baby_member_permissions.
+// Returns null when the action is owner-only OR not baby-scoped — override cannot apply.
 function babyPermBit(action: Action): 'canRead' | 'canWrite' | 'canDelete' | null {
+  if (OWNER_ONLY_ACTIONS.has(action)) return null;
   switch (action) {
     case 'baby:read':
     case 'entry:read':
@@ -667,18 +694,13 @@ function babyPermBit(action: Action): 'canRead' | 'canWrite' | 'canDelete' | nul
     case 'entry:write':
     case 'media:write':
       return 'canWrite';
-    case 'baby:trash':
-    case 'baby:purge':
-    case 'baby:restore':
     case 'entry:trash':
-    case 'entry:purge':
     case 'entry:restore':
     case 'media:trash':
-    case 'media:purge':
     case 'media:restore':
       return 'canDelete';
     default:
-      return null; // non-baby-scoped actions don't consult baby_member_permissions
+      return null; // trash:view and other non-baby-scoped actions
   }
 }
 
@@ -783,17 +805,29 @@ export async function assertPermission(
 
   const role = member.role as 'owner' | 'editor' | 'viewer';
 
-  // 2. Per-baby permission override (only if action scope is baby-bound and resource.babyId set)
-  const bit = babyPermBit(action);
-  if (bit && resource?.babyId) {
-    // Verify baby belongs to the same family
+  // 2. Cross-family check (always run when resource.babyId is set, regardless of bit)
+  if (resource?.babyId) {
     const baby = db
       .select()
       .from(babies)
       .where(and(eq(babies.id, resource.babyId), eq(babies.familyId, member.familyId)))
       .get();
     if (!baby) throw new ForbiddenError(action, 'cross_family_baby');
+  }
 
+  // 3. Per-baby permission override — ONLY a scope gate, NEVER a grant (spec §5.3)
+  //
+  //   - For owner-only actions: babyPermBit() returns null; override is skipped entirely.
+  //     The action falls through to checkOwnershipMatrix which enforces 'owner_only'.
+  //   - For non-owner-only actions with override row present: a `0` bit DENIES the action
+  //     (narrowing semantics — owner has explicitly removed the role-granted permission
+  //     for this specific baby). A `1` bit lets execution fall through to the role
+  //     matrix; it does NOT short-circuit allow.
+  //   - No override row → fall through to role matrix (override is opt-in).
+  //
+  // Codex round 10 finding #1: removing the early `return` here was the entire fix.
+  const bit = babyPermBit(action);
+  if (bit && resource?.babyId) {
     const override = db
       .select()
       .from(babyMemberPermissions)
@@ -805,16 +839,13 @@ export async function assertPermission(
       )
       .get();
 
-    if (override) {
-      const allowed = override[bit] === 1;
-      if (!allowed) throw new ForbiddenError(action, `baby_perm_${bit}_denied`);
-      // override grants the bit — bypass role-based checks for this baby
-      return;
+    if (override && override[bit] !== 1) {
+      throw new ForbiddenError(action, `baby_perm_${bit}_denied`);
     }
-    // No override → fall through to role-based ownership check
+    // Either no override (default allow per role) or override allows — fall through.
   }
 
-  // 3. Role-based ownership matrix
+  // 4. Role-based ownership matrix — final authority on allow/deny
   checkOwnershipMatrix(action, role, userId, resource);
 }
 ```
@@ -1075,7 +1106,7 @@ describe('assertPermission §5.4 matrix', () => {
     ).rejects.toThrow(/baby_perm_canRead_denied/);
   });
 
-  it('baby_member_permissions override GRANTS editor write that role didnt have', async () => {
+  it('baby_member_permissions override does NOT widen — editor with canDelete=1 still cannot purge (Codex round 10 finding #1)', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
@@ -1085,14 +1116,108 @@ describe('assertPermission §5.4 matrix', () => {
         familyMemberId: ctx.editorMemberId,
         canRead: 1,
         canWrite: 1,
+        canDelete: 1
+      })
+      .run();
+
+    // entry:purge is owner-only — override must not unlock it
+    await expect(
+      assertPermission(
+        ctx.editorId,
+        'entry:purge',
+        { babyId: ctx.babyId, authorId: ctx.editorId },
+        { dataDir }
+      )
+    ).rejects.toThrow(/owner_only/);
+
+    // media:purge is owner-only — override must not unlock it
+    await expect(
+      assertPermission(
+        ctx.editorId,
+        'media:purge',
+        { babyId: ctx.babyId, uploadedBy: ctx.editorId },
+        { dataDir }
+      )
+    ).rejects.toThrow(/owner_only/);
+
+    // baby:trash / baby:restore / baby:purge are owner-only — override must not unlock them
+    await expect(
+      assertPermission(ctx.editorId, 'baby:trash', { babyId: ctx.babyId }, { dataDir })
+    ).rejects.toThrow(/owner_only/);
+
+    await expect(
+      assertPermission(ctx.editorId, 'baby:purge', { babyId: ctx.babyId }, { dataDir })
+    ).rejects.toThrow(/owner_only/);
+  });
+
+  it('baby_member_permissions override does NOT widen — viewer with canWrite=1 still cannot write', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.viewerMemberId,
+        canRead: 1,
+        canWrite: 1,
+        canDelete: 1
+      })
+      .run();
+
+    // entry:write requires authorId==self for editor; viewer is rejected on role before that
+    await expect(
+      assertPermission(
+        ctx.viewerId,
+        'entry:write',
+        { babyId: ctx.babyId, authorId: ctx.viewerId },
+        { dataDir }
+      )
+    ).rejects.toThrow(/viewer_cannot_write/);
+  });
+
+  it('baby_member_permissions canRead=0 NARROWS editor — denies what role allowed', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.editorMemberId,
+        canRead: 0,
+        canWrite: 0,
         canDelete: 0
       })
       .run();
 
-    // editor's baby:write was already allowed by role, but override path returns immediately
     await expect(
-      assertPermission(ctx.editorId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
-    ).resolves.toBeUndefined();
+      assertPermission(ctx.editorId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
+    ).rejects.toThrow(/baby_perm_canRead_denied/);
+  });
+
+  it('baby_member_permissions canWrite=1 with present row does NOT short-circuit ownership check', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.editorMemberId,
+        canRead: 1,
+        canWrite: 1,
+        canDelete: 1
+      })
+      .run();
+
+    // entry:trash with authorId === owner (not editor) must still be denied
+    // even though override has canDelete=1 — ownership matrix is final authority
+    await expect(
+      assertPermission(
+        ctx.editorId,
+        'entry:trash',
+        { babyId: ctx.babyId, authorId: ctx.ownerId },
+        { dataDir }
+      )
+    ).rejects.toThrow(/editor_not_author/);
   });
 
   it('member:manage is owner only', async () => {
@@ -1110,13 +1235,13 @@ describe('assertPermission §5.4 matrix', () => {
 - [ ] **Step 2: Run tests**
 
 Run: `pnpm test tests/lib/permissions/assert.test.ts`
-Expected: 10 passing.
+Expected: 13 passing (10 base matrix + 3 round-10 regression tests).
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add tests/lib/permissions/assert.test.ts
-git commit -m "test(P1): full §5.4 ownership matrix coverage for assertPermission"
+git commit -m "test(P1): full §5.4 ownership matrix coverage + override-is-gate-not-grant regressions"
 ```
 
 ---
@@ -1783,11 +1908,26 @@ git commit -m "test(P1): withPermission — ok / unauthorized / forbidden→not_
 
 ---
 
-## Task 16: ESLint custom rule — api-route-must-assert
+## Task 16: ESLint custom rule — api-route-must-assert (AST-based)
 
-**Why:** Spec §5.5 says "lint 规则强制" — every `app/api/**/route.ts` must reference `withAuthorizedResource` or `assertPermission` in its source. A bare `export async function GET()` that returns secret data slips by tests but not CI.
+**Why:** Spec §5.5 says "lint 规则强制" — every `app/api/**/route.ts` must actually invoke `withAuthorizedResource(...)` or `await assertPermission(...)` in its protected exports. A bare `export async function GET()` that returns secret data must trip CI.
 
-The rule is intentionally simple: AST-walk each `app/api/**/route.ts` file, for every exported HTTP method (`GET` / `POST` / `PUT` / `PATCH` / `DELETE` / `HEAD` / `OPTIONS`), require that the file source contains the literal identifier `withAuthorizedResource` or `assertPermission`. False positive rate: zero for genuine routes; false negative possible if someone aliases the import. Acceptable for a self-hosted project — the spec calls for a guard, not airtight DLP.
+**Codex round-10 finding #2 fix**: an earlier draft did `sourceText.includes('withAuthorizedResource')` which is bypassable via comments, unused imports, or unrelated helper references. Rule must walk the **AST** of each exported HTTP-method declaration and verify the **actual code path** contains the assertion call.
+
+**Rule algorithm**:
+
+For each file matching `/app/api/**/route.{ts,tsx}` (minus allowlist):
+
+1. Visit every `ExportNamedDeclaration` whose declared name is in `{GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS}`.
+2. Get the **callable** the export resolves to:
+   - `export async function GET() { ... }` → callable is the function body itself
+   - `export const GET = ...expr` → callable is `expr` (or, if `expr` is `(args)(args)`, the innermost wrapped body)
+3. Determine if the export **uses the template** OR **calls assertPermission**:
+   - **Template form**: the export's initializer is a `CallExpression` whose callee chain starts with the identifier `withAuthorizedResource`. Pattern: `withAuthorizedResource(...)(...)` returns a function — accept any such expression.
+   - **Direct form**: the function body (statements + nested blocks within it, NOT inside nested function declarations) contains a `CallExpression` (optionally awaited) whose callee identifier name is `assertPermission`.
+4. If neither matches → report error on the export node.
+
+Comments, unused imports, and identifiers in string literals are ignored by the AST walker by construction.
 
 **Files:**
 - Create: `eslint-rules/package.json`, `eslint-rules/index.js`, `eslint-rules/api-route-must-assert.js`
@@ -1825,49 +1965,136 @@ module.exports = {
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 
+// Walk a CallExpression's callee chain to find the leftmost Identifier.
+// withAuthorizedResource({...})(handler) → CallExpression(CallExpression(Identifier 'withAuthorizedResource'))
+function leftmostCalleeName(node) {
+  let current = node;
+  while (current && current.type === 'CallExpression') {
+    current = current.callee;
+  }
+  return current && current.type === 'Identifier' ? current.name : null;
+}
+
+// True iff `expr` is a CallExpression whose leftmost callee identifier is
+// `withAuthorizedResource`. Accepts any number of chained ()() applications.
+function isTemplateExpr(expr) {
+  if (!expr) return false;
+  return expr.type === 'CallExpression' && leftmostCalleeName(expr) === 'withAuthorizedResource';
+}
+
+// True iff `body` (FunctionDeclaration body or ArrowFunctionExpression body)
+// contains a (possibly awaited) call expression whose callee identifier is
+// `assertPermission`, NOT recursing into nested function declarations or
+// nested function expressions (those have their own auth scope).
+function bodyCallsAssertPermission(body) {
+  if (!body) return false;
+  let found = false;
+
+  function visit(node) {
+    if (!node || typeof node !== 'object' || found) return;
+    if (Array.isArray(node)) {
+      for (const child of node) visit(child);
+      return;
+    }
+    // Don't descend into nested function bodies — they're independent contexts
+    if (
+      node.type === 'FunctionDeclaration' ||
+      node.type === 'FunctionExpression' ||
+      node.type === 'ArrowFunctionExpression'
+    ) {
+      return;
+    }
+
+    if (node.type === 'CallExpression') {
+      const callee = node.callee;
+      if (callee && callee.type === 'Identifier' && callee.name === 'assertPermission') {
+        found = true;
+        return;
+      }
+    }
+
+    // Recurse into children (generic AST walk)
+    for (const key of Object.keys(node)) {
+      if (key === 'parent' || key === 'loc' || key === 'range') continue;
+      visit(node[key]);
+    }
+  }
+
+  // AwaitExpression around the call is handled by recursion (its `argument` is the CallExpression)
+  visit(body);
+  return found;
+}
+
+// Resolve an export to its callable definition.
+// `export async function GET() {...}` → FunctionDeclaration node
+// `export const GET = withAuthorizedResource(...)(...)` → CallExpression init
+// `export const GET = async (req) => {...}` → ArrowFunctionExpression init
+function inspectExport(decl) {
+  if (decl.type === 'FunctionDeclaration') {
+    return { kind: 'function', name: decl.id?.name, expr: null, body: decl.body };
+  }
+  if (decl.type === 'VariableDeclaration') {
+    // ExportNamedDeclaration's child VariableDeclaration may contain multiple
+    // declarators; we handle each at the caller.
+    return null;
+  }
+  return null;
+}
+
 module.exports = {
   meta: {
     type: 'problem',
     docs: {
       description:
-        'Every app/api/**/route.ts HTTP-method export must reference withAuthorizedResource or assertPermission'
+        'Every app/api/**/route.ts HTTP-method export must invoke withAuthorizedResource() or assertPermission() in its actual code path (not via comments / unused imports)'
     },
     messages: {
       missing:
-        'API route export "{{name}}" must be wrapped with withAuthorizedResource() or call assertPermission(). See spec §5.5.'
+        'API route export "{{name}}" must be wrapped with withAuthorizedResource() OR its body must call assertPermission(). See spec §5.5.'
     },
     schema: []
   },
   create(context) {
     const filename = context.getFilename();
-    // Only enforce on files under app/api/**/route.ts (or .tsx)
     const isApiRoute = /\/app\/api\/.*\/route\.(ts|tsx|js|jsx)$/.test(filename);
     if (!isApiRoute) return {};
 
-    // Allowlist: the auth catch-all route is owned by better-auth itself
+    // Allowlist: better-auth's own catch-all, and the public health endpoint
     if (/\/app\/api\/auth\/\[\.\.\.all\]\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
-    // Allowlist: health endpoint is intentionally public
     if (/\/app\/api\/health\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
 
-    const sourceText = context.getSourceCode().getText();
-    const hasAssertion =
-      sourceText.includes('withAuthorizedResource') || sourceText.includes('assertPermission');
+    function check(node, name, expr, body) {
+      // Case 1: export is `withAuthorizedResource(...)(...)` — accept
+      if (expr && isTemplateExpr(expr)) return;
+
+      // Case 2: function declaration body or arrow body calls assertPermission — accept
+      if (body && bodyCallsAssertPermission(body)) return;
+
+      // Case 3: export is an arrow function — inspect its body
+      if (expr && (expr.type === 'ArrowFunctionExpression' || expr.type === 'FunctionExpression')) {
+        if (bodyCallsAssertPermission(expr.body)) return;
+      }
+
+      context.report({ node, messageId: 'missing', data: { name } });
+    }
 
     return {
       ExportNamedDeclaration(node) {
-        if (hasAssertion) return;
-        // Catch `export const GET = ...` / `export async function GET() {}`
-        if (node.declaration?.type === 'FunctionDeclaration') {
-          const name = node.declaration.id?.name;
-          if (name && HTTP_METHODS.has(name)) {
-            context.report({ node, messageId: 'missing', data: { name } });
-          }
-        } else if (node.declaration?.type === 'VariableDeclaration') {
-          for (const d of node.declaration.declarations) {
-            const name = d.id?.name;
-            if (name && HTTP_METHODS.has(name)) {
-              context.report({ node: d, messageId: 'missing', data: { name } });
-            }
+        const decl = node.declaration;
+        if (!decl) return;
+
+        if (decl.type === 'FunctionDeclaration') {
+          const name = decl.id?.name;
+          if (!name || !HTTP_METHODS.has(name)) return;
+          check(node, name, null, decl.body);
+          return;
+        }
+
+        if (decl.type === 'VariableDeclaration') {
+          for (const d of decl.declarations) {
+            const name = d.id?.type === 'Identifier' ? d.id.name : null;
+            if (!name || !HTTP_METHODS.has(name)) continue;
+            check(d, name, d.init, null);
           }
         }
       }
@@ -1923,20 +2150,85 @@ Modify `scripts`:
 
 (Replaces any prior `next lint`.)
 
-- [ ] **Step 5: Smoke test the rule against a deliberately bad route**
+- [ ] **Step 5: Smoke test the rule against deliberately bad routes (4 negative fixtures)**
+
+For each fixture below, the rule MUST fire. Codex round-10 finding #2 — substring detection would let fixtures 2/3/4 through silently.
 
 ```bash
 mkdir -p app/api/_rule_smoke
+
+# Fixture 1: Bare export, no auth at all
 cat > app/api/_rule_smoke/route.ts <<'EOF'
 export async function GET() {
   return new Response('secret');
 }
 EOF
-pnpm lint app/api/_rule_smoke/route.ts || echo "RULE FIRED OK"
+pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 1 passed" || echo "OK: fixture 1 caught"
+
+# Fixture 2: Comment-only reference (substring bypass attempt)
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+// TODO: add withAuthorizedResource later
+// assertPermission needs to go here
+export async function GET() {
+  return new Response('secret');
+}
+EOF
+pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 2 passed" || echo "OK: fixture 2 caught"
+
+# Fixture 3: Unused import (substring bypass attempt)
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+import { withAuthorizedResource } from '@/lib/permissions/route-template';
+import { assertPermission } from '@/lib/permissions/assert';
+export async function GET() {
+  return new Response('secret');
+}
+EOF
+pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 3 passed" || echo "OK: fixture 3 caught"
+
+# Fixture 4: assertPermission mentioned only in a string literal
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+export async function GET() {
+  const msg = 'assertPermission is great but not actually called here';
+  return new Response(msg);
+}
+EOF
+pnpm lint app/api/_rule_smoke/route.ts && echo "FAIL: fixture 4 passed" || echo "OK: fixture 4 caught"
+
+# Positive: actual template use must pass
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+import { withAuthorizedResource } from '@/lib/permissions/route-template';
+export const GET = withAuthorizedResource({
+  action: 'baby:read',
+  loader: async () => null,
+  toResource: () => ({})
+})(async () => new Response('ok'));
+EOF
+pnpm lint app/api/_rule_smoke/route.ts && echo "OK: positive fixture passed" || echo "FAIL: positive fixture rejected"
+
+# Positive: direct assertPermission call must pass
+cat > app/api/_rule_smoke/route.ts <<'EOF'
+import { assertPermission } from '@/lib/permissions/assert';
+export async function POST(req: Request) {
+  await assertPermission('user-id', 'member:manage');
+  return new Response('ok');
+}
+EOF
+pnpm lint app/api/_rule_smoke/route.ts && echo "OK: direct-call fixture passed" || echo "FAIL: direct-call fixture rejected"
+
 rm -rf app/api/_rule_smoke
 ```
 
-Expected: `RULE FIRED OK` printed (lint exited non-zero with the `babyloom/api-route-must-assert` error).
+Expected output (all 6 lines):
+```
+OK: fixture 1 caught
+OK: fixture 2 caught
+OK: fixture 3 caught
+OK: fixture 4 caught
+OK: positive fixture passed
+OK: direct-call fixture passed
+```
+
+If any line starts with `FAIL`, the rule is broken — fix it before continuing.
 
 - [ ] **Step 6: Commit**
 
@@ -2275,7 +2567,7 @@ git commit -m "fix(P1): bring legacy routes under api-route-must-assert"
 ## P1 Acceptance Checklist
 
 - [ ] `pnpm typecheck` exits 0
-- [ ] `pnpm test` — at least 27 passing (P0's 14 + P1's: 10 matrix + 6 target-loaders + 5 route-template + 3 server-action + 3 new bootstrap tests = 27 minimum)
+- [ ] `pnpm test` — at least 35 passing (P0's 14 + P1's: 13 matrix [incl 3 round-10 regressions] + 6 target-loaders + 5 route-template + 3 server-action + 4 new bootstrap tests = 35 minimum)
 - [ ] `pnpm test:e2e` — 9 passing (4 P0 + 5 P1)
 - [ ] `pnpm lint` — 0 errors against `app/**` and `lib/**`
 - [ ] A new file `app/api/_smoke/route.ts` containing just `export async function GET(){return new Response('x')}` causes `pnpm lint` to emit the `babyloom/api-route-must-assert` error

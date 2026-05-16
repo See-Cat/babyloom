@@ -292,8 +292,31 @@ media {
 }
 
 // 会话(better-auth 自动管理)
-sessions { id, userId, expiresAt, ipAddress, userAgent, ... }
+sessions { id, userId, token, expiresAt, ipAddress, userAgent, ... }
+
+// 凭据账户(better-auth 拆出来的实施细节,§3.2 物理布局)
+accounts {
+  id, userId, providerId,    // providerId='credential' 表示账号密码登录
+  password,                  // bcrypt/scrypt hash — 这才是密码真实存储位置
+  createdAt, updatedAt
+}
+
+// 验证票据(better-auth 用于忘密码/邮件验证等;V2 不实际使用)
+verifications { id, identifier, value, expiresAt }
 ```
+
+### 3.2 物理布局 vs 概念模型(better-auth 实施细节)
+
+上面 `users { ..., passwordHash }` 是**概念模型**(便于权限矩阵讨论)。**实际物理 schema 必须遵守 better-auth 拆 4 表布局**(Codex 第十轮 finding #3 修法):
+
+| 概念字段 | 物理位置 | 备注 |
+|---|---|---|
+| 用户 ID / username / nickname / role | `users` 表 | better-auth 要求 `name`/`email`,V2 把 `name` 用作 nickname,`email` 用 `${username}@local.babyloom` 内部派生(用户从不见到) |
+| 密码 hash | `accounts.password`,`providerId='credential'`,`userId` FK 回 users | better-auth login flow 从此处读 + 校验 |
+| 会话 | `sessions` 表(`token` 必须存在,better-auth 强制) | 含 cookie token |
+| 验证票据 | `verifications` 表 | V2 暂不用,但 better-auth 要求建表 |
+
+**bootstrap 永久原则**:任何写 owner 的代码必须**同事务**写两张表——`users`(身份)+ `accounts.password`(凭据)。只写 `users` → owner 无法登录;只写 `accounts` → 没有 user 来挂账。改密码同理:更新 `accounts.password` 而**不**改 `users` 上任何"密码字段"(因为概念上的 `passwordHash` 不在 users 表上)。
 
 **索引 / 约束**(§3.1):
 - `entries`: `(babyId, status, occurredAt DESC)` 用于时间线(status=active 过滤)
@@ -406,7 +429,15 @@ P0 使用 better-auth 的 email/password provider,但产品语义仍是**用户�
 
 ### 5.3 细粒度宝宝权限(可选)
 
-`baby_member_permissions` 表覆盖默认 family role。例如:多宝宝时让二宝的奶奶只能看二宝。未配置则走默认 role。
+`baby_member_permissions` 是**范围闸门**(scope gate),不是授权机制(authorization grant)。语义:
+
+- **作用**:在某个 baby 上**收窄或维持**某个非 owner 成员的能力,例如让二宝的奶奶只能看二宝(其他宝宝拿不到 `canRead`)
+- **不作用**:无法**扩大**该成员的角色权限边界——任何 owner-only action(`*:purge`、`baby:trash/restore/purge`、`member:manage`、`family:manage`、`milestone:manage`、`system:*`)即便 `canDelete=1` 也**不**给非 owner 解锁
+- 未配置 → 默认走 family role(等价"全部 babies 都按 role 允许")
+
+**实现要求**(Codex 第十轮 finding #1 修法):
+- override 命中后**不能**早 return / 跳过 role+ownership 矩阵;override 只决定"是否允许进入该 baby 的 action 域",最终 allow/deny 仍走 §5.4 矩阵
+- override 的 `canRead/canWrite/canDelete` 仅映射到对应**非 owner-only** 子集(read/write/trash);purge 和 baby-scope 管理类 action **不参考 override**,直接由 §5.4 矩阵裁决
 
 ### 5.4 权限校验中间件
 
@@ -1890,6 +1921,21 @@ PRAGMA temp_store = MEMORY;
 - **Schema 与 flow 必须双向对账,不只是字段名**:每加一个 status 值或改一个写入路径,都要列出该路径在 INSERT/UPDATE 时填的字段集合,与 schema 的 NOT NULL/CHECK 约束对账。`grep` 不够,要把 "INSERT (字段集合) for status X" 列成表,逐项核对。永久原则:**spec 内任何 status 状态机必须配一张"该状态下必填字段表"**
 - **派生资源是独立资源,输出契约必须 per-variant**:`media` 行代表的是 `{original, large, thumb, poster}` 一组字节,不是一份字节。任何"单值"的输出契约(Content-Type、Cache-Control、Content-Disposition)必须先问"这值在派生间是否相同"。若不同,就必须用表格列出来,而不是写一个"`Content-Type` 从 DB 读"的笼统规则
 - **CHECK 约束是免费的不变量**:SQLite CHECK 约束几乎无开销,能把"业务逻辑保证的不变量"提升到 DB 层强制。每次发现"业务上某状态必须有某字段"时,优先用 CHECK,不要靠应用层纪律
+
+### 15.11 第十轮(2026-05-16)— P1 plan 复查,已修复
+
+> 第十轮评审目标是 P1 permissions plan 文档,但暴露的根因在 SPEC,因此同步在此沉淀。
+
+| 发现 | 严重度 | 修复位置 |
+|---|---|---|
+| `baby_member_permissions` 覆盖语义被实现成"早 return 即授权",非 owner 持 `canDelete=1` 可意外解锁 `*:purge` / `baby:trash/restore/purge` 等 owner-only action(spec §5.3 原文"覆盖 default role"措辞歧义) | **critical** | §5.3 重写为"范围闸门 vs 授权机制"二分:override 只能收窄/维持,不能扩大;owner-only action 无视 override;P1 plan Task 8 改 assert.ts 去掉早 return + Task 9 增 canDelete-不能解锁-purge 的回归用例 |
+| ESLint `api-route-must-assert` 规则用 substring 文本检索 (`includes('withAuthorizedResource')`) → 注释 / unused import / unrelated helper 均可绕过,CI 主防线被空心化 | high | P1 plan Task 16 重写为真 AST 规则:对每个 HTTP method 导出节点检查其初始化器/body 内**实际存在** `withAuthorizedResource(...)` 调用或 `await assertPermission(...)` 调用;加 3 个负向 fixture(注释装样、unused import、unrelated helper) |
+| P1 plan Task 3 bootstrap 按 SPEC §3 概念模型(单 `users.passwordHash`)写,与 P0 实施的 better-auth 4 表布局冲突(`users` 无 passwordHash 字段、密码在 `accounts.password`),照搬会 typecheck 挂 + 密码重置失效 | high | SPEC §3.2 新增"物理布局 vs 概念模型"小节明确 better-auth 4 表事实;P1 plan Task 3 改为同事务双写 `users`(身份)+ `accounts.password`(凭据);新增 acceptance 用例"改 config → bootstrap → 用新密码 sign-in 成功" |
+
+**元教训沉淀**:
+- **"覆盖"不是"授权"——可选规则的语义动词必须精确**:`baby_member_permissions` 这种 "细粒度规则" 文档必须明确动词是 *gate*(闸门:决定是否允许) vs *grant*(授予:决定能做什么)。混用导致实现者读成"override 命中即放行"。永久原则:**spec 描述每个可选规则时必须显式声明它是 narrowing 还是 widening**,默认 narrowing
+- **CI 规则用文本检索是反模式**:任何"静态防线"必须走 AST(或类型系统),substring 检测的判断面无限大、抗噪能力为零。永久原则:**lint rule 一律 AST 实现 + 负向 fixture 套**
+- **Spec ↔ Impl ↔ Plan 三方对账**:写新 plan 前必须 grep 当前真实 schema/接口,不能只读 spec。SPEC 是"应当如此",P0 实施可能已经偏离;P1 plan 若只对 SPEC 写,会与 impl 撕裂。永久原则:**plan 落笔前先 `grep -rn <关键 schema 字段> lib/` 对账真实状态**,并在 plan 头部声明"基于 P0 实施层 X 假设"
 
 ---
 
