@@ -60,12 +60,17 @@ export default async function TimelinePage({
     <main className="min-h-screen p-4 max-w-2xl mx-auto">
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-semibold">时间线</h1>
-        <Link
-          href={`/entry/new?babyId=${selectedBabyId}`}
-          className="bg-black text-white text-sm rounded px-3 py-1.5"
-        >
-          + 新记录
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/profile" className="text-sm border rounded px-3 py-1.5">
+            我
+          </Link>
+          <Link
+            href={`/entry/new?babyId=${selectedBabyId}`}
+            className="bg-black text-white text-sm rounded px-3 py-1.5"
+          >
+            + 新记录
+          </Link>
+        </div>
       </header>
 
       {familyBabies.length > 1 && (
