@@ -363,4 +363,11 @@ describe('assertPermission §5.4 matrix', () => {
       assertPermission(ctx.editorId, 'member:manage', undefined, { dataDir })
     ).rejects.toThrow(/owner_only/);
   });
+
+  it('member:manage rejects target outside the family even when caller is owner', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    await expect(
+      assertPermission(ctx.ownerId, 'member:manage', { targetUserId: randomUUID() }, { dataDir })
+    ).rejects.toThrow(/target_not_in_family/);
+  });
 });

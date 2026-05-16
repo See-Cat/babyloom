@@ -156,6 +156,17 @@ export async function assertPermission(
     if (!baby) throw new ForbiddenError(action, 'cross_family_baby');
   }
 
+  if (action === 'member:manage' && resource?.targetUserId) {
+    const targetMember = db
+      .select()
+      .from(familyMembers)
+      .where(eq(familyMembers.userId, resource.targetUserId))
+      .get();
+    if (!targetMember || targetMember.familyId !== member.familyId) {
+      throw new ForbiddenError(action, 'target_not_in_family');
+    }
+  }
+
   // 3. Per-baby permission override — ONLY a scope gate, NEVER a grant (spec §5.3)
   //
   //   - For owner-only actions: babyPermBit() returns null; override is skipped entirely.
