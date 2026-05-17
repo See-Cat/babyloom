@@ -1193,6 +1193,8 @@ WHERE e.status = 'active' AND b.status = 'active';
 | `/profile/milestones` | 自定义里程碑(owner) |
 | `/profile/trash` | **垃圾桶** — 任何成员可访问,内容按权限过滤 |
 | `/profile/data` | 备份导出 + 日志查看(owner) |
+
+P6 status: `/gallery`, `/calendar`, and `/profile/me` are live view-only/self-service routes. Avatar upload remains deferred to P6.5.
 | `/profile/data/logs` | 日志查看 |
 
 **`/profile/trash` 页面结构**:

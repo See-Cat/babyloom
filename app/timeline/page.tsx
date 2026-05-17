@@ -1,10 +1,12 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
+import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
+import { getDayUtcRange } from '@/lib/db/queries/calendar';
 import { babies, entries, entryMedia, familyMembers } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
@@ -18,7 +20,7 @@ const dataDir = process.env.BABYLOOM_DATA_DIR
 export default async function TimelinePage({
   searchParams
 }: {
-  searchParams: Promise<{ babyId?: string }>;
+  searchParams: Promise<{ babyId?: string; date?: string }>;
 }) {
   const auth = getAuth({ dataDir });
   const session = await auth.api.getSession({ headers: await headers() });
@@ -45,6 +47,8 @@ export default async function TimelinePage({
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
       : familyBabies[0].id;
+  const timezone = loadConfig({ dataDir }).app.timezone;
+  const dayRange = sp.date ? getDayUtcRange(sp.date, timezone) : null;
 
   const rows = db
     .select()
@@ -54,7 +58,9 @@ export default async function TimelinePage({
       and(
         eq(entries.babyId, selectedBabyId),
         eq(entries.status, 'active'),
-        eq(babies.status, 'active')
+        eq(babies.status, 'active'),
+        dayRange ? gte(entries.occurredAt, dayRange.start) : undefined,
+        dayRange ? lt(entries.occurredAt, dayRange.end) : undefined
       )
     )
     .orderBy(desc(entries.occurredAt))
@@ -88,11 +94,19 @@ export default async function TimelinePage({
           {familyBabies.map((baby) => (
             <Link
               key={baby.id}
-              href={`/timeline?babyId=${baby.id}`}
+              href={`/timeline?babyId=${baby.id}${sp.date ? `&date=${sp.date}` : ''}`}
             >
               <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>{baby.name}</Tag>
             </Link>
           ))}
+        </div>
+      )}
+
+      {dayRange && sp.date && (
+        <div className="mb-[var(--space-4)]">
+          <Link href={`/timeline?babyId=${selectedBabyId}`}>
+            <Tag variant="neutral">{sp.date} · 回到全部</Tag>
+          </Link>
         </div>
       )}
 

@@ -21,11 +21,11 @@ describe('Tabbar', () => {
     expect(html).toContain('时光');
   });
 
-  it('renders future tabs as disabled placeholders', () => {
+  it('renders gallery and calendar as live links', () => {
     const html = renderToStaticMarkup(<Tabbar />);
 
-    expect(html).toContain('aria-disabled="true"');
-    expect(html).toContain('画廊');
-    expect(html).toContain('日历');
+    expect(html).not.toContain('aria-disabled="true"');
+    expect(html).toContain('href="/gallery"');
+    expect(html).toContain('href="/calendar"');
   });
 });

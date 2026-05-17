@@ -14,8 +14,8 @@ interface TabItem {
 
 const items: TabItem[] = [
   { label: '时光', href: '/timeline', icon: <PathIcon path="M4 6h16M7 12h10M9 18h6" /> },
-  { label: '画廊', href: '/gallery', icon: <PathIcon path="M5 6h14v12H5zM8 15l3-3 2 2 2-3 3 4" />, disabled: true },
-  { label: '日历', href: '/calendar', icon: <PathIcon path="M6 5h12v14H6zM9 3v4M15 3v4M6 10h12" />, disabled: true },
+  { label: '画廊', href: '/gallery', icon: <PathIcon path="M5 6h14v12H5zM8 15l3-3 2 2 2-3 3 4" /> },
+  { label: '日历', href: '/calendar', icon: <PathIcon path="M6 5h12v14H6zM9 3v4M15 3v4M6 10h12" /> },
   { label: '我的', href: '/profile', icon: <PathIcon path="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /> }
 ];
 

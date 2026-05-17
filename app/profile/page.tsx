@@ -29,6 +29,7 @@ export default async function ProfilePage() {
 
   const isOwner = member.role === 'owner';
   const links = [
+    { href: '/profile/me', label: '我的资料' },
     { href: '/timeline', label: '回到时间线' },
     { href: '/profile/trash', label: '垃圾桶' },
     ...(isOwner
