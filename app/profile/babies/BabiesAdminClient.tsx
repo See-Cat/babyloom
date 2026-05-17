@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useTrashAction } from '@/lib/hooks/useTrashAction';
 
 interface Baby {
   id: string;
@@ -13,6 +14,7 @@ interface Baby {
 
 export default function BabiesAdminPage() {
   const router = useRouter();
+  const trashAction = useTrashAction('baby');
   const [babies, setBabies] = useState<Baby[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
@@ -41,10 +43,11 @@ export default function BabiesAdminPage() {
   }
 
   async function trash(id: string) {
-    if (!confirm('确定移到垃圾桶?')) return;
-    await fetch(`/api/babies/${id}/trash`, { method: 'POST' });
-    reload();
-    router.refresh();
+    const baby = babies.find((item) => item.id === id);
+    await trashAction.softDelete(id, baby?.name ?? '宝宝', () => {
+      reload();
+      router.refresh();
+    });
   }
 
   async function createBaby() {
@@ -165,6 +168,26 @@ export default function BabiesAdminPage() {
         >
           + 添加宝宝
         </button>
+      )}
+      {trashAction.toast && (
+        <div className="fixed bottom-4 left-4 right-4 mx-auto max-w-sm rounded border bg-white p-3 shadow">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span>已删除 · {trashAction.toast.label}</span>
+            <button
+              type="button"
+              onClick={async () => {
+                const restored = await trashAction.undo();
+                if (restored) {
+                  reload();
+                  router.refresh();
+                }
+              }}
+              className="rounded border px-2 py-1"
+            >
+              撤销
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

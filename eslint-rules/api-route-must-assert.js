@@ -1,7 +1,11 @@
 'use strict';
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
-const ALLOWED_WRAPPERS = new Set(['withAuthorizedResource', 'withAuthorizedAction']);
+const ALLOWED_WRAPPERS = new Set([
+  'withAuthorizedResource',
+  'withAuthorizedAction',
+  'withAuthorizedActionRoute'
+]);
 const EXEMPT_FILES = new Set([
   '/app/api/entries/[id]/media/[mediaId]/attach/route.ts'
 ]);

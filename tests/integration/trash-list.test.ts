@@ -1,0 +1,223 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+async function seed(dataDir: string) {
+  writeFileSync(
+    join(dataDir, 'config.yaml'),
+    `
+owner:
+  username: owner
+  password: ownerpassword
+  nickname: Owner
+family:
+  name: Test
+app:
+  baseUrl: http://localhost:3000
+  timezone: Asia/Shanghai
+  secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
+`
+  );
+  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { clearConfigCache } = await import('@/lib/config/load');
+  resetDbForTesting();
+  clearConfigCache();
+  const { runMigrations } = await import('@/lib/db/migrate');
+  runMigrations(dataDir);
+  const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+  await bootstrapOwner({ dataDir });
+
+  const { getDb } = await import('@/lib/db/client');
+  const { users, families, familyMembers, babies, entries, media } = await import('@/lib/db/schema');
+  const { db } = getDb({ dataDir });
+  const owner = db.select().from(users).all()[0];
+  const family = db.select().from(families).all()[0];
+  const now = Date.now();
+  const nowDate = new Date(now);
+
+  const editorId = randomUUID();
+  const viewerId = randomUUID();
+  db.insert(users)
+    .values([
+      {
+        id: editorId,
+        name: 'Editor',
+        email: 'editor@local.babyloom',
+        emailVerified: true,
+        username: 'editor',
+        role: 'editor',
+        createdAt: nowDate,
+        updatedAt: nowDate
+      },
+      {
+        id: viewerId,
+        name: 'Viewer',
+        email: 'viewer@local.babyloom',
+        emailVerified: true,
+        username: 'viewer',
+        role: 'viewer',
+        createdAt: nowDate,
+        updatedAt: nowDate
+      }
+    ])
+    .run();
+  db.insert(familyMembers)
+    .values([
+      { id: randomUUID(), familyId: family.id, userId: editorId, role: 'editor', joinedAt: now },
+      { id: randomUUID(), familyId: family.id, userId: viewerId, role: 'viewer', joinedAt: now }
+    ])
+    .run();
+
+  const activeBabyId = randomUUID();
+  const trashedBabyId = randomUUID();
+  db.insert(babies)
+    .values([
+      {
+        id: activeBabyId,
+        familyId: family.id,
+        name: 'Active Baby',
+        birthday: '2024-01-01',
+        gender: 'girl',
+        status: 'active',
+        createdAt: now,
+        updatedAt: now
+      },
+      {
+        id: trashedBabyId,
+        familyId: family.id,
+        name: 'Trashed Baby',
+        birthday: '2024-01-01',
+        gender: 'boy',
+        status: 'trashed',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: now - 4,
+        deletedBy: owner.id
+      }
+    ])
+    .run();
+
+  const ownerEntryId = randomUUID();
+  const editorEntryId = randomUUID();
+  const parentTrashedEntryId = randomUUID();
+  db.insert(entries)
+    .values([
+      {
+        id: ownerEntryId,
+        babyId: activeBabyId,
+        authorId: owner.id,
+        content: 'owner deleted entry',
+        occurredAt: now,
+        status: 'trashed',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: now - 1,
+        deletedBy: owner.id
+      },
+      {
+        id: editorEntryId,
+        babyId: activeBabyId,
+        authorId: editorId,
+        content: 'editor deleted entry',
+        occurredAt: now,
+        status: 'trashed',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: now - 2,
+        deletedBy: editorId
+      },
+      {
+        id: parentTrashedEntryId,
+        babyId: trashedBabyId,
+        authorId: owner.id,
+        content: 'child under trashed baby',
+        occurredAt: now,
+        status: 'trashed',
+        createdAt: now,
+        updatedAt: now,
+        deletedAt: now - 3,
+        deletedBy: owner.id
+      }
+    ])
+    .run();
+
+  const mediaId = randomUUID();
+  db.insert(media)
+    .values({
+      id: mediaId,
+      babyId: activeBabyId,
+      uploadedBy: owner.id,
+      clientUploadId: randomUUID(),
+      filename: 'photo.jpg',
+      status: 'trashed',
+      createdAt: now,
+      updatedAt: now,
+      deletedAt: now - 5,
+      deletedBy: owner.id
+    })
+    .run();
+
+  return { ownerId: owner.id, editorId, viewerId, ownerEntryId, editorEntryId, parentTrashedEntryId };
+}
+
+function req(type = 'entries') {
+  return new Request(`http://localhost/api/trash?type=${type}`) as any;
+}
+
+describe('GET /api/trash', () => {
+  let dataDir: string;
+
+  beforeEach(() => {
+    vi.resetModules();
+    dataDir = mkdtempSync(join(tmpdir(), 'babyloom-trash-list-'));
+    process.env.BABYLOOM_DATA_DIR = dataDir;
+  });
+
+  afterEach(() => {
+    vi.doUnmock('@/lib/permissions/session');
+    delete process.env.BABYLOOM_DATA_DIR;
+  });
+
+  it('owner sees all trashed entries, including rows under a trashed baby', async () => {
+    const ctx = await seed(dataDir);
+    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    const { GET } = await import('@/app/api/trash/route');
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows.map((row: any) => row.id)).toEqual([
+      ctx.ownerEntryId,
+      ctx.editorEntryId,
+      ctx.parentTrashedEntryId
+    ]);
+    expect(body.counts.entries).toBe(3);
+  });
+
+  it('editor sees only rows they deleted', async () => {
+    const ctx = await seed(dataDir);
+    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
+    const { GET } = await import('@/app/api/trash/route');
+    const res = await GET(req());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.rows.map((row: any) => row.id)).toEqual([ctx.editorEntryId]);
+  });
+
+  it('viewer cannot use the trash endpoint', async () => {
+    const ctx = await seed(dataDir);
+    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.viewerId }));
+    const { GET } = await import('@/app/api/trash/route');
+    const res = await GET(req());
+    expect(res.status).toBe(404);
+  });
+
+  it('rejects an invalid type', async () => {
+    const ctx = await seed(dataDir);
+    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    const { GET } = await import('@/app/api/trash/route');
+    const res = await GET(req('nope'));
+    expect(res.status).toBe(400);
+  });
+});

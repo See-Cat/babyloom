@@ -19,6 +19,7 @@ const OWNER_ONLY_ACTIONS = new Set<Action>([
   'baby:purge',
   'entry:purge',
   'media:purge',
+  'trash:empty',
   'member:manage',
   'family:manage',
   'milestone:manage',
@@ -104,6 +105,7 @@ function checkOwnershipMatrix(
     // purge: owner only — already rejected above for editor/viewer
     case 'entry:purge':
     case 'media:purge':
+    case 'trash:empty':
     case 'baby:trash':
     case 'baby:restore':
     case 'baby:purge':

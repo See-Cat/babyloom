@@ -17,6 +17,7 @@ export const ACTIONS = [
   'media:purge',
   'media:restore',
   'trash:view',
+  'trash:empty',
   'member:manage',
   'family:manage',
   'milestone:manage',

@@ -4,12 +4,12 @@ import { stat } from 'fs/promises';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { getDb } from '@/lib/db/client';
-import { babies, entryMedia, media } from '@/lib/db/schema';
+import { babies, media } from '@/lib/db/schema';
 import { OutputBadRequestError, resolveOutputVariant } from '@/lib/media/output';
 import { resolveVariantPath } from '@/lib/media/paths';
-import { purgeFinalDir } from '@/lib/media/storage';
 import { jsonBadRequest } from '@/lib/permissions/responses';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
+import { purgeMedia } from '@/lib/trash/purge';
 
 export const runtime = 'nodejs';
 
@@ -126,14 +126,6 @@ export const DELETE = withAuthorizedResource({
   allowedStatuses: ['trashed'],
   toResource: (row) => ({ babyId: row.babyId, mediaId: row.id, uploadedBy: row.uploadedBy })
 })(async (_req, _ctx, row) => {
-  const { db } = getDb({ dataDir });
-  db.delete(entryMedia).where(eq(entryMedia.mediaId, row.id)).run();
-  db.update(media)
-    .set({ status: 'purged', updatedAt: Date.now() })
-    .where(eq(media.id, row.id))
-    .run();
-  if (row.relativePath) {
-    await purgeFinalDir(dataDir, row.relativePath).catch(() => {});
-  }
+  await purgeMedia(dataDir, row.id, row.relativePath);
   return Response.json({ purged: row.id });
 });

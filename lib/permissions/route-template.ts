@@ -4,6 +4,10 @@ import { ForbiddenError, NotFoundError, UnauthorizedError } from './errors';
 import { jsonNotFound, jsonUnauthorized, UUID_RE } from './responses';
 import { getSessionUserId } from './session';
 import { assertPermission } from './assert';
+import { getDb } from '@/lib/db/client';
+import { familyMembers } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { resolve } from 'node:path';
 
 // `allowedStatuses` is REQUIRED — not optional. A route that genuinely has no
 // status column on its target table should pass a tuple containing the only
@@ -67,6 +71,53 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
         await assertPermission(userId, opts.action, opts.toResource(row));
 
         return await handler(req, { params: params }, row, userId);
+      } catch (e) {
+        if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
+        throw e;
+      }
+    };
+  };
+}
+
+export interface WithAuthorizedActionRouteOpts {
+  action: Action;
+  allowRoles?: ReadonlyArray<'owner' | 'editor' | 'viewer'>;
+}
+
+export function withAuthorizedActionRoute(opts: WithAuthorizedActionRouteOpts) {
+  return function wrap(
+    handler: (
+      req: NextRequest,
+      ctx: { userId: string; role: 'owner' | 'editor' | 'viewer'; familyId: string }
+    ) => Promise<Response>
+  ) {
+    return async function route(req: NextRequest): Promise<Response> {
+      try {
+        let userId: string;
+        try {
+          userId = await getSessionUserId(req);
+        } catch (e) {
+          if (e instanceof UnauthorizedError) return jsonUnauthorized();
+          throw e;
+        }
+
+        await assertPermission(userId, opts.action);
+
+        const dataDir = process.env.BABYLOOM_DATA_DIR
+          ? resolve(process.env.BABYLOOM_DATA_DIR)
+          : resolve(process.cwd(), 'data');
+        const { db } = getDb({ dataDir });
+        const member = db
+          .select()
+          .from(familyMembers)
+          .where(eq(familyMembers.userId, userId))
+          .get();
+        if (!member) return jsonNotFound();
+
+        const role = member.role as 'owner' | 'editor' | 'viewer';
+        if (opts.allowRoles && !opts.allowRoles.includes(role)) return jsonNotFound();
+
+        return await handler(req, { userId, role, familyId: member.familyId });
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
         throw e;

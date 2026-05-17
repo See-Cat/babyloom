@@ -37,6 +37,9 @@ export default async function ProfilePage() {
         <Link href="/timeline" className="border rounded p-3 hover:bg-gray-50">
           ← 回到时间线
         </Link>
+        <Link href="/profile/trash" className="border rounded p-3 hover:bg-gray-50">
+          垃圾桶
+        </Link>
         {isOwner && (
           <>
             <Link href="/profile/babies" className="border rounded p-3 hover:bg-gray-50">

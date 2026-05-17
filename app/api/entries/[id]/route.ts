@@ -12,6 +12,7 @@ import {
 } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
 import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
+import { purgeEntry } from '@/lib/trash/purge';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -175,12 +176,6 @@ export const DELETE = withAuthorizedResource({
   allowedStatuses: ['trashed'],
   toResource: toEntryResource
 })(async (_req, _ctx, row) => {
-  const { db } = getDb({ dataDir });
-  db.delete(entryMilestones).where(eq(entryMilestones.entryId, row.id)).run();
-  db.delete(entryMedia).where(eq(entryMedia.entryId, row.id)).run();
-  db.update(entries)
-    .set({ status: 'purged', updatedAt: Date.now() })
-    .where(eq(entries.id, row.id))
-    .run();
+  purgeEntry(dataDir, row.id);
   return Response.json({ purged: row.id });
 });

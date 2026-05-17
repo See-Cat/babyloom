@@ -205,3 +205,88 @@ describe('withAuthorizedResource', () => {
     vi.doUnmock('@/lib/permissions/session');
   });
 });
+
+describe('withAuthorizedActionRoute', () => {
+  let dataDir: string;
+  let ctx: Awaited<ReturnType<typeof seed>>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    vi.doUnmock('@/lib/permissions/session');
+    dataDir = mkdtempSync(join(tmpdir(), 'babyloom-route-action-'));
+    ctx = await seed(dataDir);
+    process.env.BABYLOOM_DATA_DIR = dataDir;
+  });
+
+  async function buildRoute() {
+    const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
+    return withAuthorizedActionRoute({
+      action: 'trash:view',
+      allowRoles: ['owner', 'editor']
+    })(async (_req: any, { userId }) => {
+      return new Response(JSON.stringify({ ok: true, userId }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    });
+  }
+
+  it('allows an owner through a global trash route', async () => {
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    const route = await buildRoute();
+    const res = await route(mockReq());
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.userId).toBe(ctx.ownerId);
+  });
+
+  it('returns 401 when a global route has no session', async () => {
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => {
+        const { UnauthorizedError } = await import('@/lib/permissions/errors');
+        throw new UnauthorizedError();
+      }
+    }));
+    const route = await buildRoute();
+    const res = await route(mockReq());
+    expect(res.status).toBe(401);
+  });
+
+  it('collapses disallowed roles to 404 on a global trash route', async () => {
+    const { getDb } = await import('@/lib/db/client');
+    const { users, families, familyMembers } = await import('@/lib/db/schema');
+    const { db } = getDb({ dataDir });
+    const family = db.select().from(families).all()[0];
+    const viewerId = randomUUID();
+    const now = new Date();
+    db.insert(users)
+      .values({
+        id: viewerId,
+        name: 'Viewer',
+        email: 'viewer@local.babyloom',
+        emailVerified: true,
+        username: 'viewer',
+        role: 'viewer',
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+    db.insert(familyMembers)
+      .values({
+        id: randomUUID(),
+        familyId: family.id,
+        userId: viewerId,
+        role: 'viewer',
+        joinedAt: Date.now()
+      })
+      .run();
+    vi.doMock('@/lib/permissions/session', () => ({
+      getSessionUserId: async () => viewerId
+    }));
+    const route = await buildRoute();
+    const res = await route(mockReq());
+    expect(res.status).toBe(404);
+  });
+});

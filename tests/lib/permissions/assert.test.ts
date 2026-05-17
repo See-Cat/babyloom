@@ -370,4 +370,14 @@ describe('assertPermission §5.4 matrix', () => {
       assertPermission(ctx.ownerId, 'member:manage', { targetUserId: randomUUID() }, { dataDir })
     ).rejects.toThrow(/target_not_in_family/);
   });
+
+  it('trash:empty is owner only', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    await expect(assertPermission(ctx.ownerId, 'trash:empty', undefined, { dataDir })).resolves
+      .toBeUndefined();
+    await expect(assertPermission(ctx.editorId, 'trash:empty', undefined, { dataDir })).rejects
+      .toThrow(/owner_only/);
+    await expect(assertPermission(ctx.viewerId, 'trash:empty', undefined, { dataDir })).rejects
+      .toThrow(/owner_only/);
+  });
 });

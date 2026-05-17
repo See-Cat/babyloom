@@ -1,5 +1,5 @@
 import tseslint from '@typescript-eslint/parser';
-import babyloom from 'eslint-plugin-babyloom';
+import babyloom from './eslint-rules/index.js';
 
 export default [
   {
@@ -27,7 +27,8 @@ export default [
       babyloom
     },
     rules: {
-      'babyloom/api-route-must-assert': 'error'
+      'babyloom/api-route-must-assert': 'error',
+      'babyloom/parent-chain-join': 'error'
     }
   }
 ];
