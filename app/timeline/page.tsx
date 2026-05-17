@@ -6,7 +6,10 @@ import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { babies, entries, entryMedia, familyMembers } from '@/lib/db/schema';
-import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
+import { AppShell } from '@/components/mobile/AppShell';
+import { TimelineCard } from '@/components/features/TimelineCard';
+import { Button } from '@/components/ui/Button';
+import { Tag } from '@/components/ui/Tag';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -72,55 +75,41 @@ export default async function TimelinePage({
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <header className="flex items-center justify-between mb-4">
-        <h1 className="text-xl font-semibold">时间线</h1>
-        <div className="flex gap-2">
-          <Link href="/profile" className="text-sm border rounded px-3 py-1.5">
-            我
-          </Link>
-          <Link
-            href={`/entry/new?babyId=${selectedBabyId}`}
-            className="bg-black text-white text-sm rounded px-3 py-1.5"
-          >
-            + 新记录
-          </Link>
-        </div>
-      </header>
-
+    <AppShell
+      title="时光"
+      rightSlot={
+        <Link href={`/entry/new?babyId=${selectedBabyId}`}>
+          <Button size="sm">新记录</Button>
+        </Link>
+      }
+    >
       {familyBabies.length > 1 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto">
+        <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
           {familyBabies.map((baby) => (
             <Link
               key={baby.id}
               href={`/timeline?babyId=${baby.id}`}
-              className={`px-3 py-1.5 text-sm rounded border ${
-                baby.id === selectedBabyId ? 'bg-black text-white' : ''
-              }`}
             >
-              {baby.name}
+              <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>{baby.name}</Tag>
             </Link>
           ))}
         </div>
       )}
 
       {rows.length === 0 ? (
-        <p className="text-sm opacity-60 text-center mt-8">还没有记录</p>
+        <p className="mt-[var(--space-8)] text-center text-[var(--text-sm)] text-[var(--color-muted)]">还没有记录</p>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-[var(--space-3)]">
           {rows.map((row) => (
-            <li key={row.entries.id} className="border rounded p-3">
-              <Link href={`/entry/${row.entries.id}`} className="block">
-                <p className="text-xs opacity-60 mb-1">
-                  {new Date(row.entries.occurredAt).toLocaleString('zh-CN')}
-                </p>
-                <p className="line-clamp-3 whitespace-pre-wrap">{row.entries.content}</p>
-                <ThumbnailStrip mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []} />
-              </Link>
+            <li key={row.entries.id}>
+              <TimelineCard
+                entry={row.entries}
+                mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []}
+              />
             </li>
           ))}
         </ul>
       )}
-    </main>
+    </AppShell>
   );
 }

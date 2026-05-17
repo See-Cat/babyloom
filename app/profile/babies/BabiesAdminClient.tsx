@@ -3,6 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { AppShell } from '@/components/mobile/AppShell';
+import { BabyCard } from '@/components/features/BabyCard';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Toast } from '@/components/ui/Toast';
 import { useTrashAction } from '@/lib/hooks/useTrashAction';
 
 interface Baby {
@@ -64,131 +70,85 @@ export default function BabiesAdminPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <Link href="/profile" className="text-sm opacity-60">
-        ← 个人
-      </Link>
-      <h1 className="text-xl font-semibold my-4">宝宝管理</h1>
-
-      <ul className="flex flex-col gap-3 mb-6">
+    <AppShell
+      title="宝宝管理"
+      leftSlot={
+        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          返回
+        </Link>
+      }
+    >
+      <ul className="mb-[var(--space-6)] flex flex-col gap-[var(--space-3)]">
         {babies.map((b) => (
-          <li key={b.id} className="border rounded p-3 flex items-center justify-between">
-            {editingId === b.id ? (
-              <>
-                <input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className="border rounded px-2 py-1 flex-1 mr-2"
-                />
-                <button
-                  type="button"
-                  onClick={() => rename(b.id)}
-                  className="text-sm bg-black text-white px-3 py-1 rounded mr-2"
-                >
-                  保存
-                </button>
-                <button type="button" onClick={() => setEditingId(null)} className="text-sm">
-                  取消
-                </button>
-              </>
-            ) : (
-              <>
-                <div>
-                  <p className="font-medium">{b.name}</p>
-                  <p className="text-xs opacity-60">
-                    {b.birthday} · {b.gender}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingId(b.id);
-                      setEditName(b.name);
-                    }}
-                    className="text-sm border rounded px-3 py-1"
-                  >
-                    编辑
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => trash(b.id)}
-                    className="text-sm text-red-600 border rounded px-3 py-1"
-                  >
-                    删除
-                  </button>
-                </div>
-              </>
-            )}
+          <li key={b.id}>
+            <BabyCard
+              baby={b}
+              editing={editingId === b.id}
+              editName={editName}
+              onEditNameChange={setEditName}
+              onSave={() => rename(b.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onEdit={() => {
+                setEditingId(b.id);
+                setEditName(b.name);
+              }}
+              onTrash={() => trash(b.id)}
+            />
           </li>
         ))}
       </ul>
 
       {creating ? (
-        <div className="border rounded p-3 flex flex-col gap-2">
-          <input
-            placeholder="名字"
-            value={newBaby.name}
-            onChange={(e) => setNewBaby({ ...newBaby, name: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
-          <input
-            type="date"
-            value={newBaby.birthday}
-            onChange={(e) => setNewBaby({ ...newBaby, birthday: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
+        <Card className="flex flex-col gap-[var(--space-3)]">
+          <Input label="名字" placeholder="名字" value={newBaby.name} onChange={(e) => setNewBaby({ ...newBaby, name: e.target.value })} />
+          <Input label="生日" type="date" value={newBaby.birthday} onChange={(e) => setNewBaby({ ...newBaby, birthday: e.target.value })} />
           <select
+            aria-label="性别"
             value={newBaby.gender}
             onChange={(e) => setNewBaby({ ...newBaby, gender: e.target.value })}
-            className="border rounded px-2 py-1"
+            className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]"
           >
             <option value="girl">女宝</option>
             <option value="boy">男宝</option>
             <option value="other">其他</option>
           </select>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={createBaby}
-              className="bg-black text-white text-sm px-3 py-1 rounded"
-            >
+          <div className="flex gap-[var(--space-2)]">
+            <Button type="button" size="sm" onClick={createBaby}>
               创建
-            </button>
-            <button type="button" onClick={() => setCreating(false)} className="text-sm">
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
               取消
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       ) : (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="border rounded p-3 w-full text-left text-sm"
-        >
+        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
           + 添加宝宝
-        </button>
+        </Button>
       )}
       {trashAction.toast && (
-        <div className="fixed bottom-4 left-4 right-4 mx-auto max-w-sm rounded border bg-white p-3 shadow">
-          <div className="flex items-center justify-between gap-3 text-sm">
-            <span>已删除 · {trashAction.toast.label}</span>
-            <button
-              type="button"
-              onClick={async () => {
-                const restored = await trashAction.undo();
-                if (restored) {
-                  reload();
-                  router.refresh();
-                }
-              }}
-              className="rounded border px-2 py-1"
-            >
-              撤销
-            </button>
-          </div>
+        <div className="fixed bottom-[calc(var(--space-4)+env(safe-area-inset-bottom))] left-[var(--space-4)] right-[var(--space-4)] z-[var(--z-toast)] mx-auto max-w-sm">
+          <Toast
+            message={`已删除 · ${trashAction.toast.label}`}
+            action={
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={async () => {
+                  const restored = await trashAction.undo();
+                  if (restored) {
+                    reload();
+                    router.refresh();
+                  }
+                }}
+              >
+                撤销
+              </Button>
+            }
+          />
         </div>
       )}
-    </main>
+    </AppShell>
   );
 }

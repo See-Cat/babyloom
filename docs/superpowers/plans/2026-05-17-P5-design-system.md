@@ -31,6 +31,18 @@ This plan was reviewed against the current `claude/affectionate-satoshi-6703ce` 
 - Do not create one commit per task during this execution unless explicitly requested. Group into the 13 phases below, one commit per phase; leave commit choreography to the final integration step.
 - The repo uses `pnpm` based on lint script; if `pnpm` is unavailable in CI, fall back to `npm exec` for equivalent commands.
 
+## Execution status — 2026-05-17
+
+Implemented in `claude/affectionate-satoshi-6703ce`:
+
+- Phase 0–9: complete. Tokens, typography, 11 core UI components, mobile shell components, 7 feature components, demo route, and existing-page sweep are in place.
+- Phase 10: visual-regression spec file exists, but snapshot baselines are intentionally not committed because the plan requires human review before baseline commit.
+- Phase 11: complete. `@axe-core/playwright` is installed, `tests/e2e/a11y.spec.ts` covers the P5 page set, and a11y / reduced-motion / keyboard-flow Playwright specs pass when the Next dev server is allowed to bind port 3000.
+- Phase 12: `babyloom/no-raw-color` is implemented, tested, registered, and visible in ESLint print-config.
+- Phase 13: `docs/DESIGN.md` exists and spec §16 is updated with this implementation status.
+
+Verification completed locally: `pnpm test`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, raw-color grep, `pnpm exec eslint --print-config app/login/page.tsx`, and escalated `pnpm exec playwright test a11y reduced-motion keyboard-flow`. Full visual-regression baselines remain intentionally uncommitted pending human review.
+
 ---
 
 ## Scope IN (this plan)
@@ -41,7 +53,7 @@ This plan was reviewed against the current `claude/affectionate-satoshi-6703ce` 
 - 7 business components (`components/features/`) abstracting inlined page markup
 - Layout (`app/layout.tsx`) wired with font preload + ToastProvider
 - 9 existing pages re-skinned to use new components (markup-only changes)
-- 2 placeholder pages (`/gallery`, `/calendar`) so Tabbar tabs don't 404
+- Tabbar renders unavailable future tabs (`/gallery`, `/calendar`) as disabled placeholders so P5 does not create new business routes
 - 1 dev-only demo route `(dev)/components` as visual-regression source
 - 1 ESLint rule `babyloom/no-raw-color` (preventive)
 - Self-hosted WOFF2 subsets for Nunito + Noto Sans SC + Zen Maru Gothic
@@ -125,9 +137,7 @@ components/features/
 └── TimelineCard.tsx
 
 app/
-├── (dev)/components/page.tsx               # demo route, NODE_ENV guard
-├── gallery/page.tsx                        # P6 placeholder ("即将到来")
-└── calendar/page.tsx                       # P6 placeholder
+└── (dev)/components/page.tsx               # demo route, NODE_ENV guard
 
 eslint-rules/
 └── no-raw-color.js                         # AST rule
@@ -177,14 +187,14 @@ Pure verification; no code change. Outputs feed every later phase.
 - [ ] **0.3** Inspect `app/globals.css` (13 lines). Confirm `system-ui` font and placeholder-token comment.
 - [ ] **0.4** Inspect each of the 9 page files. For each, list (a) total className count (b) which of the 4 dominant patterns appear (button / card / input / error). Store in `_p5-recon.md` as table.
 - [ ] **0.5** Inspect `components/media/UploadButton.tsx`. Confirm it accepts `babyId` + `onUploaded` and renders no styled wrapper of its own (or list what's there).
-- [ ] **0.6** Acquire WOFF2 font subsets:
+- [ ] **0.6** Confirm WOFF2 font subset requirements and current font-file state. Actual acquisition happens in Phase 1 because Phase 0 is verification-only:
   - Nunito 400 + 700: from Google Fonts via `pyftsubset` or pre-built `fonts.bunny.net` subset endpoint — keep Latin Extended-A range.
   - Noto Sans SC 400 + 700: GB2312 subset (~6500 codepoints) ≤ 800 KB each.
   - Zen Maru Gothic 400 + 700: JIS Level 1 subset (~3000 codepoints) ≤ 400 KB each.
-  - **Verify**: each file < 1 MB, total `public/fonts/` < 5 MB.
+  - **Verify in Phase 1**: each file < 1 MB, total `public/fonts/` < 5 MB.
 - [ ] **0.7** Confirm CI Playwright base image is `mcr.microsoft.com/playwright:v1.48` (or current `@playwright/test` matching version). If not pinned in `playwright.config.ts`, add a comment for Phase 11.
 
-**Phase exit:** `_p5-recon.md` exists with all 7 outputs; nothing committed.
+**Phase exit:** `_p5-recon.md` exists with all 7 outputs and is ignored by git; nothing committed.
 
 ---
 
@@ -359,10 +369,11 @@ Light phase; kept separate so it doesn't bloat earlier commits.
 
 ---
 
-## Phase 7 — Mobile Shell + Placeholder Tabs
+## Phase 7 — Mobile Shell + Future Tab Placeholders
 
 - [ ] **7.1** Create `components/mobile/Tabbar.tsx`:
   - 4 items hardcoded in spec §5.1.
+  - `Timeline` and `Me` link to existing routes. `Gallery` and `Calendar` render as disabled future tabs with `aria-disabled="true"` and no navigation until their real P6 pages exist.
   - SVG icons inlined (no icon library). Each ~ 24 × 24.
   - Active tab: `--color-accent` background, `translateY(-6px)` with `cubic-bezier(0.34, 1.56, 0.64, 1)` 280 ms.
   - Reduced-motion: drop the translate, keep color change.
@@ -377,13 +388,11 @@ Light phase; kept separate so it doesn't bloat earlier commits.
 - [ ] **7.4** Create `components/mobile/PullToRefresh.tsx`:
   - Wraps children; only mounts touch listeners if `'ontouchstart' in window`. Renders a self-drawn spinner above the content when pulled.
   - Desktop: pass-through wrapper.
-- [ ] **7.5** Create placeholder pages:
-  - `app/gallery/page.tsx` → `<AppShell title="画廊"><Card><p>即将到来</p></Card></AppShell>`.
-  - `app/calendar/page.tsx` → similar.
+- [ ] **7.5** Do **not** create `/gallery` or `/calendar` pages in P5. Verify disabled Tabbar items do not navigate or 404.
 - [ ] **7.6** Unit tests for AppShell pathname branching + Tabbar active-state highlighting.
-- [ ] **7.7** **Verify**: `pnpm dev`, mobile-emulate 375 px, navigate `/timeline` → `/gallery` → `/calendar` → `/profile` via Tabbar. Tab active state lifts correctly. `/login` shows no Tabbar.
+- [ ] **7.7** **Verify**: `pnpm dev`, mobile-emulate 375 px, navigate `/timeline` → `/profile` via Tabbar. Tab active state lifts correctly. Disabled `/gallery` and `/calendar` items do not navigate. `/login` shows no Tabbar.
 
-**Phase exit:** Commit `feat(P5): mobile shell + placeholder tabs`.
+**Phase exit:** Commit `feat(P5): mobile shell + future tab placeholders`.
 
 ---
 

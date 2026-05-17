@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AppShell } from '@/components/mobile/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
+import { Tag } from '@/components/ui/Tag';
 
 type TrashType = 'entries' | 'media' | 'babies';
 
@@ -135,23 +140,27 @@ export default function TrashClient() {
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <Link href="/profile" className="text-sm opacity-60">
-        ← 个人
-      </Link>
-      <header className="my-4 flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">垃圾桶</h1>
-        <button
+    <AppShell
+      title="垃圾桶"
+      leftSlot={
+        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          返回
+        </Link>
+      }
+      rightSlot={
+        <Button
           type="button"
+          size="sm"
+          variant="error"
           onClick={() => setPending({ action: 'empty' })}
           disabled={counts[activeType] === 0}
-          className="rounded border border-red-200 px-3 py-1.5 text-sm text-red-600 disabled:opacity-40"
         >
-          清空 {activeLabel} ({counts[activeType]})
-        </button>
-      </header>
+          清空
+        </Button>
+      }
+    >
 
-      <div role="tablist" className="mb-4 flex gap-2 overflow-x-auto">
+      <div role="tablist" className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
         {tabs.map((tab) => (
           <button
             key={tab.type}
@@ -159,98 +168,91 @@ export default function TrashClient() {
             role="tab"
             aria-selected={activeType === tab.type}
             onClick={() => switchTab(tab.type)}
-            className={`rounded-full border px-3 py-1.5 text-sm ${
-              activeType === tab.type ? 'bg-black text-white' : ''
-            }`}
           >
-            {tab.label} ({counts[tab.type]})
+            <Tag variant={activeType === tab.type ? 'accent' : 'neutral'}>
+              {tab.label} ({counts[tab.type]})
+            </Tag>
           </button>
         ))}
       </div>
 
       {message && (
-        <div className="mb-3 rounded border bg-gray-50 px-3 py-2 text-sm" aria-live="polite">
+        <Card className="mb-[var(--space-3)] text-[var(--text-sm)]" aria-live="polite">
           {message}
-        </div>
+        </Card>
       )}
 
       {rows.length === 0 && !loading ? (
-        <div className="mt-12 text-center opacity-60">
+        <div className="mt-[var(--space-12)] text-center text-[var(--color-muted)]">
           <p>当前没有已删除的 {activeLabel}</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="flex flex-col gap-[var(--space-3)]">
           {rows.map((row) => (
-            <li key={row.id} className="rounded border p-3">
-              <p className="text-xs opacity-60">
-                {row.babyName ? `${row.babyName} · ` : ''}
-                {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
-              </p>
-              <p className="my-2 whitespace-pre-wrap text-sm">{row.label || '无内容'}</p>
-              {row.type === 'babies' && row.childCount ? (
-                <p className="mb-2 text-xs text-red-600">还有 {row.childCount} 项数据未清理</p>
-              ) : null}
-              <div className="flex gap-2">
-                <button
+            <li key={row.id}>
+              <Card>
+                <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+                  {row.babyName ? `${row.babyName} · ` : ''}
+                  {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
+                </p>
+                <p className="my-[var(--space-2)] whitespace-pre-wrap text-[var(--text-sm)]">{row.label || '无内容'}</p>
+                {row.type === 'babies' && row.childCount ? (
+                  <p className="mb-[var(--space-2)] text-[var(--text-xs)] text-[var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
+                ) : null}
+                <div className="flex gap-[var(--space-2)]">
+                  <Button
                   type="button"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => restore(row)}
-                  className="rounded border px-3 py-1 text-sm"
                 >
                   还原
-                </button>
-                <button
+                  </Button>
+                  <Button
                   type="button"
+                  size="sm"
+                  variant="error"
                   onClick={() => setPending({ action: 'purge', row })}
                   disabled={row.type === 'babies' && Boolean(row.childCount)}
-                  className="rounded border border-red-200 px-3 py-1 text-sm text-red-600 disabled:opacity-40"
                 >
                   永久删除
-                </button>
-              </div>
+                  </Button>
+                </div>
+              </Card>
             </li>
           ))}
         </ul>
       )}
 
       {nextCursor && (
-        <button
-          type="button"
-          onClick={() => load(nextCursor)}
-          className="mt-4 w-full rounded border px-3 py-2 text-sm"
-        >
+        <Button type="button" variant="secondary" onClick={() => load(nextCursor)} className="mt-[var(--space-4)]" fullWidth>
           加载更多
-        </button>
+        </Button>
       )}
 
-      {pending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div role="dialog" aria-modal="true" className="w-full max-w-sm rounded bg-white p-4">
-            <h2 className="font-semibold">永久删除</h2>
-            <p className="my-3 text-sm opacity-70">
-              {pending.action === 'empty'
-                ? `将永久删除当前 tab 下的 ${counts[activeType]} 项 ${activeLabel}。此操作不可撤销。`
-                : `此操作不可撤销。“${pending.row?.label ?? '该项目'}” 将从垃圾桶中移除。`}
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                autoFocus
-                onClick={() => setPending(null)}
-                className="rounded border px-3 py-1.5 text-sm"
-              >
-                取消
-              </button>
-              <button
-                type="button"
-                onClick={confirmPending}
-                className="rounded bg-red-600 px-3 py-1.5 text-sm text-white"
-              >
-                永久删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
+      <Dialog
+        open={Boolean(pending)}
+        onOpenChange={(open) => {
+          if (!open) setPending(null);
+        }}
+        title="永久删除"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setPending(null)}>
+              取消
+            </Button>
+            <Button type="button" variant="error" onClick={confirmPending}>
+              永久删除
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          {pending?.action === 'empty'
+            ? `将永久删除当前 tab 下的 ${counts[activeType]} 项 ${activeLabel}。此操作不可撤销。`
+            : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从垃圾桶中移除。`}
+        </p>
+      </Dialog>
+    </AppShell>
   );
 }

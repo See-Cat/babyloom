@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 
 export default function OnboardingBabyPage() {
   const router = useRouter();
@@ -30,26 +33,26 @@ export default function OnboardingBabyPage() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-6">
-      <form action={onSubmit} className="w-full max-w-md flex flex-col gap-4">
-        <h1 className="text-2xl font-semibold">第一个宝宝</h1>
-        <p className="text-sm opacity-75">先添加一个宝宝才能开始记录</p>
-        <input name="name" required placeholder="宝宝名字" className="border rounded px-3 py-2" />
-        <input name="birthday" required type="date" className="border rounded px-3 py-2" />
-        <select name="gender" required className="border rounded px-3 py-2">
+    <main className="flex min-h-screen items-center justify-center bg-[var(--color-bg)] p-[var(--space-6)]">
+      <Card className="w-full max-w-md">
+      <form action={onSubmit} className="flex flex-col gap-[var(--space-4)]">
+        <div>
+          <h1 className="text-[var(--text-hero)] font-bold text-[var(--color-fg-strong)]">第一个宝宝</h1>
+          <p className="text-[var(--text-sm)] text-[var(--color-muted)]">先添加一个宝宝才能开始记录</p>
+        </div>
+        <Input name="name" required placeholder="宝宝名字" label="宝宝名字" />
+        <Input name="birthday" required type="date" label="生日" />
+        <select name="gender" required aria-label="性别" className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]">
           <option value="girl">女宝</option>
           <option value="boy">男宝</option>
           <option value="other">其他</option>
         </select>
-        {error && <p className="text-red-600 text-sm">{error}</p>}
-        <button
-          type="submit"
-          disabled={pending}
-          className="bg-black text-white rounded py-2 disabled:opacity-50"
-        >
+        {error && <p role="alert" className="text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
+        <Button type="submit" disabled={pending} fullWidth>
           {pending ? '创建中…' : '创建宝宝'}
-        </button>
+        </Button>
       </form>
+      </Card>
     </main>
   );
 }

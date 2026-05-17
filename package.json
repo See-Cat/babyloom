@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint \"app/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\"",
+    "lint": "eslint \"app/**/*.{ts,tsx}\" \"components/**/*.{ts,tsx}\" \"lib/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
@@ -33,6 +33,7 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
     "@playwright/test": "^1.48.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/better-sqlite3": "^7.6.11",

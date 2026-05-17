@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AppShell } from '@/components/mobile/AppShell';
+import { MilestoneRow } from '@/components/features/MilestoneRow';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 
 interface Milestone {
   id: string;
@@ -59,117 +64,52 @@ export default function MilestonesAdminPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <Link href="/profile" className="text-sm opacity-60">
-        ← 个人
-      </Link>
-      <h1 className="text-xl font-semibold my-4">里程碑设置</h1>
-
-      <ul className="grid grid-cols-2 gap-2 mb-6">
+    <AppShell
+      title="里程碑设置"
+      leftSlot={
+        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          返回
+        </Link>
+      }
+    >
+      <ul className="mb-[var(--space-6)] grid gap-[var(--space-2)] sm:grid-cols-2">
         {items.map((m) => (
-          <li key={m.id} className="border rounded p-3 flex items-center justify-between">
-            {editingId === m.id ? (
-              <div className="flex flex-col gap-2 w-full">
-                <input
-                  aria-label="图标"
-                  value={editDraft.icon}
-                  onChange={(e) => setEditDraft({ ...editDraft, icon: e.target.value })}
-                  className="border rounded px-2 py-1"
-                  maxLength={10}
-                />
-                <input
-                  placeholder="名称"
-                  value={editDraft.name}
-                  onChange={(e) => setEditDraft({ ...editDraft, name: e.target.value })}
-                  className="border rounded px-2 py-1"
-                />
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => saveEdit(m.id)}
-                    className="bg-black text-white text-sm px-3 py-1 rounded"
-                  >
-                    保存
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEditingId(null)}
-                    className="text-sm"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <span>
-                  {m.icon} {m.name}
-                  {m.isSystem && <span className="text-xs opacity-50 ml-1">(系统)</span>}
-                </span>
-                {!m.isSystem && (
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingId(m.id);
-                        setEditDraft({ name: m.name, icon: m.icon });
-                      }}
-                      className="text-xs"
-                    >
-                      编辑
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => remove(m.id)}
-                      className="text-xs text-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                )}
-              </>
-            )}
+          <li key={m.id}>
+            <MilestoneRow
+              milestone={m}
+              editing={editingId === m.id}
+              editDraft={editDraft}
+              onEditDraftChange={setEditDraft}
+              onSave={() => saveEdit(m.id)}
+              onCancelEdit={() => setEditingId(null)}
+              onEdit={() => {
+                setEditingId(m.id);
+                setEditDraft({ name: m.name, icon: m.icon });
+              }}
+              onRemove={() => remove(m.id)}
+            />
           </li>
         ))}
       </ul>
 
       {creating ? (
-        <div className="border rounded p-3 flex flex-col gap-2">
-          <input
-            placeholder="emoji (如 🎉)"
-            value={draft.icon}
-            onChange={(e) => setDraft({ ...draft, icon: e.target.value })}
-            className="border rounded px-2 py-1"
-            maxLength={4}
-          />
-          <input
-            placeholder="名称 (如 第一次叫妈妈)"
-            value={draft.name}
-            onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={create}
-              className="bg-black text-white text-sm px-3 py-1 rounded"
-            >
+        <Card className="flex flex-col gap-[var(--space-3)]">
+          <Input label="emoji" placeholder="emoji (如 🎉)" value={draft.icon} onChange={(e) => setDraft({ ...draft, icon: e.target.value })} maxLength={4} />
+          <Input label="名称" placeholder="名称 (如 第一次叫妈妈)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
+          <div className="flex gap-[var(--space-2)]">
+            <Button type="button" size="sm" onClick={create}>
               创建
-            </button>
-            <button type="button" onClick={() => setCreating(false)} className="text-sm">
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
               取消
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       ) : (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="border rounded p-3 w-full text-left text-sm"
-        >
+        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
           + 添加里程碑
-        </button>
+        </Button>
       )}
-    </main>
+    </AppShell>
   );
 }

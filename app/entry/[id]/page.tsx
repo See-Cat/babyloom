@@ -16,6 +16,10 @@ import {
 import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
 import { Gallery } from '@/components/media/Gallery';
+import { AppShell } from '@/components/mobile/AppShell';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Tag } from '@/components/ui/Tag';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -68,36 +72,40 @@ export default async function EntryDetailPage({
     .all();
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <div className="flex gap-3 text-sm mb-2">
-        <Link href={`/timeline?babyId=${entry.babyId}`} className="opacity-60">
-          ← 时间线
+    <AppShell
+      title="记录"
+      leftSlot={
+        <Link href={`/timeline?babyId=${entry.babyId}`} className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          返回
         </Link>
-        {canEdit && (
-          <Link href={`/entry/${entry.id}/edit`} className="text-blue-600">
-            编辑
+      }
+      rightSlot={
+        canEdit ? (
+          <Link href={`/entry/${entry.id}/edit`}>
+            <Button size="sm" variant="secondary">编辑</Button>
           </Link>
-        )}
-      </div>
-      <article className="mt-4">
-        <header className="mb-4">
-          <p className="text-xs opacity-60">
+        ) : null
+      }
+    >
+      <Card as="article">
+        <header className="mb-[var(--space-4)]">
+          <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
             {baby?.name} · {new Date(entry.occurredAt).toLocaleString('zh-CN')}
           </p>
-          <p className="text-xs opacity-60">作者:{author?.name ?? '未知'}</p>
+          <p className="text-[var(--text-xs)] text-[var(--color-muted)]">作者:{author?.name ?? '未知'}</p>
         </header>
-        <p className="whitespace-pre-wrap text-base">{entry.content}</p>
+        <p className="whitespace-pre-wrap text-[var(--text-base)]">{entry.content}</p>
         {attached.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-[var(--space-4)] flex flex-wrap gap-[var(--space-2)]">
             {attached.map((m) => (
-              <span key={m.id} className="px-2 py-1 text-xs border rounded">
+              <Tag key={m.id} variant="accent">
                 {m.icon} {m.name}
-              </span>
+              </Tag>
             ))}
           </div>
         )}
         <Gallery mediaIds={attachedMedia.map((media) => media.mediaId)} />
-      </article>
-    </main>
+      </Card>
+    </AppShell>
   );
 }

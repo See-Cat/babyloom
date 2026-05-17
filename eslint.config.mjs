@@ -14,7 +14,7 @@ export default [
     ]
   },
   {
-    files: ['app/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'lib/**/*.{ts,tsx}', 'tests/**/*.{ts,tsx}'],
     languageOptions: {
       parser: tseslint,
       parserOptions: {
@@ -28,6 +28,7 @@ export default [
     },
     rules: {
       'babyloom/api-route-must-assert': 'error',
+      'babyloom/no-raw-color': 'error',
       'babyloom/parent-chain-join': 'error'
     }
   }

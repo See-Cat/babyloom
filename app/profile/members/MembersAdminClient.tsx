@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AppShell } from '@/components/mobile/AppShell';
+import { FamilyMemberList } from '@/components/features/FamilyMemberList';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 
 interface Member {
   memberId: string;
@@ -84,136 +89,77 @@ export default function MembersAdminPage() {
   }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <Link href="/profile" className="text-sm opacity-60">
-        ← 个人
-      </Link>
-      <h1 className="text-xl font-semibold my-4">成员管理</h1>
+    <AppShell
+      title="成员管理"
+      leftSlot={
+        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+          返回
+        </Link>
+      }
+    >
 
-      {error && <p className="text-red-600 text-sm mb-2">{error}</p>}
+      {error && <p role="alert" className="mb-[var(--space-2)] text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
 
-      <ul className="flex flex-col gap-3 mb-6">
-        {members.map((m) => (
-          <li key={m.memberId} className="border rounded p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">{m.nickname}</p>
-                <p className="text-xs opacity-60">
-                  @{m.username} · {m.role}
-                </p>
-              </div>
-              {m.role !== 'owner' && (
-                <div className="flex gap-2">
-                  <select
-                    value={m.role}
-                    onChange={(e) => changeRole(m.userId, e.target.value as 'editor' | 'viewer')}
-                    className="border rounded px-2 py-1 text-sm"
-                  >
-                    <option value="editor">editor</option>
-                    <option value="viewer">viewer</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setResetFor(m.userId)}
-                    className="text-sm border rounded px-3 py-1"
-                  >
-                    改密码
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => remove(m.userId)}
-                    className="text-sm text-red-600 border rounded px-3 py-1"
-                  >
-                    移除
-                  </button>
-                </div>
-              )}
-            </div>
-            {resetFor === m.userId && (
-              <div className="mt-3 flex gap-2">
-                <input
-                  type="password"
-                  value={resetPassword}
-                  onChange={(e) => setResetPassword(e.target.value)}
-                  placeholder="新密码 (≥8 位)"
-                  className="border rounded px-2 py-1 flex-1"
-                />
-                <button
-                  type="button"
-                  onClick={() => resetPwd(m.userId)}
-                  className="bg-black text-white text-sm px-3 py-1 rounded"
-                >
+      <div className="mb-[var(--space-6)]">
+        <FamilyMemberList
+          members={members}
+          onRoleChange={changeRole}
+          onResetPassword={setResetFor}
+          onRemove={remove}
+          resetSlot={(m) =>
+            resetFor === m.userId ? (
+              <div className="mt-[var(--space-3)] flex flex-col gap-[var(--space-2)] sm:flex-row sm:items-end">
+                <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码 (≥8 位)" label="新密码" />
+                <Button type="button" size="sm" onClick={() => resetPwd(m.userId)}>
                   保存
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
+                  size="sm"
+                  variant="ghost"
                   onClick={() => {
                     setResetFor(null);
                     setResetPassword('');
                   }}
-                  className="text-sm"
                 >
                   取消
-                </button>
+                </Button>
               </div>
-            )}
-          </li>
-        ))}
-      </ul>
+            ) : null
+          }
+        />
+      </div>
 
       {creating ? (
-        <div className="border rounded p-3 flex flex-col gap-2">
-          <input
-            placeholder="用户名 (3-50, a-z0-9_-)"
-            value={newMember.username}
-            onChange={(e) => setNewMember({ ...newMember, username: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
-          <input
-            placeholder="昵称"
-            value={newMember.nickname}
-            onChange={(e) => setNewMember({ ...newMember, nickname: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
-          <input
-            type="password"
-            placeholder="初始密码 (≥8)"
-            value={newMember.password}
-            onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
-            className="border rounded px-2 py-1"
-          />
+        <Card className="flex flex-col gap-[var(--space-3)]">
+          <Input label="用户名" placeholder="用户名 (3-50, a-z0-9_-)" value={newMember.username} onChange={(e) => setNewMember({ ...newMember, username: e.target.value })} />
+          <Input label="昵称" placeholder="昵称" value={newMember.nickname} onChange={(e) => setNewMember({ ...newMember, nickname: e.target.value })} />
+          <Input label="初始密码" type="password" placeholder="初始密码 (≥8)" value={newMember.password} onChange={(e) => setNewMember({ ...newMember, password: e.target.value })} />
           <select
+            aria-label="角色"
             value={newMember.role}
             onChange={(e) =>
               setNewMember({ ...newMember, role: e.target.value as 'editor' | 'viewer' })
             }
-            className="border rounded px-2 py-1"
+            className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]"
           >
             <option value="editor">editor</option>
             <option value="viewer">viewer</option>
           </select>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={createNew}
-              className="bg-black text-white text-sm px-3 py-1 rounded"
-            >
+          <div className="flex gap-[var(--space-2)]">
+            <Button type="button" size="sm" onClick={createNew}>
               创建
-            </button>
-            <button type="button" onClick={() => setCreating(false)} className="text-sm">
+            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
               取消
-            </button>
+            </Button>
           </div>
-        </div>
+        </Card>
       ) : (
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          className="border rounded p-3 w-full text-left text-sm"
-        >
+        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
           + 添加成员
-        </button>
+        </Button>
       )}
-    </main>
+    </AppShell>
   );
 }

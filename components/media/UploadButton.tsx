@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { Button } from '@/components/ui/Button';
 
 export interface UploadedMedia {
   mediaId: string;
@@ -13,9 +14,10 @@ export interface UploadButtonProps {
   onUploaded: (media: UploadedMedia) => void;
   disabled?: boolean;
   multiple?: boolean;
+  className?: string;
 }
 
-export function UploadButton({ babyId, onUploaded, disabled, multiple = true }: UploadButtonProps) {
+export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className }: UploadButtonProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -50,7 +52,7 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true }: 
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={className ?? 'flex flex-col gap-2'}>
       <input
         ref={inputRef}
         type="file"
@@ -59,16 +61,17 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true }: 
         hidden
         onChange={(event) => event.target.files && handleFiles(event.target.files)}
       />
-      <button
+      <Button
         type="button"
+        size="sm"
+        variant="secondary"
         disabled={disabled || busy}
         onClick={() => inputRef.current?.click()}
-        className="self-start border rounded px-3 py-1.5 text-sm disabled:opacity-50"
       >
         {busy ? '上传中…' : '添加照片 / 视频'}
-      </button>
+      </Button>
       {error && (
-        <p role="alert" className="text-sm text-red-600">
+        <p role="alert" className="text-[var(--text-sm)] text-[var(--color-error)]">
           {error}
         </p>
       )}

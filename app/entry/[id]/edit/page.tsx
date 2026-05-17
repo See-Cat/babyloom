@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { AppShell } from '@/components/mobile/AppShell';
+import { EntryComposer } from '@/components/features/EntryComposer';
+import { Card } from '@/components/ui/Card';
 
 interface EntryDto {
   id: string;
@@ -75,48 +78,27 @@ export default function EditEntryPage() {
     router.refresh();
   }
 
-  if (!entry) return <main className="p-4">加载中…</main>;
+  if (!entry) {
+    return (
+      <AppShell title="编辑记录">
+        <Card>加载中…</Card>
+      </AppShell>
+    );
+  }
 
   return (
-    <main className="min-h-screen p-4 max-w-2xl mx-auto">
-      <h1 className="text-xl font-semibold mb-4">编辑记录</h1>
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        rows={8}
-        className="w-full border rounded px-3 py-2 resize-none mb-4"
+    <AppShell title="编辑记录">
+      <EntryComposer
+        content={content}
+        milestones={allMilestones}
+        selectedMilestoneIds={selectedMilestoneIds}
+        error={error}
+        submitting={pending}
+        onContentChange={setContent}
+        onToggleMilestone={toggleMilestone}
+        onCancel={() => router.back()}
+        onSubmitClick={onSubmit}
       />
-      <div className="mb-4">
-        <p className="text-sm font-medium mb-2">里程碑</p>
-        <div className="flex flex-wrap gap-2">
-          {allMilestones.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => toggleMilestone(m.id)}
-              className={`px-3 py-1.5 text-sm border rounded ${
-                selectedMilestoneIds.has(m.id) ? 'bg-black text-white' : ''
-              }`}
-            >
-              {m.icon} {m.name}
-            </button>
-          ))}
-        </div>
-      </div>
-      {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-      <div className="flex gap-2 justify-end">
-        <button type="button" onClick={() => router.back()} className="px-4 py-2 border rounded">
-          取消
-        </button>
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={pending}
-          className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
-        >
-          {pending ? '保存中…' : '保存'}
-        </button>
-      </div>
-    </main>
+    </AppShell>
   );
 }

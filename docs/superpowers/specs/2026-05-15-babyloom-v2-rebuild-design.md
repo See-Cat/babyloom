@@ -1970,3 +1970,5 @@ PRAGMA temp_store = MEMORY;
 ## 16. 下一步
 
 本设计经用户确认后,进入 `writing-plans` 阶段,产出可执行的实施计划(按模块/阶段拆解)。
+
+2026-05-17: P5 设计系统实施已在 `plans/2026-05-17-P5-design-system.md` 对应工作树推进。已落地 tokens、字体、核心 UI、移动端壳、业务组件、页面 sweep、`babyloom/no-raw-color` 护栏与 `docs/DESIGN.md`; `@axe-core/playwright` 已安装并通过 a11y / reduced-motion / keyboard-flow 验证。视觉回归 baseline 仍需人工 review 后提交。

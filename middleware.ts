@@ -9,6 +9,10 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  if (process.env.NODE_ENV !== 'production' && pathname.startsWith('/components')) {
+    return NextResponse.next();
+  }
+
   if (pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
