@@ -5,7 +5,7 @@ import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { babies, entryMilestones, milestones, users } from '@/lib/db/schema';
+import { babies, entryMilestones, familyMembers, milestones, users } from '@/lib/db/schema';
 import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
 
@@ -40,6 +40,13 @@ export default async function EntryDetailPage({
   const { db } = getDb({ dataDir });
   const author = db.select().from(users).where(eq(users.id, entry.authorId)).get();
   const baby = db.select().from(babies).where(eq(babies.id, entry.babyId)).get();
+  const member = db
+    .select()
+    .from(familyMembers)
+    .where(eq(familyMembers.userId, session.user.id))
+    .get();
+  const canEdit =
+    member?.role === 'owner' || (member?.role === 'editor' && entry.authorId === session.user.id);
   const attached = db
     .select({ id: milestones.id, name: milestones.name, icon: milestones.icon })
     .from(entryMilestones)
@@ -53,9 +60,11 @@ export default async function EntryDetailPage({
         <Link href={`/timeline?babyId=${entry.babyId}`} className="opacity-60">
           ← 时间线
         </Link>
-        <Link href={`/entry/${entry.id}/edit`} className="text-blue-600">
-          编辑
-        </Link>
+        {canEdit && (
+          <Link href={`/entry/${entry.id}/edit`} className="text-blue-600">
+            编辑
+          </Link>
+        )}
       </div>
       <article className="mt-4">
         <header className="mb-4">

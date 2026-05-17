@@ -41,6 +41,16 @@ test.describe.serial('member admin', () => {
     expect(res.status()).toBe(404);
   });
 
+  test('non-owner gets 404 for member admin page', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[name="username"]', 'edith');
+    await page.fill('input[name="password"]', 'edithpass123');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/timeline*');
+    const res = await page.goto('/profile/members');
+    expect(res?.status()).toBe(404);
+  });
+
   test('owner resets password', async ({ request }) => {
     const res = await request.patch(`/api/family-members/${newMemberUserId}`, {
       headers: { cookie: ownerCookie, 'content-type': 'application/json' },

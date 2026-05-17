@@ -35,6 +35,20 @@ test.describe.serial('milestones', () => {
     expect(body.milestones.some((m: any) => m.id === milestoneId)).toBe(true);
   });
 
+  test('owner edits a custom milestone from the admin page', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[name="username"]', 'e2eowner');
+    await page.fill('input[name="password"]', 'e2epassword');
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/\/(timeline|onboarding\/baby)/);
+    await page.goto('/profile/milestones');
+    const item = page.locator('li').filter({ hasText: 'First word' });
+    await item.getByRole('button', { name: '编辑' }).click();
+    await page.getByPlaceholder('名称').fill('First phrase');
+    await page.getByRole('button', { name: '保存' }).click();
+    await expect(page.getByText('First phrase')).toBeVisible();
+  });
+
   test('owner deletes the milestone', async ({ request }) => {
     const res = await request.delete(`/api/milestones/${milestoneId}`, { headers: { cookie } });
     expect(res.status()).toBe(200);

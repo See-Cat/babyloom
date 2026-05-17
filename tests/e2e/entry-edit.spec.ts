@@ -92,6 +92,17 @@ test.describe.serial('entry edit', () => {
     expect(res.status()).toBe(404);
   });
 
+  test('viewer does not see edit link on entry detail', async ({ page }) => {
+    await page.goto('/login');
+    await page.fill('input[name="username"]', 'eeview');
+    await page.fill('input[name="password"]', 'eeviewpass1');
+    await page.click('button[type="submit"]');
+    await page.waitForURL('**/timeline*');
+    await page.goto(`/entry/${entryId}`);
+    await expect(page.getByText('updated text')).toBeVisible();
+    await expect(page.getByRole('link', { name: '编辑' })).toHaveCount(0);
+  });
+
   test("editor cannot PATCH another author's entry (404)", async ({ request }) => {
     await request.post('/api/family-members', {
       headers: { cookie, 'content-type': 'application/json' },
