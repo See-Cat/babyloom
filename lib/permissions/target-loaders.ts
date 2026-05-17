@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { getDb } from '@/lib/db/client';
-import { babies, entries } from '@/lib/db/schema';
+import { babies, entries, media } from '@/lib/db/schema';
 import type { Action, PermissionResource } from './actions';
 import { NotFoundError } from './errors';
 import { assertPermission } from './assert';
@@ -9,8 +9,9 @@ import { UUID_RE } from './responses';
 
 export interface LoadAndAssertOptions {
   id: string;
-  table: 'babies' | 'entries' | 'milestones' | 'users';
+  table: 'babies' | 'entries' | 'media' | 'milestones' | 'users';
   allowedStatuses?: string[];
+  allowedParentStatuses?: string[];
   requirePermission: { userId: string; action: Action };
   toResource?: (row: any) => PermissionResource;
   dataDir?: string;
@@ -57,7 +58,40 @@ export async function loadAndAssertTarget<R = unknown>(
         .innerJoin(babies, eq(babies.id, entries.babyId))
         .where(eq(entries.id, opts.id))
         .get();
-      if (row && row.babyStatus !== 'active') {
+      if (row && !(opts.allowedParentStatuses ?? ['active']).includes(row.babyStatus)) {
+        row = null;
+      }
+      break;
+    case 'media':
+      row = db
+        .select({
+          id: media.id,
+          babyId: media.babyId,
+          uploadedBy: media.uploadedBy,
+          clientUploadId: media.clientUploadId,
+          type: media.type,
+          mimeType: media.mimeType,
+          sizeBytes: media.sizeBytes,
+          contentHash: media.contentHash,
+          width: media.width,
+          height: media.height,
+          durationSec: media.durationSec,
+          relativePath: media.relativePath,
+          originalExt: media.originalExt,
+          filename: media.filename,
+          takenAt: media.takenAt,
+          status: media.status,
+          createdAt: media.createdAt,
+          updatedAt: media.updatedAt,
+          deletedAt: media.deletedAt,
+          deletedBy: media.deletedBy,
+          babyStatus: babies.status
+        })
+        .from(media)
+        .innerJoin(babies, eq(babies.id, media.babyId))
+        .where(eq(media.id, opts.id))
+        .get();
+      if (row && !(opts.allowedParentStatuses ?? ['active']).includes(row.babyStatus)) {
         row = null;
       }
       break;
@@ -92,6 +126,13 @@ export async function loadAndAssertTarget<R = unknown>(
           babyId: target.babyId,
           entryId: target.id,
           authorId: target.authorId,
+          deletedBy: target.deletedBy ?? undefined
+        };
+      case 'media':
+        return {
+          babyId: target.babyId,
+          mediaId: target.id,
+          uploadedBy: target.uploadedBy,
           deletedBy: target.deletedBy ?? undefined
         };
       case 'milestones':

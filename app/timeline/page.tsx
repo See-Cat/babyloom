@@ -1,11 +1,12 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray } from 'drizzle-orm';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { babies, entries, familyMembers } from '@/lib/db/schema';
+import { babies, entries, entryMedia, familyMembers } from '@/lib/db/schema';
+import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -55,6 +56,20 @@ export default async function TimelinePage({
     )
     .orderBy(desc(entries.occurredAt))
     .all();
+  const entryIds = rows.map((row) => row.entries.id);
+  const bridges = entryIds.length
+    ? db
+        .select({ entryId: entryMedia.entryId, mediaId: entryMedia.mediaId })
+        .from(entryMedia)
+        .where(inArray(entryMedia.entryId, entryIds))
+        .all()
+    : [];
+  const mediaIdsByEntry = new Map<string, string[]>();
+  for (const bridge of bridges) {
+    const list = mediaIdsByEntry.get(bridge.entryId) ?? [];
+    list.push(bridge.mediaId);
+    mediaIdsByEntry.set(bridge.entryId, list);
+  }
 
   return (
     <main className="min-h-screen p-4 max-w-2xl mx-auto">
@@ -100,6 +115,7 @@ export default async function TimelinePage({
                   {new Date(row.entries.occurredAt).toLocaleString('zh-CN')}
                 </p>
                 <p className="line-clamp-3 whitespace-pre-wrap">{row.entries.content}</p>
+                <ThumbnailStrip mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []} />
               </Link>
             </li>
           ))}

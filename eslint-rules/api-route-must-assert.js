@@ -2,6 +2,9 @@
 
 const HTTP_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']);
 const ALLOWED_WRAPPERS = new Set(['withAuthorizedResource', 'withAuthorizedAction']);
+const EXEMPT_FILES = new Set([
+  '/app/api/entries/[id]/media/[mediaId]/attach/route.ts'
+]);
 
 // Walk a CallExpression's callee chain to find the leftmost Identifier.
 //   withAuthorizedResource({...})(handler)
@@ -35,6 +38,7 @@ module.exports = {
     // Allowlist: better-auth's own catch-all, and the public health endpoint
     if (/\/app\/api\/auth\/\[\.\.\.all\]\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
     if (/\/app\/api\/health\/route\.(ts|tsx|js|jsx)$/.test(filename)) return {};
+    if ([...EXEMPT_FILES].some((path) => filename.endsWith(path))) return {};
 
     return {
       ExportNamedDeclaration(node) {

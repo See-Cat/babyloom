@@ -1,3 +1,4 @@
+import { sql } from 'drizzle-orm';
 import {
   sqliteTable,
   text,
@@ -187,13 +188,53 @@ export const entryMilestones = sqliteTable(
   })
 );
 
+export const media = sqliteTable(
+  'media',
+  {
+    id: text('id').primaryKey(),
+    babyId: text('baby_id')
+      .notNull()
+      .references(() => babies.id, { onDelete: 'cascade' }),
+    uploadedBy: text('uploaded_by')
+      .notNull()
+      .references(() => users.id),
+    clientUploadId: text('client_upload_id').notNull(),
+    type: text('type'),
+    mimeType: text('mime_type'),
+    sizeBytes: integer('size_bytes'),
+    contentHash: text('content_hash'),
+    width: integer('width'),
+    height: integer('height'),
+    durationSec: integer('duration_sec'),
+    relativePath: text('relative_path'),
+    originalExt: text('original_ext'),
+    filename: text('filename').notNull(),
+    takenAt: integer('taken_at'),
+    status: text('status').notNull(),
+    createdAt: integer('created_at').notNull(),
+    updatedAt: integer('updated_at').notNull(),
+    deletedAt: integer('deleted_at'),
+    deletedBy: text('deleted_by').references(() => users.id)
+  },
+  (t) => ({
+    byBabyStatus: index('ix_media_baby_status').on(t.babyId, t.status),
+    byClientUpload: index('ix_media_client_upload').on(t.clientUploadId, t.uploadedBy),
+    uniqReadyHash: uniqueIndex('uq_media_baby_hash_ready')
+      .on(t.babyId, t.contentHash)
+      .where(sql`status = 'ready'`),
+    byStatusDeleted: index('ix_media_status_deleted').on(t.status, t.deletedAt)
+  })
+);
+
 export const entryMedia = sqliteTable(
   'entry_media',
   {
     entryId: text('entry_id')
       .notNull()
       .references(() => entries.id, { onDelete: 'cascade' }),
-    mediaId: text('media_id').notNull(),
+    mediaId: text('media_id')
+      .notNull()
+      .references(() => media.id, { onDelete: 'cascade' }),
     attachedBy: text('attached_by')
       .notNull()
       .references(() => users.id),

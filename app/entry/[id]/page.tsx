@@ -5,9 +5,17 @@ import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { babies, entryMilestones, familyMembers, milestones, users } from '@/lib/db/schema';
+import {
+  babies,
+  entryMedia,
+  entryMilestones,
+  familyMembers,
+  milestones,
+  users
+} from '@/lib/db/schema';
 import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
+import { Gallery } from '@/components/media/Gallery';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -53,6 +61,11 @@ export default async function EntryDetailPage({
     .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
     .where(eq(entryMilestones.entryId, entry.id))
     .all();
+  const attachedMedia = db
+    .select({ mediaId: entryMedia.mediaId })
+    .from(entryMedia)
+    .where(eq(entryMedia.entryId, entry.id))
+    .all();
 
   return (
     <main className="min-h-screen p-4 max-w-2xl mx-auto">
@@ -83,6 +96,7 @@ export default async function EntryDetailPage({
             ))}
           </div>
         )}
+        <Gallery mediaIds={attachedMedia.map((media) => media.mediaId)} />
       </article>
     </main>
   );

@@ -22,7 +22,13 @@ export const configSchema = z.object({
     .object({
       level: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info')
     })
-    .default({ level: 'info' })
+    .default({ level: 'info' }),
+  media: z
+    .object({
+      maxPhotoBytes: z.number().int().positive().default(50_000_000),
+      maxVideoBytes: z.number().int().positive().default(500_000_000)
+    })
+    .default({ maxPhotoBytes: 50_000_000, maxVideoBytes: 500_000_000 })
 });
 
 export type Config = z.infer<typeof configSchema>;

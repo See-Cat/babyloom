@@ -13,3 +13,8 @@ app:
 
 log:
   level: info
+
+media:
+  # Max upload size per file. Photos and videos counted separately.
+  maxPhotoBytes: 50000000
+  maxVideoBytes: 500000000

@@ -85,6 +85,11 @@ export const GET = withAuthorizedResource({
     .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
     .where(eq(entryMilestones.entryId, row.id))
     .all();
+  const attachedMedia = db
+    .select({ mediaId: entryMedia.mediaId })
+    .from(entryMedia)
+    .where(eq(entryMedia.entryId, row.id))
+    .all();
 
   return Response.json({
     id: row.id,
@@ -94,7 +99,8 @@ export const GET = withAuthorizedResource({
     occurredAt: row.occurredAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    milestones: attached
+    milestones: attached,
+    mediaIds: attachedMedia.map((item) => item.mediaId)
   });
 });
 

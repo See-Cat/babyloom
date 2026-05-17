@@ -3,7 +3,14 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
-import { babies, entries, entryMilestones, familyMembers, milestones } from '@/lib/db/schema';
+import {
+  babies,
+  entries,
+  entryMedia,
+  entryMilestones,
+  familyMembers,
+  milestones
+} from '@/lib/db/schema';
 import { withAuthorizedAction } from '@/lib/permissions/action-template';
 import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
@@ -58,7 +65,24 @@ export const GET = withAuthorizedAction({ action: 'baby:read' })(async (req, use
     .orderBy(desc(entries.occurredAt))
     .all();
 
-  return Response.json({ entries: rows });
+  const entryIds = rows.map((row) => row.id);
+  const bridges = entryIds.length
+    ? db
+        .select({ entryId: entryMedia.entryId, mediaId: entryMedia.mediaId })
+        .from(entryMedia)
+        .where(inArray(entryMedia.entryId, entryIds))
+        .all()
+    : [];
+  const mediaIdsByEntry = new Map<string, string[]>();
+  for (const bridge of bridges) {
+    const list = mediaIdsByEntry.get(bridge.entryId) ?? [];
+    list.push(bridge.mediaId);
+    mediaIdsByEntry.set(bridge.entryId, list);
+  }
+
+  return Response.json({
+    entries: rows.map((row) => ({ ...row, mediaIds: mediaIdsByEntry.get(row.id) ?? [] }))
+  });
 });
 
 export const POST = withAuthorizedAction({

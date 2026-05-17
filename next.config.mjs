@@ -1,7 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  serverExternalPackages: ['better-sqlite3', 'pino', 'pino-roll', 'bindings'],
+  serverExternalPackages: [
+    'better-sqlite3',
+    'bindings',
+    'ffmpeg-static',
+    'ffprobe-static',
+    'file-type',
+    'fluent-ffmpeg',
+    'formidable',
+    'pino',
+    'pino-roll',
+    'sharp'
+  ],
   webpack: (config, { isServer, nextRuntime, webpack }) => {
     const isEdge = nextRuntime === 'edge';
 
@@ -12,8 +23,14 @@ const nextConfig = {
         ...(config.resolve.alias || {}),
         'better-sqlite3': false,
         'bindings': false,
+        'ffmpeg-static': false,
+        'ffprobe-static': false,
+        'file-type': false,
+        'fluent-ffmpeg': false,
+        'formidable': false,
         'pino': false,
-        'pino-roll': false
+        'pino-roll': false,
+        'sharp': false
       };
     }
 
