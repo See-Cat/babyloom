@@ -899,15 +899,21 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 
 ---
 
-## 11. 附录 · Timeline v5 标准实例
+## 11. 视觉真值参照
 
-最终 Timeline mockup 包含本规范的全部要素,作为视觉真值参照:
+本规范由文字规则 + 三份可在浏览器中打开的 HTML 参照组成。**实施时优先以参照页的视觉数值为准**(文字规则有歧义时);参照页与本文不一致的,以本文为准。
 
-- 文件:`.superpowers/brainstorm/14057-1779110326/content/timeline-motion.html`
-- 包含:Header(标题 + 副标月龄 + Baby Pill)/ Hero(带图态)/ 4 张 Card / FAB / Tabbar
-- 动效:错峰进场 / FAB & Pill 按压 / Tabbar 激活胶囊弹起 / Toast 弹出 / Hero ken-burns / reduced-motion 全关
+| 参照 | 文件 | 覆盖 |
+|---|---|---|
+| **组件状态参考** | [`assets/2026-05-18-components-reference.html`](./assets/2026-05-18-components-reference.html) | 全部 14 类基础组件 × 全部状态(default / focus / active / disabled / loading / error / empty),Tokens 快查 |
+| **弹窗交互预览** | [`assets/2026-05-18-popups-reference.html`](./assets/2026-05-18-popups-reference.html) | Modal / BottomSheet / ActionSheet 三种弹窗的实际渲染与进退场动画 |
+| **Timeline 页 + 动效** | [`assets/2026-05-18-timeline-motion-reference.html`](./assets/2026-05-18-timeline-motion-reference.html) | Timeline 完整页 + 进场 / 按压 / Tabbar 切换 / Hero ken-burns / reduced-motion 模拟 |
 
-实施时凡视觉与该 mockup 不一致的,**以本规范 §1–§8 的规则为准**(mockup 仅是规则的一次具象表达,规则才是真值)。
+实施流程:
+
+1. 读本规范 §1–§10 建立规则
+2. 在浏览器打开三个参照页对照视觉
+3. 实现完成后**用 Playwright 截图与参照页对比**,作为视觉回归基线
 
 ---
 
