@@ -458,18 +458,29 @@ fallback: 渐变背景 + 中文姓氏首字 / 英文首字母大写
 
 ### 4.7 Modal
 
+居中对话框,用于**确认、警告、需要简短输入**的场景。
+
 ```
-遮罩:    rgba(61,52,40,.45),fade-in 250ms
-容器:    --color-surface-2 (#fdfdf5)
-圆角:    --radius-lg (24px)
-阴影:    --shadow-soft-lg
-最大宽:  桌面 480px;移动端宽 = 100% - 32px
-内边距:  20px 上下 / 24px 左右
-进场:    scale: .96 → 1 + opacity 0 → 1,250ms ease
-退场:    同上反向,200ms
-ESC 关:  ✅
-点遮罩关: ✅
-focus trap: ✅
+遮罩:        rgba(61,52,40,.45),fade-in --duration-base
+容器背景:    --color-surface-2 (#fdfdf5)
+容器圆角:    --radius-lg (24px)
+容器阴影:    --shadow-soft-lg
+最大宽:      桌面 480px;移动端宽 = 100% - 32px (left/right 各 16)
+垂直位置:    top: 50%,translateY(-50%)
+内边距:      22px 上下 / 24px 左右
+标题:        --text-lg (16px) 实测显大可用 --text-xl (18px),--font-bold,--color-fg-strong
+            margin-bottom: 8px
+正文:        --text-base (13.5px),--leading-base,--color-fg
+            margin-bottom: 18px
+按钮行:      flex,gap 10px,两个按钮等宽(flex: 1)
+            destructive 操作必须放右侧(主操作位置)
+进场:        opacity 0 → 1 + translateY(calc(-50% + 8px)) scale(.96) → translateY(-50%) scale(1)
+            --duration-base var(--ease),用 backwards fill-mode
+退场:        反向,--duration-fast (150ms)
+ESC 关:      ✅
+点遮罩关:    ✅ (但 destructive Modal 应禁用点遮罩关,避免误关)
+focus trap:  ✅(打开时焦点落到主操作按钮或第一个 input)
+关闭按钮 ×:  仅信息展示型 Modal 加,确认/警告型不加(避免与"取消"重复)
 ```
 
 **禁止顶部加 blob clip-path 装饰**——原 spec §7.6 提到但实际过于花哨,会破坏温和感。Modal 就是平静的对话框。**这是与 P5 spec 的第二处显式差异**。
@@ -548,15 +559,26 @@ reduced-motion: 改为脉冲透明度(opacity .4 ↔ 1, 1s ease-in-out)
 
 ### 4.12 移动壳 · BottomSheet
 
+自下而上拉起,用于**从列表中选择**(切宝宝、选成员、Milestone 多选、媒体来源)。
+
 ```
-背景:       --color-surface-2
-顶部圆角:   --radius-lg (24px) 仅上面两角
-阴影:       --shadow-soft-lg
+背景:       --color-surface-2 (#fdfdf5)
+顶部圆角:   --radius-lg (24px) 仅上面两角(border-radius: 24px 24px 0 0)
+阴影:       0 -8px 24px 0 rgba(61,52,40,.14)(向上的软阴影,与 --shadow-soft-lg 镜像)
 handle:     顶部居中 36×4px 圆角 2px 浅色横条(--color-border-light)
-内边距:     20px 上下 / 24px 左右
-进场:       translateY(100%) → 0,300ms ease-out
-遮罩:       fade-in 250ms (rgba(61,52,40,.45))
-高度:       auto(最高 90vh);超过时内部滚动
+            margin-bottom: 14px
+内边距:     18px 上 / 20px 左右 / 28px 下(底部留出安全区)
+            实际再加 env(safe-area-inset-bottom)
+标题:       --text-md (14px),--font-bold,--color-fg-strong,margin-bottom: 14px
+列表项:     padding 10px 6px;radius 14;
+            选中态背景 --color-surface,右侧加 mint-dark ✓ 标记
+            点按:背景 rgba(0,0,0,.04)
+"添加新…"项: 顶部 1px border-light 分隔线 + 14px 上 padding,
+            mint-dark 色,--font-semibold
+进场:       translateY(100%) → 0,--duration-slow (300ms) var(--ease)
+退场:       反向,--duration-base (250ms)
+遮罩:       rgba(61,52,40,.45),fade-in --duration-base
+高度:       auto(最高 90vh);超过时内部滚动(内部加 overflow-y: auto)
 关闭:       下拉超过 80px + 松手 / 点遮罩 / ESC
 ```
 
@@ -564,16 +586,27 @@ handle:     顶部居中 36×4px 圆角 2px 浅色横条(--color-border-light)
 
 ### 4.13 移动壳 · ActionSheet
 
-iOS 风布局,自下而上:
+iOS 风菜单,自下而上,用于**对当前对象的多个操作**(编辑 / 复制 / 移到回收站等)。
 
 ```
-容器:        --color-surface-2,顶部圆角 24px
-项高度:      54px
-项背景:      默认透明,:active 时 rgba(0,0,0,.05)
-项字色:      --color-fg(默认), --color-error(destructive), --color-primary-active(emphasized)
-项字号:      --text-md (14px), 字重 --font-semibold
+位置:        bottom: 12px;left/right: 12px(屏幕底部留 12px 安全边距,与 iOS 一致)
+分组容器:    --color-surface-2,圆角 --radius-base (18px,不用 24)
+            阴影 --shadow-soft-lg
+项 padding:  16px 上下 / 18px 左右
+项字号:      --text-md (14.5px) 略偏大,--font-semibold
+项字色:      默认: --color-fg
+            emphasized(强调操作,通常是"编辑/完成"): --color-primary-active
+            destructive(删除/移到回收站): --color-error
+项对齐:      text-align: center(iOS 风格)
 项分隔:      1px solid --color-border-light(最后一项无)
-取消按钮:    与项列表隔开 8px 间距,独立成块,背景同上,字重 --font-bold
+项点按态:    background: rgba(0,0,0,.05)(瞬时,无 transition)
+取消块:      与分组隔 8px,独立的圆角 18px 浮起块,同样 --color-surface-2 + --shadow-soft-lg
+            字重 --font-bold(比项稍重,语义"独立动作")
+项数限制:    建议 ≤ 5(含 destructive);超过用 BottomSheet 替代
+进场:        translateY(120%) → 0,--duration-slow (300ms) var(--ease)
+退场:        反向,--duration-base (250ms)
+遮罩:        rgba(61,52,40,.45),fade-in --duration-base
+关闭:        点取消 / 点项 / 点遮罩 / ESC
 ```
 
 ### 4.14 移动壳 · AppShell
