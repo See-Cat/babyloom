@@ -3,6 +3,7 @@
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { AvatarUploader } from './AvatarUploader';
 
 export interface BabyCardProps {
   baby: {
@@ -10,6 +11,7 @@ export interface BabyCardProps {
     name: string;
     birthday: string;
     gender: string;
+    avatarUrl?: string | null;
   };
   editing?: boolean;
   editName?: string;
@@ -37,7 +39,12 @@ export function BabyCard({ baby, editing, editName, onCancelEdit, onEdit, onEdit
         </div>
       ) : (
         <div className="flex items-center justify-between gap-[var(--space-3)]">
-          <div>
+          <div className="min-w-0">
+            <AvatarUploader
+              currentUrl={baby.avatarUrl}
+              fallbackName={baby.name}
+              target={`baby:${baby.id}`}
+            />
             <p className="font-bold text-[var(--color-fg-strong)]">{baby.name}</p>
             <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
               {baby.birthday} · {baby.gender}

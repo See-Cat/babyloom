@@ -7,9 +7,10 @@ import { getAuth } from '@/lib/auth/server';
 import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { getDayUtcRange } from '@/lib/db/queries/calendar';
-import { babies, entries, entryMedia, familyMembers } from '@/lib/db/schema';
+import { babies, entries, entryMedia, familyMembers, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 
@@ -54,6 +55,7 @@ export default async function TimelinePage({
     .select()
     .from(entries)
     .innerJoin(babies, eq(babies.id, entries.babyId))
+    .innerJoin(users, eq(users.id, entries.authorId))
     .where(
       and(
         eq(entries.babyId, selectedBabyId),
@@ -96,7 +98,10 @@ export default async function TimelinePage({
               key={baby.id}
               href={`/timeline?babyId=${baby.id}${sp.date ? `&date=${sp.date}` : ''}`}
             >
-              <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>{baby.name}</Tag>
+              <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
+                <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
+                {baby.name}
+              </Tag>
             </Link>
           ))}
         </div>
@@ -118,6 +123,8 @@ export default async function TimelinePage({
             <li key={row.entries.id}>
               <TimelineCard
                 entry={row.entries}
+                authorName={row.user.name}
+                authorImage={row.user.image}
                 mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []}
               />
             </li>

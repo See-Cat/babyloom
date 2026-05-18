@@ -10,15 +10,21 @@ export interface TimelineCardProps {
     occurredAt: number;
   };
   authorName?: string | null;
+  authorImage?: string | null;
   mediaIds?: string[];
 }
 
-export function TimelineCard({ entry, authorName = '未知', mediaIds = [] }: TimelineCardProps) {
+export function TimelineCard({ entry, authorName = '未知', authorImage, mediaIds = [] }: TimelineCardProps) {
   return (
     <Card as="article" interactive>
       <Link href={`/entry/${entry.id}`} className="block">
         <div className="mb-[var(--space-3)] flex items-center gap-[var(--space-3)]">
-          <Avatar name={authorName ?? '未知'} alt={authorName ?? '未知'} size="sm" />
+          <Avatar
+            src={authorImage ?? undefined}
+            name={authorName ?? '未知'}
+            alt={authorName ?? '未知'}
+            size="sm"
+          />
           <div>
             <p className="text-[var(--text-sm)] font-bold text-[var(--color-fg-strong)]">{authorName}</p>
             <p className="text-[var(--text-xs)] text-[var(--color-muted)]">

@@ -9,6 +9,7 @@ import { babies, familyMembers } from '@/lib/db/schema';
 import { groupMediaByMonth, listGalleryMedia } from '@/lib/db/queries/gallery';
 import { GalleryGrid } from '@/components/features/GalleryGrid';
 import { AppShell } from '@/components/mobile/AppShell';
+import { Avatar } from '@/components/ui/Avatar';
 import { Tag } from '@/components/ui/Tag';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
@@ -59,7 +60,7 @@ function BabyTabs({
   selectedBabyId,
   route
 }: {
-  babies: Array<{ id: string; name: string }>;
+  babies: Array<{ id: string; name: string; avatarUrl: string | null }>;
   selectedBabyId: string;
   route: string;
 }) {
@@ -68,7 +69,10 @@ function BabyTabs({
     <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
       {babies.map((baby) => (
         <Link key={baby.id} href={`${route}?babyId=${baby.id}`}>
-          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>{baby.name}</Tag>
+          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
+            <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
+            {baby.name}
+          </Tag>
         </Link>
       ))}
     </div>

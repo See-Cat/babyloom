@@ -10,6 +10,7 @@ import { buildMonthGrid, formatDateInTimezone, listEntryDays } from '@/lib/db/qu
 import { babies, familyMembers } from '@/lib/db/schema';
 import { MonthCalendar } from '@/components/features/MonthCalendar';
 import { AppShell } from '@/components/mobile/AppShell';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 
@@ -75,7 +76,7 @@ function BabyTabs({
   selectedBabyId,
   ym
 }: {
-  babies: Array<{ id: string; name: string }>;
+  babies: Array<{ id: string; name: string; avatarUrl: string | null }>;
   selectedBabyId: string;
   ym: string;
 }) {
@@ -84,7 +85,10 @@ function BabyTabs({
     <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
       {babies.map((baby) => (
         <Link key={baby.id} href={`/calendar?babyId=${baby.id}&ym=${ym}`}>
-          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>{baby.name}</Tag>
+          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
+            <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
+            {baby.name}
+          </Tag>
         </Link>
       ))}
     </div>

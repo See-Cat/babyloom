@@ -7,6 +7,7 @@ import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
+import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
@@ -44,10 +45,15 @@ export default async function ProfilePage() {
   return (
     <AppShell title="我的">
       <Card className="mb-[var(--space-4)]">
-        <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me?.name}</h2>
-        <p className="text-[var(--text-sm)] text-[var(--color-muted)]">
-          @{me?.username} · {member.role}
-        </p>
+        <div className="flex items-center gap-[var(--space-3)]">
+          <Avatar src={me?.image ?? undefined} name={me?.name ?? '我'} size="lg" />
+          <div>
+            <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me?.name}</h2>
+            <p className="text-[var(--text-sm)] text-[var(--color-muted)]">
+              @{me?.username} · {member.role}
+            </p>
+          </div>
+        </div>
       </Card>
       <nav className="grid gap-[var(--space-3)]">
         {links.map((link) => (

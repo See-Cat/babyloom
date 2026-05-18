@@ -16,6 +16,7 @@ interface Baby {
   name: string;
   birthday: string;
   gender: string;
+  avatarUrl?: string | null;
 }
 
 export default function BabiesAdminPage() {

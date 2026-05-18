@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { EditMeForm } from '@/components/features/EditMeForm';
+import { AvatarUploader } from '@/components/features/AvatarUploader';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
 import { Tag } from '@/components/ui/Tag';
@@ -35,9 +36,12 @@ export default async function MePage() {
     <AppShell title="我的资料">
       <Card className="mb-[var(--space-4)]">
         <div className="flex items-center justify-between gap-[var(--space-3)]">
-          <div>
-            <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me.name}</h2>
-            <p className="text-[var(--text-sm)] text-[var(--color-muted)]">@{me.username}</p>
+          <div className="min-w-0">
+            <AvatarUploader currentUrl={me.image} fallbackName={me.name} target="me" />
+            <div className="mt-[var(--space-2)]">
+              <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me.name}</h2>
+              <p className="text-[var(--text-sm)] text-[var(--color-muted)]">@{me.username}</p>
+            </div>
           </div>
           <Tag variant="neutral">{member.role}</Tag>
         </div>
