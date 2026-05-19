@@ -13,3 +13,4 @@ test-results/
 .DS_Store
 docs/superpowers/plans/_*.md
 .superpowers/
+.sisyphus/
