@@ -1,90 +1,59 @@
-# BabyLoom - 小日子
+# Babyloom V2
 
-宝宝生活记录应用 - 三端完整解决方案
+家庭宝宝成长记录,自托管 PWA。
 
-## 项目结构
+## P0 Status
 
-```
-babyloom/
-├── docker-compose.yml          # 三端统一部署
-├── .env                        # 环境变量
-├── client/                     # 客户端APP (PWA)
-│   ├── public/
-│   ├── src/
-│   ├── package.json
-│   └── Dockerfile
-├── admin/                      # 管理后台PC
-│   ├── public/
-│   ├── src/
-│   ├── package.json
-│   └── Dockerfile
-└── server/                     # 后端服务
-    ├── src/
-    ├── package.json
-    └── Dockerfile
-```
+Foundation in place: Next.js 15 + SQLite + better-auth + config-driven owner.
 
-## 技术栈
-
-- **客户端APP**: React + PWA + TypeScript
-- **管理后台**: React + Ant Design + TypeScript
-- **后端服务**: NestJS + PostgreSQL + TypeScript
-- **部署**: Docker + Docker Compose + Nginx
-
-## 快速开始
-
-### 开发环境
+## Quick Start
 
 ```bash
-# 启动本地开发数据库（不需要在本机安装 PostgreSQL）
-docker compose -f docker-compose.dev.yml up -d db
-
-# 启动后端服务
-cd server
-npm install
-npm run start:dev
-
-# 启动客户端APP
-cd client
-npm install
-npm run dev
-
-# 启动管理后台
-cd admin
-npm install
-npm run dev
+pnpm install
+mkdir -p data
+cat > data/config.yaml <<'EOF'
+owner:
+  username: owner
+  password: <at-least-6-chars>
+  nickname: Owner
+family:
+  name: 我们家
+app:
+  baseUrl: http://localhost:3000
+  secret: <at-least-32-chars-random-string>
+  timezone: Asia/Shanghai
+log:
+  level: info
+EOF
+chmod 600 data/config.yaml
+pnpm dev
 ```
 
-### 生产部署
+Open http://localhost:3000, log in with the username + password from `data/config.yaml`.
+
+## Tests
 
 ```bash
-# 在QNAP Container Station中部署
-docker-compose up -d
+pnpm test           # unit + integration
+pnpm test:e2e       # Playwright
+pnpm typecheck
 ```
 
-## 功能模块
+## Scripts
 
-### 客户端APP
-- 时光：按时间线展示宝宝成长记录
-- 画廊：照片视频网格浏览
-- 日历：月历视图标记记录日
-- 我的：宝宝资料、里程碑、家庭成员
+- `pnpm dev` — Next.js dev server
+- `pnpm build` — production build (standalone output)
+- `pnpm db:generate` — generate Drizzle migrations from schema changes
+- `pnpm db:migrate` — apply pending migrations to the configured SQLite file
 
-### 管理后台
-- 数据看板：统计概览
-- 记录管理：查看/编辑/删除记录
-- 媒体管理：照片视频管理
-- 用户管理：家庭成员管理
-- 系统设置：备份、存储、通知
+## Configuration
 
-## 开发顺序
+All runtime configuration lives in `data/config.yaml`. See spec §4 for the full schema (P0 ships only the `owner` and `log` sections).
 
-1. **Phase 1**: 后端服务（API + 数据库）
-2. **Phase 2**: 客户端APP（PWA）
-3. **Phase 3**: 管理后台
+## Reset Owner Password
 
-## 文档
+Edit `data/config.yaml` → restart the app. The bootstrap step replaces the owner's password hash on every boot.
 
-- [API文档](./docs/api.md)
-- [数据库设计](./docs/database.md)
-- [部署指南](./docs/deployment.md)
+## Project Spec
+
+`docs/superpowers/specs/2026-05-15-babyloom-v2-rebuild-design.md`

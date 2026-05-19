@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Calendar mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --avatar-yellow:#f5c31c; --avatar-peach:#e59266;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --shadow-soft-lg:0 8px 24px 0 rgba(61,52,40,.14);
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-back:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  /* === Header === */
+  .header{padding:16px 18px 8px;display:flex;align-items:center;justify-content:space-between}
+  .ph-title{font-size:22px;font-weight:800;color:var(--fg-strong);line-height:1.15}
+  .ph-title .sub{display:block;font-size:11px;font-weight:600;color:var(--fg-soft);margin-top:3px}
+
+  /* === Month nav === */
+  .month-nav{display:flex;align-items:center;justify-content:space-between;padding:8px 16px 14px}
+  .nav-btn{width:36px;height:36px;border:none;background:transparent;color:var(--fg);font-size:18px;cursor:pointer;border-radius:50%;display:grid;place-items:center;font-family:inherit;font-weight:700}
+  .nav-btn:active{background:rgba(0,0,0,.04)}
+  .nav-btn:disabled{opacity:.3;cursor:not-allowed}
+  .month-title{display:inline-flex;align-items:center;gap:6px;background:var(--surface-2);padding:8px 16px;border-radius:var(--radius-pill);font-size:14px;font-weight:800;color:var(--fg-strong);cursor:pointer;box-shadow:0 3px 0 0 var(--press);border:none;font-family:inherit;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .month-title:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--press)}
+  .month-title .caret{font-size:11px;color:var(--fg-soft)}
+
+  /* === Calendar grid === */
+  .cal{padding:0 14px}
+  .wd-row{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:4px}
+  .wd{text-align:center;padding:4px 0;font-size:11px;font-weight:700;color:var(--fg-soft);letter-spacing:.3px}
+  .wd.weekend{color:var(--fg-disabled)}
+  .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+  .cell{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--fg);cursor:pointer;background:transparent;border:none;font-family:inherit;transition:background .15s}
+  .cell:active{background:rgba(0,0,0,.04)}
+  .cell.out{color:var(--fg-disabled);opacity:.4;cursor:default}
+  .cell.has-entry::after{content:'';position:absolute;bottom:6px;width:5px;height:5px;border-radius:50%;background:var(--primary)}
+  .cell.today{color:var(--primary-active);font-weight:800}
+  .cell.today::before{content:'';position:absolute;inset:6px;border-radius:50%;border:1.5px solid var(--primary);pointer-events:none}
+  .cell.selected{background:var(--primary);color:#fff;font-weight:800}
+  .cell.selected::before{display:none}
+  .cell.selected.has-entry::after{background:#fff}
+  .cell.selected.today{color:#fff}
+
+  /* === Day preview === */
+  .preview{flex:1;overflow-y:auto;padding:16px 16px 16px;margin-top:8px;border-top:1px solid var(--border-light);scrollbar-width:none}
+  .preview::-webkit-scrollbar{display:none}
+  .preview-head{margin-bottom:14px}
+  .preview-head .top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:8px}
+  .preview-head .day{font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .preview-head .day .when{font-size:11px;color:var(--fg-soft);font-weight:600;margin-left:6px}
+  .preview-head .count{font-size:11px;color:var(--fg-soft);font-weight:700}
+  .age-block{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--primary-bg);color:var(--primary-active);border-radius:var(--radius-pill);font-size:12px;font-weight:700}
+  .age-block .dot{width:3px;height:3px;border-radius:50%;background:var(--primary-active);opacity:.6}
+
+  /* mini entry card */
+  .mini-card{background:var(--surface);border-radius:var(--radius-card);padding:12px 14px;margin-bottom:10px;cursor:pointer}
+  .meta{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .ava{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:11px;flex-shrink:0;background:var(--avatar-pink)}
+  .ava.b{background:var(--avatar-blue)} .ava.y{background:var(--avatar-yellow);color:#724a00}
+  .meta .who{font-weight:700;font-size:12px}
+  .meta .when{font-size:11px;color:var(--fg-soft);margin-left:auto;font-weight:600}
+  .mini-card .body{font-size:13px;line-height:1.55;margin:0;color:var(--fg);font-weight:500}
+  .mini-card .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;margin-top:8px;border-radius:12px;overflow:hidden}
+  .thumb{aspect-ratio:1;background:linear-gradient(135deg,#ffd6a8,#ffb6c8)}
+  .thumb.b{background:linear-gradient(135deg,#a8e6f5,#7cc4e8)}
+  .thumb.g{background:linear-gradient(135deg,#c8f5d6,#7ce8a4)}
+
+  /* empty day */
+  .empty-day{padding:30px 12px;text-align:center;color:var(--fg-soft);font-size:13px;font-weight:500}
+  .empty-day .icon{font-size:28px;margin-bottom:8px;opacity:.6}
+  .empty-day .add{margin-top:14px;display:inline-flex;align-items:center;gap:6px;padding:9px 18px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-pill);font-weight:700;font-size:12.5px;cursor:pointer;font-family:inherit;box-shadow:0 4px 0 0 var(--primary-active);transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .empty-day .add:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--primary-active)}
+
+  /* === Tabbar === */
+  .ph-tabbar{height:64px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;border-top:1px solid var(--border-light);flex-shrink:0}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--fg-soft);font-weight:700;cursor:pointer;background:transparent;border:none;font-family:inherit}
+  .tab.active{color:var(--primary-active)}
+  .tab .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;transition:transform .35s var(--ease-back),background .25s,box-shadow .35s var(--ease-back),color .25s}
+  .tab.active .dot{background:var(--primary);color:#fff;transform:translateY(-6px);box-shadow:0 4px 0 0 var(--press)}
+
+  /* === Year-Month picker sheet === */
+  .scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);z-index:10}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 0 22px;box-shadow:0 -8px 24px 0 rgba(61,52,40,.14);z-index:20}
+  .sheet .handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 14px}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:0 20px 14px}
+  .sheet-head h3{margin:0;font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .sheet-head .cancel{background:transparent;border:none;color:var(--fg-soft);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;padding:0}
+  .sheet-head .confirm{background:transparent;border:none;color:var(--primary-active);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;padding:0}
+  .wheels{position:relative;display:grid;grid-template-columns:1.3fr 1fr;gap:0;height:180px;padding:0 16px;overflow:hidden}
+  .wheels::before{content:'';position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);height:40px;background:var(--surface);border-radius:var(--radius-sm);pointer-events:none;z-index:0}
+  .wheel{position:relative;height:100%;overflow:hidden;z-index:1;mask:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)}
+  .wheel-track{display:flex;flex-direction:column;transform:translateY(60px)}
+  .wheel-item{height:40px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--fg-soft);font-weight:600;font-variant-numeric:tabular-nums;transition:color .2s, font-weight .2s}
+  .wheel-item.selected{color:var(--fg-strong);font-weight:800;font-size:16px}
+  .wheel-item.near{color:var(--fg)}
+  .quick{display:flex;gap:8px;padding:14px 20px 0;justify-content:center}
+  .quick .qchip{padding:6px 14px;background:var(--surface);border:none;border-radius:var(--radius-pill);font-size:12px;font-weight:700;color:var(--fg);cursor:pointer;font-family:inherit}
+  .quick .qchip:active{background:var(--bg)}
+</style>
+</head>
+<body>
+
+<h2>Calendar 日历</h2>
+<p class="subtitle">三个状态:默认(今天有记录) / 选中空白日 / 年月切换 picker</p>
+
+<div class="phones">
+
+  <!-- default -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <div class="ph-title">日历<span class="sub">小乐 · 1岁3月</span></div>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn" aria-label="上个月">‹</button>
+        <button class="month-title">2025 年 5 月 <span class="caret">▾</span></button>
+        <button class="nav-btn" aria-label="下个月">›</button>
+      </div>
+      <div class="cal">
+        <div class="wd-row">
+          <div class="wd weekend">日</div>
+          <div class="wd">一</div>
+          <div class="wd">二</div>
+          <div class="wd">三</div>
+          <div class="wd">四</div>
+          <div class="wd">五</div>
+          <div class="wd weekend">六</div>
+        </div>
+        <div class="grid">
+          <!-- May 2025: starts Thursday May 1 -->
+          <button class="cell out">27</button>
+          <button class="cell out">28</button>
+          <button class="cell out">29</button>
+          <button class="cell out">30</button>
+          <button class="cell has-entry">1</button>
+          <button class="cell">2</button>
+          <button class="cell has-entry">3</button>
+
+          <button class="cell has-entry">4</button>
+          <button class="cell">5</button>
+          <button class="cell has-entry">6</button>
+          <button class="cell has-entry">7</button>
+          <button class="cell">8</button>
+          <button class="cell">9</button>
+          <button class="cell has-entry">10</button>
+
+          <button class="cell has-entry">11</button>
+          <button class="cell">12</button>
+          <button class="cell has-entry">13</button>
+          <button class="cell has-entry">14</button>
+          <button class="cell has-entry">15</button>
+          <button class="cell">16</button>
+          <button class="cell has-entry">17</button>
+
+          <button class="cell has-entry">18</button>
+          <button class="cell selected today has-entry">19</button>
+          <button class="cell">20</button>
+          <button class="cell">21</button>
+          <button class="cell">22</button>
+          <button class="cell">23</button>
+          <button class="cell">24</button>
+
+          <button class="cell">25</button>
+          <button class="cell">26</button>
+          <button class="cell">27</button>
+          <button class="cell">28</button>
+          <button class="cell">29</button>
+          <button class="cell">30</button>
+          <button class="cell">31</button>
+
+          <button class="cell out">1</button>
+          <button class="cell out">2</button>
+          <button class="cell out">3</button>
+          <button class="cell out">4</button>
+          <button class="cell out">5</button>
+          <button class="cell out">6</button>
+          <button class="cell out">7</button>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="preview-head">
+          <div class="top">
+            <div class="day">5 月 19 日<span class="when">星期一 · 今天</span></div>
+            <div class="count">3 条记录</div>
+          </div>
+          <div class="age-block">1岁3月<span class="dot"></span>第 456 天</div>
+        </div>
+        <div class="mini-card">
+          <div class="meta">
+            <div class="ava">妈</div>
+            <div class="who">妈妈</div>
+            <div class="when">14:32</div>
+          </div>
+          <p class="body">第一次自己端着小碗吃完一整碗粥。</p>
+          <div class="thumbs"><div class="thumb"></div><div class="thumb b"></div><div class="thumb g"></div></div>
+        </div>
+        <div class="mini-card">
+          <div class="meta">
+            <div class="ava b">爸</div>
+            <div class="who">爸爸</div>
+            <div class="when">09:10</div>
+          </div>
+          <p class="body">早晨在公园里追鸽子,跑得比上周稳多了 🐦</p>
+        </div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab active"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">① 默认 · 今天选中 + 当天预览</div>
+  </div>
+
+  <!-- empty day -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <div class="ph-title">日历<span class="sub">小乐 · 1岁3月</span></div>
+      </div>
+      <div class="month-nav">
+        <button class="nav-btn" aria-label="上个月">‹</button>
+        <button class="month-title">2025 年 5 月 <span class="caret">▾</span></button>
+        <button class="nav-btn" aria-label="下个月">›</button>
+      </div>
+      <div class="cal">
+        <div class="wd-row">
+          <div class="wd weekend">日</div><div class="wd">一</div><div class="wd">二</div><div class="wd">三</div><div class="wd">四</div><div class="wd">五</div><div class="wd weekend">六</div>
+        </div>
+        <div class="grid">
+          <button class="cell out">27</button><button class="cell out">28</button><button class="cell out">29</button><button class="cell out">30</button>
+          <button class="cell has-entry">1</button><button class="cell">2</button><button class="cell has-entry">3</button>
+
+          <button class="cell has-entry">4</button><button class="cell">5</button><button class="cell has-entry">6</button><button class="cell has-entry">7</button>
+          <button class="cell">8</button><button class="cell">9</button><button class="cell has-entry">10</button>
+
+          <button class="cell has-entry">11</button><button class="cell">12</button><button class="cell has-entry">13</button><button class="cell has-entry">14</button>
+          <button class="cell has-entry">15</button><button class="cell">16</button><button class="cell has-entry">17</button>
+
+          <button class="cell has-entry">18</button><button class="cell today has-entry">19</button><button class="cell selected">20</button>
+          <button class="cell">21</button><button class="cell">22</button><button class="cell">23</button><button class="cell">24</button>
+
+          <button class="cell">25</button><button class="cell">26</button><button class="cell">27</button><button class="cell">28</button>
+          <button class="cell">29</button><button class="cell">30</button><button class="cell">31</button>
+
+          <button class="cell out">1</button><button class="cell out">2</button><button class="cell out">3</button><button class="cell out">4</button>
+          <button class="cell out">5</button><button class="cell out">6</button><button class="cell out">7</button>
+        </div>
+      </div>
+
+      <div class="preview">
+        <div class="preview-head">
+          <div class="top">
+            <div class="day">5 月 20 日<span class="when">星期二</span></div>
+            <div class="count">无记录</div>
+          </div>
+          <div class="age-block">1岁3月<span class="dot"></span>第 457 天</div>
+        </div>
+        <div class="empty-day">
+          <div class="icon">🌱</div>
+          <div>这一天还没有记录</div>
+          <button class="add">＋ 给这一天写一条</button>
+        </div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab active"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">② 选中空白日 · 提供补记入口</div>
+  </div>
+
+  <!-- year-month picker -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header" style="filter:brightness(.7)">
+        <div class="ph-title">日历<span class="sub">小乐 · 1岁3月</span></div>
+      </div>
+      <div class="month-nav" style="filter:brightness(.7)">
+        <button class="nav-btn">‹</button>
+        <button class="month-title" style="background:var(--primary);color:#fff">2025 年 5 月 <span class="caret" style="color:rgba(255,255,255,.7)">▾</span></button>
+        <button class="nav-btn">›</button>
+      </div>
+      <div class="cal" style="filter:brightness(.7)">
+        <div class="wd-row">
+          <div class="wd weekend">日</div><div class="wd">一</div><div class="wd">二</div><div class="wd">三</div><div class="wd">四</div><div class="wd">五</div><div class="wd weekend">六</div>
+        </div>
+        <div class="grid">
+          <button class="cell out">27</button><button class="cell out">28</button><button class="cell out">29</button><button class="cell out">30</button>
+          <button class="cell has-entry">1</button><button class="cell">2</button><button class="cell has-entry">3</button>
+          <button class="cell has-entry">4</button><button class="cell">5</button><button class="cell has-entry">6</button><button class="cell has-entry">7</button>
+          <button class="cell">8</button><button class="cell">9</button><button class="cell has-entry">10</button>
+          <button class="cell has-entry">11</button><button class="cell">12</button><button class="cell has-entry">13</button><button class="cell has-entry">14</button>
+          <button class="cell has-entry">15</button><button class="cell">16</button><button class="cell has-entry">17</button>
+          <button class="cell has-entry">18</button><button class="cell selected today has-entry">19</button>
+          <button class="cell">20</button><button class="cell">21</button><button class="cell">22</button><button class="cell">23</button><button class="cell">24</button>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-head">
+          <button class="cancel">取消</button>
+          <h3>选择月份</h3>
+          <button class="confirm">确定</button>
+        </div>
+        <div class="wheels">
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">2022</div>
+              <div class="wheel-item">2023</div>
+              <div class="wheel-item near">2024</div>
+              <div class="wheel-item selected">2025</div>
+              <div class="wheel-item near">2026</div>
+            </div>
+          </div>
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">3 月</div>
+              <div class="wheel-item">4 月</div>
+              <div class="wheel-item near">5 月</div>
+              <div class="wheel-item selected">6 月</div>
+              <div class="wheel-item near">7 月</div>
+            </div>
+          </div>
+        </div>
+        <div class="quick">
+          <button class="qchip">回到本月</button>
+          <button class="qchip">出生月</button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">③ 点月份标题 · 年月 picker</div>
+  </div>
+
+</div>
+
+<div style="max-width:1000px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>顶栏简化</b> — "日历" + 副标 "{宝宝} · {月龄}",右侧无按钮(切换宝宝走 Profile)</li>
+  <li><b>月份切换</b> — 三段式 <code>‹ | 5 月按钮(浮起胶囊) | ›</code>。中间按钮可点开 BottomSheet 年月 picker(2 列年/月滚轮 + "回到本月/出生月"快捷 chip)。比"上一月/下一月"文字按钮更紧凑</li>
+  <li><b>日历 cell</b>:
+    <ul>
+      <li>普通日:数字居中 + 无修饰</li>
+      <li>有记录:数字下方 5px mint 圆点(底部 6px)。<b>不区分内容类型</b>(简化;详情在下方预览)</li>
+      <li>今天:数字 mint 加粗 + 1.5px mint 圆环包围</li>
+      <li>选中日(任意点):mint 实底 + 白字 + 加粗;若同时是今天,圆环被实底覆盖,但仍显示白底 dot</li>
+      <li>非本月:opacity 0.4,不可点</li>
+    </ul>
+  </li>
+  <li><b>周末标记</b> — 表头"日 / 六"色淡(<code>--fg-disabled</code>),提供视觉锚点</li>
+  <li><b>无连续 ring/hover/transform</b> — 日期格只用<b>背景色</b>区分状态,无 hover lift(mobile-first)</li>
+  <li><b>下方"当日预览"</b> — 比直接跳 <code>/timeline?date=</code> 更顺手。选了哪天就在下方展示那天的 mini-card(头像 + 作者 + 时间 + 内容 + 缩略图)。预览区可滚动,容纳多条</li>
+  <li><b>当日年龄块</b> — 预览头部第二行,显示选中日的月龄(例 <code>1岁3月 · 第 457 天</code>),mint-bg pill。<b>不重复宝宝名字</b>(顶部副标已有)。回看过去某天时能直观看到"那时候宝宝多大",承接 babyloom 的成长记录定位;空白日也显示,提示"那天宝宝多大,要不要补记一条"</li>
+  <li><b>无记录日</b>:预览区显示 🌱 + 文案 + "给这一天写一条"主 CTA → 跳 <code>/entry/new?babyId=&occurredAt=2025-05-20T...</code>(传日期作 occurredAt 默认)</li>
+  <li><b>滑动手势</b>(可选,P6+):左右滑日历区切换月份;触摸优先,桌面靠 ‹ / › 按钮</li>
+  <li><b>性能</b> — 月数据(<code>daySet</code>:有记录的日期 ISO 集合)按月预取;切月触发新一次 server fetch(SWR)</li>
+</ul>
+</div>
+
+</body>
+</html>

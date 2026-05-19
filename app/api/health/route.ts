@@ -1,0 +1,17 @@
+import { NextResponse } from 'next/server';
+import { resolve } from 'node:path';
+import { getDb } from '@/lib/db/client';
+import { ensureStartup } from '@/instrumentation.node';
+
+const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');
+
+export const GET = async () => {
+  try {
+    await ensureStartup();
+    const { raw } = getDb({ dataDir });
+    const result = raw.prepare('SELECT 1 as ok').get() as { ok: number };
+    return NextResponse.json({ ok: true, dbReady: result.ok === 1 });
+  } catch (err) {
+    return NextResponse.json({ ok: false, error: (err as Error).message }, { status: 503 });
+  }
+};

@@ -1,0 +1,110 @@
+import { randomUUID } from 'node:crypto';
+import { and, eq } from 'drizzle-orm';
+import { getDb } from '@/lib/db/client';
+import { accounts, familyMembers, users } from '@/lib/db/schema';
+import { hashPassword, ownerInternalEmail } from '@/lib/bootstrap/owner';
+
+export interface CreateMemberOpts {
+  dataDir: string;
+  familyId: string;
+  username: string;
+  password: string;
+  nickname: string;
+  role: 'owner' | 'editor' | 'viewer';
+}
+
+export interface CreateMemberResult {
+  userId: string;
+  memberId: string;
+  email: string;
+}
+
+/**
+ * Creates a user + credential account + family_members row in a single
+ * transaction. Returns the generated ids. Throws if username already exists.
+ *
+ * The dual-write to users+accounts is the spec §3.2 invariant — never call
+ * db.insert(users) for a new account without also inserting
+ * accounts(providerId='credential').
+ */
+export async function createMember(opts: CreateMemberOpts): Promise<CreateMemberResult> {
+  const { db } = getDb({ dataDir: opts.dataDir });
+
+  const existingByUsername = db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, opts.username))
+    .get();
+  if (existingByUsername) {
+    throw new Error('username_taken');
+  }
+
+  const userId = randomUUID();
+  const memberId = randomUUID();
+  const email = ownerInternalEmail(opts.username);
+  const now = new Date();
+  const nowMs = Date.now();
+  const passwordHash = hashPassword(opts.password);
+
+  db.transaction((tx) => {
+    tx.insert(users)
+      .values({
+        id: userId,
+        name: opts.nickname,
+        email,
+        emailVerified: true,
+        username: opts.username,
+        role: opts.role,
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+    tx.insert(accounts)
+      .values({
+        id: randomUUID(),
+        userId,
+        providerId: 'credential',
+        accountId: email,
+        password: passwordHash,
+        createdAt: now,
+        updatedAt: now
+      })
+      .run();
+    tx.insert(familyMembers)
+      .values({
+        id: memberId,
+        familyId: opts.familyId,
+        userId,
+        role: opts.role,
+        joinedAt: nowMs
+      })
+      .run();
+  });
+
+  return { userId, memberId, email };
+}
+
+/**
+ * Resets a member's credential password. Touches accounts.password only.
+ */
+export function resetMemberPassword(opts: {
+  dataDir: string;
+  userId: string;
+  newPassword: string;
+}): void {
+  const { db } = getDb({ dataDir: opts.dataDir });
+  const passwordHash = hashPassword(opts.newPassword);
+  const now = new Date();
+
+  const cred = db
+    .select()
+    .from(accounts)
+    .where(and(eq(accounts.userId, opts.userId), eq(accounts.providerId, 'credential')))
+    .get();
+  if (!cred) throw new Error('no_credential_account');
+
+  db.update(accounts)
+    .set({ password: passwordHash, updatedAt: now })
+    .where(eq(accounts.id, cred.id))
+    .run();
+}

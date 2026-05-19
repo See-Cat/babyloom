@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Login + Onboarding mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5; --bg-disabled:#f0ece2;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border:#aaa69d; --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --error:#e05a5a; --error-active:#c94444; --error-bg:#fbe4e4;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --shadow-soft-lg:0 8px 24px 0 rgba(61,52,40,.14);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:740px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  /* Pre-auth body — no AppShell, no Tabbar */
+  .preauth{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 24px}
+
+  .brand{text-align:center;margin-bottom:32px}
+  .brand .mascot{font-size:48px;margin-bottom:8px;display:inline-block;line-height:1}
+  .brand h1{font-size:28px;font-weight:800;color:var(--fg-strong);margin:0 0 6px;letter-spacing:.5px}
+  .brand .lead{font-size:13.5px;color:var(--fg-soft);margin:0;font-weight:500}
+
+  /* Pre-auth form fields */
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding-left:4px}
+  .input{display:block;width:100%;height:44px;padding:0 16px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--fg);box-shadow:var(--shadow-soft-sm);transition:border-color .25s var(--ease),box-shadow .25s var(--ease);outline:none}
+  .input::placeholder{color:var(--fg-disabled)}
+  .input:focus,.input.focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)}
+  .input.error{border-color:var(--error);box-shadow:0 0 0 3px rgba(224,90,90,.22),var(--shadow-soft-sm)}
+  .err-msg{display:flex;align-items:center;gap:6px;background:var(--error-bg);color:var(--error-active);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;font-weight:600;margin:8px 0 16px}
+  .err-msg::before{content:'!';width:16px;height:16px;border-radius:50%;background:var(--error);color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;flex-shrink:0}
+
+  /* Buttons */
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;border:none;border-radius:var(--radius-pill);font-family:inherit;font-weight:700;cursor:pointer;user-select:none;height:48px;font-size:15px;width:100%;transition:transform .12s var(--ease),box-shadow .12s var(--ease);color:#fff;background:var(--primary);box-shadow:0 5px 0 0 var(--primary-active)}
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 0 var(--primary-active);transition-duration:.08s}
+  .btn:disabled{opacity:.5;box-shadow:none;pointer-events:none}
+  .btn-loading{pointer-events:none;background:var(--primary-active);background-image:repeating-linear-gradient(-45deg,var(--primary-active),var(--primary-active) 10px,var(--primary) 10px,var(--primary) 20px);background-size:28.28px 28.28px;animation:btn-stripe 1s linear infinite;box-shadow:none}
+  @keyframes btn-stripe{to{background-position:-28.28px 0}}
+  .btn-text{background:transparent;color:var(--primary-active);box-shadow:none;height:auto;font-size:13px;font-weight:600;padding:0;text-decoration:underline;text-underline-offset:3px}
+
+  .footer-link{text-align:center;margin-top:18px;font-size:12.5px;color:var(--fg-soft);font-weight:500}
+  .footer-link a{color:var(--primary-active);text-decoration:none;font-weight:700;margin-left:6px}
+
+  /* Onboarding: progress + segmented control */
+  .step{display:flex;align-items:center;justify-content:center;gap:6px;font-size:11px;font-weight:700;color:var(--fg-soft);margin-bottom:18px;letter-spacing:.5px;text-transform:uppercase}
+  .step .dot{width:8px;height:8px;border-radius:50%;background:var(--border-light)}
+  .step .dot.active{background:var(--primary);width:24px;border-radius:999px}
+
+  .segmented{display:flex;background:var(--surface);padding:4px;border-radius:var(--radius-pill);gap:4px}
+  .segmented .seg{flex:1;height:36px;border:none;background:transparent;border-radius:var(--radius-pill);font-family:inherit;font-size:13px;font-weight:700;color:var(--fg-soft);cursor:pointer;transition:background .2s,color .2s}
+  .segmented .seg.active{background:var(--surface-2);color:var(--fg);box-shadow:var(--shadow-soft-sm)}
+  .segmented .seg:active{transform:scale(.97)}
+
+  .avatar-pick{display:flex;align-items:center;gap:14px;background:var(--surface);border-radius:var(--radius-card);padding:14px 16px;cursor:pointer}
+  .avatar-pick .ava{width:48px;height:48px;border-radius:50%;background:var(--avatar-pink);display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;flex-shrink:0;border:2px dashed rgba(255,255,255,.6)}
+  .avatar-pick .info{flex:1;min-width:0}
+  .avatar-pick .info .ttl{font-size:13.5px;font-weight:700;color:var(--fg);margin:0 0 2px}
+  .avatar-pick .info .sub{font-size:11px;color:var(--fg-soft);font-weight:600}
+  .avatar-pick .chev{color:var(--fg-soft);font-size:14px}
+
+  /* Top safe area decoration */
+  .top-bar{height:6px;background:linear-gradient(90deg,var(--primary),var(--avatar-pink),var(--warning));opacity:.18}
+
+  /* Date row (replaces native <input type=date>) */
+  .date-row{display:flex;align-items:center;justify-content:space-between;width:100%;height:44px;padding:0 16px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--fg);box-shadow:var(--shadow-soft-sm);cursor:pointer;font-weight:500}
+  .date-row .placeholder{color:var(--fg-disabled)}
+  .date-row .chev{color:var(--fg-soft);font-size:12px}
+
+  /* Date picker sheet */
+  .scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);opacity:1;z-index:10}
+  .date-sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 0 22px;box-shadow:0 -8px 24px 0 rgba(61,52,40,.14);z-index:20}
+  .date-sheet .handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 14px}
+  .date-sheet .header{display:flex;align-items:center;justify-content:space-between;padding:0 20px 14px}
+  .date-sheet h3{margin:0;font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .date-sheet .cancel{background:transparent;border:none;color:var(--fg-soft);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;padding:0}
+  .date-sheet .confirm{background:transparent;border:none;color:var(--primary-active);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;padding:0}
+
+  .wheels{position:relative;display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:0;height:200px;padding:0 16px;overflow:hidden}
+  /* Center band highlight */
+  .wheels::before{content:'';position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);height:40px;background:var(--surface);border-radius:var(--radius-sm);pointer-events:none;z-index:0}
+  .wheel{position:relative;height:100%;overflow:hidden;z-index:1;mask:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)}
+  .wheel-track{display:flex;flex-direction:column;transform:translateY(80px)}
+  .wheel-item{height:40px;display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--fg-soft);font-weight:600;font-variant-numeric:tabular-nums;transition:color .2s,font-weight .2s}
+  .wheel-item.selected{color:var(--fg-strong);font-weight:800;font-size:17px}
+  .wheel-item.near{color:var(--fg)}
+</style>
+</head>
+<body>
+
+<h2>Login + Onboarding 页面 mockup</h2>
+<p class="subtitle">三个状态:登录默认 / 登录失败 / 添加宝宝(onboarding 首屏)</p>
+
+<div class="phones">
+
+  <!-- Login default -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="top-bar"></div>
+      <div class="preauth">
+        <div class="brand">
+          <div class="mascot">🌱</div>
+          <h1>Babyloom</h1>
+          <p class="lead">登录到家庭记录本</p>
+        </div>
+        <div class="field">
+          <label for="u">用户名</label>
+          <input id="u" class="input" placeholder="例如 mama">
+        </div>
+        <div class="field">
+          <label for="p">密码</label>
+          <input id="p" class="input" type="password" placeholder="••••••">
+        </div>
+        <button class="btn">登录</button>
+        <div class="footer-link">
+          家里还没有账号?<a href="#">看看 README →</a>
+        </div>
+      </div>
+    </div>
+    <div class="caption">① Login · 默认</div>
+  </div>
+
+  <!-- Login error + focus state -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="top-bar"></div>
+      <div class="preauth">
+        <div class="brand">
+          <div class="mascot">🌱</div>
+          <h1>Babyloom</h1>
+          <p class="lead">登录到家庭记录本</p>
+        </div>
+        <div class="field">
+          <label for="u2">用户名</label>
+          <input id="u2" class="input" value="mama">
+        </div>
+        <div class="field">
+          <label for="p2">密码</label>
+          <input id="p2" class="input error focus" type="password" value="••••">
+        </div>
+        <div class="err-msg">用户名或密码不对,再试一次</div>
+        <button class="btn btn-loading">登录中…</button>
+      </div>
+    </div>
+    <div class="caption">② Login · error + loading 态</div>
+  </div>
+
+  <!-- Onboarding baby -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="top-bar"></div>
+      <div class="preauth" style="justify-content:flex-start;padding-top:48px">
+        <div class="step">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span>添加第一个宝宝</span>
+        </div>
+        <div class="brand" style="margin-bottom:24px">
+          <div class="mascot">👶</div>
+          <h1 style="font-size:22px">第一个宝宝</h1>
+          <p class="lead">先添加一个宝宝,就可以开始记录啦</p>
+        </div>
+        <div class="avatar-pick">
+          <div class="ava">＋</div>
+          <div class="info">
+            <p class="ttl">添加头像</p>
+            <p class="sub">可选 · 之后也能在设置里改</p>
+          </div>
+          <div class="chev">›</div>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label for="n">名字</label>
+          <input id="n" class="input" placeholder="例如 小乐">
+        </div>
+        <div class="field">
+          <label for="b">生日</label>
+          <button id="b" class="date-row" type="button">
+            <span>2024 年 8 月 1 日</span>
+            <span class="chev">›</span>
+          </button>
+        </div>
+        <div class="field">
+          <label>性别</label>
+          <div class="segmented" role="radiogroup" aria-label="性别">
+            <button class="seg" role="radio" aria-checked="false">男宝</button>
+            <button class="seg active" role="radio" aria-checked="true">女宝</button>
+          </div>
+        </div>
+        <button class="btn" style="margin-top:8px">开始记录</button>
+      </div>
+    </div>
+    <div class="caption">③ Onboarding · 添加宝宝</div>
+  </div>
+
+  <!-- Onboarding + date picker open -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="top-bar"></div>
+      <div class="preauth" style="justify-content:flex-start;padding-top:48px">
+        <div class="step">
+          <span class="dot active"></span>
+          <span class="dot"></span>
+          <span>添加第一个宝宝</span>
+        </div>
+        <div class="brand" style="margin-bottom:24px">
+          <div class="mascot">👶</div>
+          <h1 style="font-size:22px">第一个宝宝</h1>
+          <p class="lead">先添加一个宝宝,就可以开始记录啦</p>
+        </div>
+        <div class="field" style="margin-top:14px">
+          <label for="n2">名字</label>
+          <input id="n2" class="input" value="小乐">
+        </div>
+        <div class="field">
+          <label for="b2">生日</label>
+          <button id="b2" class="date-row" type="button" style="border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)">
+            <span>2024 年 8 月 1 日</span>
+            <span class="chev">›</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Date picker sheet open -->
+      <div class="scrim"></div>
+      <div class="date-sheet">
+        <div class="handle"></div>
+        <div class="header">
+          <button class="cancel">取消</button>
+          <h3>选择生日</h3>
+          <button class="confirm">确定</button>
+        </div>
+        <div class="wheels">
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">2020</div>
+              <div class="wheel-item">2021</div>
+              <div class="wheel-item near">2022</div>
+              <div class="wheel-item near">2023</div>
+              <div class="wheel-item selected">2024</div>
+              <div class="wheel-item near">2025</div>
+              <div class="wheel-item near">2026</div>
+            </div>
+          </div>
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">4 月</div>
+              <div class="wheel-item">5 月</div>
+              <div class="wheel-item near">6 月</div>
+              <div class="wheel-item near">7 月</div>
+              <div class="wheel-item selected">8 月</div>
+              <div class="wheel-item near">9 月</div>
+              <div class="wheel-item near">10 月</div>
+            </div>
+          </div>
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">28 日</div>
+              <div class="wheel-item">29 日</div>
+              <div class="wheel-item near">30 日</div>
+              <div class="wheel-item near">31 日</div>
+              <div class="wheel-item selected">1 日</div>
+              <div class="wheel-item near">2 日</div>
+              <div class="wheel-item near">3 日</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">④ 生日 picker 拉起</div>
+  </div>
+
+</div>
+
+<div style="max-width:900px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>无 AppShell / Tabbar</b> — pre-auth 流程是全屏沉浸,顶部仅留 6px 极淡彩条做装饰,提示品牌色</li>
+  <li><b>居中对齐</b> — 表单竖向居中,左右 24px padding;Onboarding 由于内容多,改为 <code>justify-content: flex-start; padding-top: 48px</code></li>
+  <li><b>Brand mascot</b> — Login 用 🌱(成长的种子),Onboarding 用 👶(直接呼应主题)。emoji 替代矢量 logo,零成本零依赖</li>
+  <li><b>错误展示</b> — 不用红字一行,改为 error-bg 红底圆角块 + ! 圆点 icon,信息密度高且可被聋哑用户/读屏察觉;同时把出错字段 border 染红</li>
+  <li><b>性别用 segmented control</b> — 替代丑陋的 native <code>&lt;select&gt;</code>,3 个选项 × Tag-pill 风格,选中态用 surface-2 浮起 + soft 阴影。a11y 上 <code>role="radiogroup"</code> + <code>aria-checked</code></li>
+  <li><b>Onboarding 头像</b> — 用 dashed 内圈头像 + 整块 Card 作为"添加头像"按钮,可选(标注"之后也能改")</li>
+  <li><b>步骤指示</b> — Onboarding 顶部 step dot:当前步骤为胶囊形 mint,后续为小灰圆。本期只有 1 步,但保留结构以便后续多步扩展</li>
+  <li><b>Footer link</b> — Login 底部一行"家里还没有账号? README →",承接 babyloom 自托管定位</li>
+  <li><b>生日选择器</b> — <b>不用原生 <code>&lt;input type="date"&gt;</code></b>(桌面端浏览器外观各异、Animal Crossing 风不搭)。改成可点击的 date-row 触发 BottomSheet 滚轮选择器:三列 (年/月/日),中间高亮带,选中项加大加粗,上下渐隐 mask。年份范围 = 今年 - 10 ~ 今年(宝宝最大 10 岁,后续可配置)。a11y 上保留 <code>aria-label="选择生日"</code>,确认后回填到 date-row 文字</li>
+</ul>
+</div>
+
+</body>
+</html>

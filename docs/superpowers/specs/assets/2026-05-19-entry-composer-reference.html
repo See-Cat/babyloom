@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>EntryComposer mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5; --bg-disabled:#f0ece2;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border:#aaa69d; --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --error:#e05a5a; --error-active:#c94444;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --avatar-yellow:#f5c31c; --avatar-peach:#e59266;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --shadow-soft-lg:0 8px 24px 0 rgba(61,52,40,.14);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  /* === AppShell header === */
+  .header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px 12px}
+  .back{width:36px;height:36px;border:none;background:transparent;color:var(--fg);font-size:22px;cursor:pointer;border-radius:50%;display:grid;place-items:center;font-family:inherit}
+  .back:active{background:rgba(0,0,0,.05)}
+  .ttl{font-size:18px;font-weight:800;color:var(--fg-strong);flex:1;text-align:center}
+  .save-btn{height:36px;padding:0 16px;border:none;background:var(--primary);color:#fff;font-weight:700;font-size:13px;border-radius:var(--radius-pill);cursor:pointer;box-shadow:0 4px 0 0 var(--primary-active);font-family:inherit;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .save-btn:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--primary-active);transition-duration:.08s}
+  .save-btn:disabled{opacity:.5;box-shadow:none;pointer-events:none}
+  .save-btn.loading{background:var(--primary-active);background-image:repeating-linear-gradient(-45deg,var(--primary-active),var(--primary-active) 10px,var(--primary) 10px,var(--primary) 20px);background-size:28.28px 28.28px;animation:btn-stripe 1s linear infinite;box-shadow:none;color:#fff}
+  @keyframes btn-stripe{to{background-position:-28.28px 0}}
+
+  /* === Body === */
+  .body{flex:1;overflow-y:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+
+  /* === Context row (baby + time) === */
+  .ctx-row{display:flex;align-items:center;gap:10px;padding:4px 4px}
+  .ava{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0;background:var(--avatar-mint)}
+  .ava.b{background:var(--avatar-blue)} .ava.p{background:var(--avatar-pink)} .ava.y{background:var(--avatar-yellow);color:#724a00}
+  .ctx-meta{flex:1;min-width:0}
+  .ctx-meta .name{font-size:14px;font-weight:700;color:var(--fg);margin:0}
+  .ctx-meta .sub{font-size:11px;color:var(--fg-soft);margin:0;font-weight:600}
+  .time-pill{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;background:var(--surface-2);border-radius:var(--radius-pill);font-size:12px;font-weight:700;color:var(--fg);cursor:pointer;border:none;box-shadow:0 3px 0 0 var(--press);font-family:inherit;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .time-pill:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--press)}
+  .time-pill .clock{font-size:14px}
+
+  /* === Textarea === */
+  .textarea{width:100%;min-height:160px;padding:14px 16px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-card);font-family:inherit;font-size:14px;color:var(--fg);box-shadow:var(--shadow-soft-sm);resize:none;line-height:1.65;outline:none;transition:border-color .25s var(--ease),box-shadow .25s var(--ease)}
+  .textarea::placeholder{color:var(--fg-disabled);font-weight:500}
+  .textarea:focus,.textarea.focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)}
+  .char-count{text-align:right;font-size:11px;color:var(--fg-soft);font-weight:600;margin-top:-8px;padding-right:4px}
+
+  /* === Section title === */
+  .sect{display:flex;align-items:center;justify-content:space-between;margin:6px 4px -2px}
+  .sect .label{font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+  .sect .more{font-size:12px;font-weight:700;color:var(--primary-active);cursor:pointer;background:none;border:none;font-family:inherit;padding:0}
+
+  /* === Milestone chips === */
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;background:var(--surface);border-radius:var(--radius-pill);font-size:12.5px;font-weight:700;color:var(--fg);cursor:pointer;border:none;font-family:inherit;transition:background .15s}
+  .chip:active{background:var(--bg-disabled)}
+  .chip.selected{background:var(--primary);color:#fff}
+  .chip .icon{font-size:14px}
+
+  /* === Media uploader === */
+  .media-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .media-tile{aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden;position:relative;background:linear-gradient(135deg,#ffd6a8,#ffb6c8)}
+  .media-tile.b{background:linear-gradient(135deg,#a8e6f5,#7cc4e8)}
+  .media-tile.g{background:linear-gradient(135deg,#c8f5d6,#7ce8a4)}
+  .media-tile .rm{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;font-size:14px;font-weight:700;display:grid;place-items:center;cursor:pointer;border:none;font-family:inherit}
+  .media-tile.uploading{display:grid;place-items:center;background:var(--surface)}
+  .media-tile.uploading .progress{position:absolute;left:8px;right:8px;bottom:8px;height:4px;background:rgba(255,255,255,.5);border-radius:2px;overflow:hidden}
+  .media-tile.uploading .progress::after{content:'';display:block;height:100%;width:60%;background:var(--primary);border-radius:2px}
+  .media-add{aspect-ratio:1;border-radius:var(--radius-sm);background:var(--surface-2);border:2px dashed var(--border-light);display:grid;place-items:center;font-size:28px;color:var(--fg-soft);font-weight:300;cursor:pointer;font-family:inherit}
+  .media-add:active{background:var(--surface)}
+  .media-add .label{font-size:11px;font-weight:700;margin-top:-4px}
+
+  /* === Spinner === */
+  .spinner{display:inline-block;width:24px;height:24px;border-radius:50%;border:3px solid rgba(255,255,255,.5);border-top-color:#fff;animation:spin 1.2s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* Bottom note for keyboard hint */
+  .bottom-hint{position:absolute;left:16px;right:16px;bottom:12px;font-size:11px;color:var(--fg-soft);text-align:center;font-weight:600;padding:6px}
+
+  /* Popups inside phone */
+  .scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);z-index:10}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:var(--radius-lg) var(--radius-lg) 0 0;padding:18px 0 22px;box-shadow:0 -8px 24px 0 rgba(61,52,40,.14);z-index:20}
+  .sheet .handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 14px}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;padding:0 20px 14px}
+  .sheet-head h3{margin:0;font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .sheet-head .cancel{background:transparent;border:none;color:var(--fg-soft);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;padding:0}
+  .sheet-head .confirm{background:transparent;border:none;color:var(--primary-active);font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;padding:0}
+  .sheet-head .count{position:absolute;left:50%;transform:translateX(-50%);font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.3px;margin-top:18px}
+
+  /* Tab toggle in date/time sheet */
+  .segmented{display:flex;background:var(--surface);padding:4px;border-radius:var(--radius-pill);gap:4px;margin:0 20px 14px}
+  .segmented .seg{flex:1;height:34px;border:none;background:transparent;border-radius:var(--radius-pill);font-family:inherit;font-size:13px;font-weight:700;color:var(--fg-soft);cursor:pointer;transition:background .2s,color .2s}
+  .segmented .seg.active{background:var(--surface-2);color:var(--fg);box-shadow:var(--shadow-soft-sm)}
+
+  /* Wheels */
+  .wheels{position:relative;display:grid;gap:0;height:180px;padding:0 16px;overflow:hidden}
+  .wheels.date{grid-template-columns:1.2fr 1fr 1fr}
+  .wheels.time{grid-template-columns:1fr 1fr}
+  .wheels::before{content:'';position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);height:40px;background:var(--surface);border-radius:var(--radius-sm);pointer-events:none;z-index:0}
+  .wheel{position:relative;height:100%;overflow:hidden;z-index:1;mask:linear-gradient(180deg,transparent,#000 35%,#000 65%,transparent)}
+  .wheel-track{display:flex;flex-direction:column;transform:translateY(60px)}
+  .wheel-item{height:40px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--fg-soft);font-weight:600;font-variant-numeric:tabular-nums;transition:color .2s,font-weight .2s}
+  .wheel-item.selected{color:var(--fg-strong);font-weight:800;font-size:16px}
+  .wheel-item.near{color:var(--fg)}
+
+  /* Quick chips in date/time sheet */
+  .quick{display:flex;gap:8px;padding:14px 20px 0;justify-content:center}
+  .quick .qchip{padding:6px 14px;background:var(--surface);border:none;border-radius:var(--radius-pill);font-size:12px;font-weight:700;color:var(--fg);cursor:pointer;font-family:inherit}
+  .quick .qchip:active{background:var(--bg-disabled)}
+
+  /* Milestone sheet */
+  .ms-body{padding:0 20px;max-height:60vh;overflow-y:auto}
+  .ms-body::-webkit-scrollbar{display:none}
+  .ms-chips{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 16px}
+  .ms-section-title{font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin:8px 0 8px 4px}
+  .ms-add{display:flex;align-items:center;gap:8px;padding:14px 6px;border-top:1px solid var(--border-light);margin-top:8px;color:var(--primary-active);font-weight:700;font-size:13.5px;cursor:pointer;background:transparent;border-left:none;border-right:none;border-bottom:none;font-family:inherit;width:100%}
+</style>
+</head>
+<body>
+
+<h2>EntryComposer · 新建记录</h2>
+<p class="subtitle">两个状态:刚打开(空)/ 填写中(文字 + 里程碑 + 媒体)</p>
+
+<div class="phones">
+
+  <!-- Empty state -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back">‹</button>
+        <div class="ttl">新记录</div>
+        <button class="save-btn" disabled>保存</button>
+      </div>
+      <div class="body">
+        <div class="ctx-row">
+          <div class="ava">乐</div>
+          <div class="ctx-meta">
+            <p class="name">小乐</p>
+            <p class="sub">记录给</p>
+          </div>
+          <button class="time-pill"><span class="clock">🕐</span>今天 14:32</button>
+        </div>
+
+        <textarea class="textarea" placeholder="今天小乐做了什么呢…"></textarea>
+
+        <div class="sect">
+          <div class="label">里程碑(可多选)</div>
+        </div>
+        <div class="chips">
+          <button class="chip">第一次自己吃饭</button>
+          <button class="chip">第一次走</button>
+          <button class="chip">会叫人</button>
+          <button class="chip">长牙</button>
+          <button class="chip" style="background:var(--surface-2);color:var(--fg-soft);font-weight:600">+ 更多</button>
+        </div>
+
+        <div class="sect">
+          <div class="label">媒体</div>
+        </div>
+        <div class="media-grid">
+          <button class="media-add">
+            <div>
+              <div style="font-size:28px;line-height:1">＋</div>
+              <div class="label">添加</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">① 刚打开 · 空态(保存按钮 disabled)</div>
+  </div>
+
+  <!-- Filled state -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back">‹</button>
+        <div class="ttl">新记录</div>
+        <button class="save-btn">保存</button>
+      </div>
+      <div class="body">
+        <div class="ctx-row">
+          <div class="ava">乐</div>
+          <div class="ctx-meta">
+            <p class="name">小乐</p>
+            <p class="sub">记录给</p>
+          </div>
+          <button class="time-pill"><span class="clock">🕐</span>今天 14:32</button>
+        </div>
+
+        <textarea class="textarea focus">第一次自己端着小碗吃完一整碗粥,从头到尾都没掉。还学会用手指比"好"。</textarea>
+        <div class="char-count">62 / 2000</div>
+
+        <div class="sect">
+          <div class="label">里程碑(可多选)</div>
+        </div>
+        <div class="chips">
+          <button class="chip selected">第一次自己吃饭</button>
+          <button class="chip">第一次走</button>
+          <button class="chip">会叫人</button>
+          <button class="chip">长牙</button>
+          <button class="chip" style="background:var(--surface-2);color:var(--fg-soft);font-weight:600">+ 更多</button>
+        </div>
+
+        <div class="sect">
+          <div class="label">媒体 · 已上传 3 张</div>
+        </div>
+        <div class="media-grid">
+          <div class="media-tile"><button class="rm" aria-label="删除">×</button></div>
+          <div class="media-tile b"><button class="rm" aria-label="删除">×</button></div>
+          <div class="media-tile g"><button class="rm" aria-label="删除">×</button></div>
+          <div class="media-tile uploading">
+            <span class="spinner" style="border-color:rgba(121,79,39,.2);border-top-color:var(--primary)"></span>
+            <div class="progress"></div>
+          </div>
+          <button class="media-add">
+            <div>
+              <div style="font-size:28px;line-height:1">＋</div>
+              <div class="label">添加</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">② 填写中 · 文字 + 里程碑 + 媒体 + 1 张上传中</div>
+  </div>
+
+  <!-- Time pill open -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back">‹</button>
+        <div class="ttl">新记录</div>
+        <button class="save-btn">保存</button>
+      </div>
+      <div class="body" style="filter:brightness(.7)">
+        <div class="ctx-row">
+          <div class="ava">乐</div>
+          <div class="ctx-meta">
+            <p class="name">小乐</p>
+            <p class="sub">记录给</p>
+          </div>
+          <button class="time-pill" style="background:var(--primary);color:#fff"><span class="clock">🕐</span>今天 14:32</button>
+        </div>
+        <textarea class="textarea">第一次自己端着小碗吃完一整碗粥…</textarea>
+      </div>
+
+      <!-- Date/Time sheet -->
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="handle"></div>
+        <div class="sheet-head">
+          <button class="cancel">取消</button>
+          <h3>发生时间</h3>
+          <button class="confirm">确定</button>
+        </div>
+        <div class="segmented" role="tablist">
+          <button class="seg active" role="tab">日期</button>
+          <button class="seg" role="tab">时间</button>
+        </div>
+        <div class="wheels date">
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">2023</div>
+              <div class="wheel-item near">2024</div>
+              <div class="wheel-item selected">2025</div>
+              <div class="wheel-item near">2026</div>
+              <div class="wheel-item">2027</div>
+            </div>
+          </div>
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">3 月</div>
+              <div class="wheel-item near">4 月</div>
+              <div class="wheel-item selected">5 月</div>
+              <div class="wheel-item near">6 月</div>
+              <div class="wheel-item">7 月</div>
+            </div>
+          </div>
+          <div class="wheel">
+            <div class="wheel-track">
+              <div class="wheel-item">17 日</div>
+              <div class="wheel-item near">18 日</div>
+              <div class="wheel-item selected">19 日</div>
+              <div class="wheel-item near">20 日</div>
+              <div class="wheel-item">21 日</div>
+            </div>
+          </div>
+        </div>
+        <div class="quick">
+          <button class="qchip">今天</button>
+          <button class="qchip">昨天</button>
+          <button class="qchip">前天</button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">③ 点时间胶囊 · 日期 tab</div>
+  </div>
+
+  <!-- Milestone "+ 更多" BottomSheet -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back">‹</button>
+        <div class="ttl">新记录</div>
+        <button class="save-btn">保存</button>
+      </div>
+      <div class="body" style="filter:brightness(.7)">
+        <div class="ctx-row">
+          <div class="ava">乐</div>
+          <div class="ctx-meta">
+            <p class="name">小乐</p>
+            <p class="sub">记录给</p>
+          </div>
+          <button class="time-pill"><span class="clock">🕐</span>今天 14:32</button>
+        </div>
+        <textarea class="textarea">第一次自己端着小碗吃完一整碗粥…</textarea>
+      </div>
+
+      <!-- Milestone sheet -->
+      <div class="scrim"></div>
+      <div class="sheet" style="padding-bottom:8px">
+        <div class="handle"></div>
+        <div class="sheet-head" style="position:relative">
+          <button class="cancel">取消</button>
+          <h3>选择里程碑</h3>
+          <button class="confirm">完成 (2)</button>
+        </div>
+        <div class="ms-body">
+          <div class="ms-chips" style="padding-top:8px">
+            <button class="chip selected">第一次自己吃饭</button>
+            <button class="chip">第一次喝奶</button>
+            <button class="chip">第一口辅食</button>
+            <button class="chip">第一次喝水</button>
+            <button class="chip">抬头</button>
+            <button class="chip">翻身</button>
+            <button class="chip">坐稳</button>
+            <button class="chip">爬</button>
+            <button class="chip selected">第一次走</button>
+            <button class="chip">独立站</button>
+            <button class="chip">第一声笑</button>
+            <button class="chip">咿呀学语</button>
+            <button class="chip">叫"妈妈"</button>
+            <button class="chip">叫"爸爸"</button>
+            <button class="chip">说短句</button>
+            <button class="chip">长牙</button>
+            <button class="chip">第一次理发</button>
+            <button class="chip">第一次剪指甲</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">④ 点 "+ 更多" · 里程碑全集</div>
+  </div>
+
+</div>
+
+<div style="max-width:900px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>顶栏 save 而非底部 save</b> — 移动端键盘弹起时底部被遮挡,save 放顶部右侧最稳。返回(<code>‹</code>)+ 标题 + 保存,三段式</li>
+  <li><b>保存按钮 disabled 态</b> — 空内容时 disabled(灰 + 不能点),输入任意字符后自动激活</li>
+  <li><b>Context row</b> — 头像 + "记录给 [小乐]" + 时间胶囊,告知用户"我在给谁记录、什么时间发生"。时间默认"今天 + 当前时刻",点胶囊拉起 DatePicker(年/月/日)+ TimePicker(时/分)</li>
+  <li><b>Textarea</b> — 最低 160px 高,auto-grow 最多 6 行;字符计数<code>当前/2000</code> 仅当 ≥50% 时显示(否则隐藏不打扰)</li>
+  <li><b>里程碑 chip 行</b> — 横向 wrap 排列(不滚动);最多内联 6 个,超过则"+ 更多"打开 BottomSheet 多选。chip 选中态 = mint 实底 + 白字;未选中 = surface 奶油底 + 暖棕字。<b>UI 上无图标</b>:用户自定义里程碑时不需要再选 icon,减负。<br><b>实施备注</b>:DB schema 中 <code>milestones.icon</code> 字段<b>保留</b>(扩展用,如未来定制视觉/导出报表/AI 自动选图);UI 渲染层不读取 / 不展示</li>
+  <li><b>媒体 grid</b> — 3 列,每个 cell 1:1。已上传 = 缩略图 + 右上 ×。上传中 = surface 底 + 居中 spinner + 底部进度条。最后一格永远是 dashed 的"+ 添加"</li>
+  <li><b>无底部按钮区</b> — 顶部已有"保存",删除原来底部的"取消 / 保存"两按钮,信息密度更高。"取消" = 顶部 <code>‹</code> 返回(若有未保存内容应弹 ActionSheet 确认)</li>
+  <li><b>键盘弹起处理</b> — body 设 <code>overflow-y: auto</code> + iOS <code>interactive-keyboard-dismiss</code>,焦点在 textarea 时自动滚动让焦点可见</li>
+  <li><b>未保存离开</b> — 点 <code>‹</code> 返回时,若 textarea 非空 / 有媒体 / 有里程碑选中,弹 ActionSheet:"放弃当前记录"(destructive) / "继续编辑"(取消)</li>
+  <li><b>时间胶囊点开(③)</b> — BottomSheet 顶部 segmented tab 切换"日期 / 时间";内容区是滚轮(日期 3 列年月日 / 时间 2 列时分);下方 3 个快捷 chip "今天/昨天/前天"。年份范围 = 宝宝出生日 ~ 今天(<b>不能选未来</b>,避免无效数据)。点"今天"chip 会把日期+时间同时设为当前</li>
+  <li><b>"+ 更多" 里程碑(④)</b> — BottomSheet 列出全部里程碑,扁平 chips wrap(<b>无分类、无 schema 变更</b>)。已选项实底 mint,可在 sheet 内勾选/取消。顶部右侧 "完成 (N)" 显示当前已选数。<b>自定义里程碑入口不在此处</b>,放到 Profile/里程碑管理子页(独立页面,与本 sheet 解耦)</li>
+</ul>
+</div>
+
+</body>
+</html>
