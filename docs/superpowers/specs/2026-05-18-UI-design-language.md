@@ -1015,6 +1015,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **弹窗交互预览** | [`assets/2026-05-18-popups-reference.html`](./assets/2026-05-18-popups-reference.html) | Modal / BottomSheet / ActionSheet 三种弹窗的实际渲染与进退场动画 |
 | **Timeline 页 + 动效** | [`assets/2026-05-18-timeline-motion-reference.html`](./assets/2026-05-18-timeline-motion-reference.html) | Timeline 完整页 + 进场 / 按压 / Tabbar 切换 / Hero ken-burns / reduced-motion 模拟 |
 | **Login + Onboarding** | [`assets/2026-05-19-login-onboarding-reference.html`](./assets/2026-05-19-login-onboarding-reference.html) | Pre-auth 沉浸态 / 错误展示 / 性别 segmented / DatePicker 滚轮 BottomSheet |
+| **EntryComposer 新记录** | [`assets/2026-05-19-entry-composer-reference.html`](./assets/2026-05-19-entry-composer-reference.html) | 空态 / 填写中 / 时间胶囊 DateTimePicker / 里程碑全集 BottomSheet |
 
 实施流程:
 
