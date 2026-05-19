@@ -95,6 +95,56 @@ babyloom 是手机为主的家庭 PWA。**所有 `:hover` 状态必须用 `@medi
 
 进场动画在 reduced-motion 下应**立刻显示终态**(不能从隐藏跳到可见有可察觉延迟)。Hero 的 ken-burns 必须停。按压反馈可以保留(改成"瞬时"切换,不是"动画过渡")。
 
+### 1.7 UI 图标用 inline SVG,不用 emoji
+
+> 系统图标(按钮 / 列表 / 导航)必须用 SVG,emoji 仅用作内容。
+
+**禁用 emoji 当 UI 图标的根因**:不同操作系统 / 浏览器 / 字体的 emoji 渲染**严重不一致**:
+
+- 👶 在 Apple 平台又大又彩(类卡通),在 Windows 上简笔且偏黑白
+- 👨‍👩‍👧 等 ZWJ 复合 emoji 在不支持 ZWJ 序列的系统上**完全 fallback 成单独的字符**(显示成两个 emoji 拼在一起,或纯文本"A")
+- 同一组 emoji 高低线宽差异巨大,视觉层次彻底崩溃
+
+**规则**:
+
+```html
+<!-- ❌ 禁止:emoji 当 UI 图标 -->
+<button class="row">
+  <span>👶</span> 宝宝
+</button>
+
+<!-- ✅ 正确:inline SVG -->
+<button class="row">
+  <svg viewBox="0 0 24 24" class="ic">
+    <circle cx="12" cy="12" r="9"/>
+    <circle cx="9" cy="11" r=".8" fill="currentColor" stroke="none"/>
+    <circle cx="15" cy="11" r=".8" fill="currentColor" stroke="none"/>
+    <path d="M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5"/>
+  </svg>
+  宝宝
+</button>
+```
+
+**SVG 图标规范**:
+
+| 属性 | 值 | 备注 |
+|---|---|---|
+| viewBox | `0 0 24 24` | Lucide / Heroicons 标准 |
+| 渲染尺寸 | 22×22(列表) / 18×18(按钮内) / 16×16(角标) | 由父容器控制 |
+| stroke | `currentColor` | 自动跟随文字色 |
+| stroke-width | `1.8`(列表)/ `2`(按钮) | 不用 1.5(太细),不用 2.5(过粗) |
+| fill | `none`(默认)或 `currentColor`(实心装饰) | 不用第三方填色 |
+| stroke-linecap | `round` | |
+| stroke-linejoin | `round` | |
+
+**emoji 允许的位置**(用作内容,不作 UI):
+
+- 用户在 entry / 评论 / 名字里输入的 emoji
+- Onboarding / 空态 / Hero 等场景的**单个大表情**(装饰性,有"内容感"而非"图标感",且即使渲染稍有差异也不影响功能识别)
+- Toast / 提示文案里偶尔点缀(如 "🌱 今天还没记录")
+
+**图标库建议**:实施时可选 [Lucide](https://lucide.dev/) 或 [Heroicons](https://heroicons.com/),它们都符合本规范的 viewBox + stroke 规则。**不要混用多个图标库**(线条风格不统一)。**不要引整个图标库的 npm 包**,只把用到的图标 inline 进 React 组件或独立 SVG 文件(减少包体积)。
+
 ---
 
 ## 2. 设计令牌(Tokens)
@@ -974,6 +1024,7 @@ ken-burns、loading 斜纹、stripe 动画必须**完全停止**。
 - ❌ 用 `<div role="button">` → 用真正的 `<button>`,获得 a11y / 键盘默认行为
 - ❌ Loading 按钮还允许点击 → 必须 `pointer-events: none` + `aria-busy`
 - ❌ 用 `<input type="date">` / `<select>` 等原生 form control → 桌面/iOS/Android 渲染各异,与 AC 风脱节。日期用 §4.15 DatePicker,枚举用 segmented control 或 BottomSheet
+- ❌ **用 emoji 当 UI 系统图标**(列表行图标、按钮图标、tab 图标等)→ 跨平台渲染差异巨大,👨‍👩‍👧 等 ZWJ 复合 emoji 在不支持的系统上彻底 fallback 失败。改用 inline SVG(§1.7)。emoji 仅用作内容(用户输入)或单个大型装饰表情(空态 / Hero)
 
 ---
 
@@ -1020,6 +1071,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **Entry 详情** | [`assets/2026-05-19-entry-detail-reference.html`](./assets/2026-05-19-entry-detail-reference.html) | 带媒体 carousel / 纯文字 / ⋯ ActionSheet(编辑 + 移到回收站) |
 | **Gallery 画廊 + 全屏 viewer** | [`assets/2026-05-19-gallery-reference.html`](./assets/2026-05-19-gallery-reference.html) | 3 列正方网格 / 月分组 sticky / 视频角标 / 空态 / 全屏 viewer |
 | **Calendar 日历** | [`assets/2026-05-19-calendar-reference.html`](./assets/2026-05-19-calendar-reference.html) | 月份格子 + 当日 mint 点 + 选中日预览 + 当日年龄块 + 年月 picker |
+| **Profile / Me 设置** | [`assets/2026-05-19-profile-reference.html`](./assets/2026-05-19-profile-reference.html) | Me hub / 宝宝管理(切换中) / 回收站(owner) / 批量删除 / 永久删除 Modal |
 
 实施流程:
 

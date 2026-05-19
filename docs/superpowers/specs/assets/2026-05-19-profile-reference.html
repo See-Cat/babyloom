@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Profile / Me mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5; --bg-disabled:#f0ece2;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --error:#e05a5a; --error-active:#c94444; --error-bg:#fbe4e4;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --avatar-yellow:#f5c31c; --avatar-peach:#e59266; --avatar-purple:#b77dee;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --shadow-soft-lg:0 8px 24px 0 rgba(61,52,40,.14);
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-back:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  /* Header (with optional back) */
+  .header{padding:16px 18px 8px;display:flex;align-items:center;gap:8px}
+  .header.has-back{padding-left:6px}
+  .back{width:36px;height:36px;border:none;background:transparent;color:var(--fg);font-size:22px;cursor:pointer;border-radius:50%;display:grid;place-items:center;font-family:inherit;flex-shrink:0}
+  .back:active{background:rgba(0,0,0,.05)}
+  .ph-title{font-size:22px;font-weight:800;color:var(--fg-strong);line-height:1.15;flex:1}
+  .ph-title.center{text-align:center}
+  .ph-title .sub{display:block;font-size:11px;font-weight:600;color:var(--fg-soft);margin-top:3px}
+
+  /* Body */
+  .body{flex:1;overflow-y:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:14px;scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+
+  /* User card (top of Me hub) */
+  .user-card{display:flex;align-items:center;gap:14px;padding:18px 18px;background:var(--surface);border-radius:var(--radius-card)}
+  .ava{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex-shrink:0;background:var(--avatar-pink)}
+  .ava-md{width:40px;height:40px;font-size:15px}
+  .ava-lg{width:56px;height:56px;font-size:20px}
+  .ava-xl{width:72px;height:72px;font-size:26px}
+  .ava.b{background:var(--avatar-blue)} .ava.m{background:var(--avatar-mint)} .ava.y{background:var(--avatar-yellow);color:#724a00}
+  .ava.peach{background:var(--avatar-peach)} .ava.purple{background:var(--avatar-purple)}
+  .user-info{flex:1;min-width:0}
+  .user-info .name{font-size:17px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .user-info .role{display:inline-block;font-size:11px;font-weight:700;color:var(--primary-active);background:var(--primary-bg);padding:3px 10px;border-radius:var(--radius-pill)}
+  .user-info .role.editor{color:var(--fg-strong);background:var(--surface-2)}
+  .user-info .role.viewer{color:var(--fg-soft);background:var(--bg-disabled)}
+  .edit-me{width:36px;height:36px;border:none;background:transparent;color:var(--fg-soft);font-size:16px;cursor:pointer;border-radius:50%;display:grid;place-items:center;font-family:inherit;flex-shrink:0}
+  .edit-me:active{background:rgba(0,0,0,.05)}
+
+  /* Section title */
+  .sect-title{font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin:6px 4px -6px}
+
+  /* List card (settings items) */
+  .list-card{background:var(--surface);border-radius:var(--radius-card);overflow:hidden}
+  .row{appearance:none;-webkit-appearance:none;margin:0;padding:14px 16px;width:100%;box-sizing:border-box;display:flex;align-items:center;gap:14px;background:transparent;color:var(--fg);font-family:inherit;font-size:14px;font-weight:600;text-align:left;border:none;border-radius:0;outline:none;cursor:pointer;box-shadow:none;transition:background .15s}
+  .row + .row{border-top:1px solid var(--border-light)}
+  .row:active{background:rgba(0,0,0,.04)}
+  .row .ic{width:24px;height:24px;flex-shrink:0;color:var(--fg-soft);display:grid;place-items:center}
+  .row .ic svg{width:22px;height:22px;stroke:currentColor;stroke-width:1.8;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .row .label{flex:1;font-weight:700;line-height:1.3;min-width:0}
+  .row .label .sub{display:block;font-size:11px;color:var(--fg-soft);font-weight:600;margin-top:2px}
+  .row .meta-r{font-size:12.5px;color:var(--fg-soft);font-weight:600}
+  .row .chev{color:var(--fg-soft);font-size:16px;font-weight:600;line-height:1}
+
+  /* Baby card (in babies management) */
+  .baby-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:var(--radius-card);cursor:pointer;border:2px solid transparent}
+  .baby-card.active{border-color:var(--primary);background:var(--primary-bg)}
+  .baby-card .info{flex:1;min-width:0}
+  .baby-card .info .name{font-size:15px;font-weight:800;color:var(--fg-strong);margin:0 0 2px;display:flex;align-items:center;gap:8px}
+  .baby-card .info .name .badge{font-size:10px;font-weight:800;color:#fff;background:var(--primary-active);padding:2px 8px;border-radius:var(--radius-pill)}
+  .baby-card .info .meta{font-size:11.5px;color:var(--fg-soft);font-weight:600;margin:0}
+  .baby-card .chev{color:var(--fg-soft);font-size:14px}
+  .add-baby{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--surface-2);border:2px dashed var(--border-light);border-radius:var(--radius-card);color:var(--fg-soft);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .add-baby:active{background:var(--surface)}
+
+  /* Trash card */
+  .trash-card{padding:12px 14px;background:var(--surface);border-radius:var(--radius-card);margin-bottom:10px}
+  .trash-meta{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;color:var(--fg-soft);font-weight:600}
+  .trash-meta .ava{width:20px;height:20px;font-size:10px}
+  .trash-content{font-size:13px;line-height:1.55;margin:0 0 10px;color:var(--fg);font-weight:500;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .trash-actions{display:flex;gap:8px;justify-content:flex-end}
+  .trash-btn{padding:6px 14px;border-radius:var(--radius-pill);font-size:12px;font-weight:700;border:none;cursor:pointer;font-family:inherit}
+  .trash-btn.restore{background:var(--primary);color:#fff;box-shadow:0 3px 0 0 var(--primary-active)}
+  .trash-btn.restore:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--primary-active)}
+  .trash-btn.purge{background:transparent;color:var(--error)}
+  .trash-info-bar{background:var(--surface-2);border-radius:var(--radius-base);padding:10px 14px;font-size:12px;color:var(--fg);line-height:1.55;display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .trash-info-bar .icon{font-size:14px}
+
+  /* Active baby featured card */
+  .active-baby{display:flex;align-items:center;gap:14px;padding:16px 18px;background:var(--primary-bg);border-radius:var(--radius-card);border:1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)}
+  .active-baby .info{flex:1;min-width:0}
+  .active-baby .info .name{font-size:16px;font-weight:800;color:var(--fg-strong);margin:0 0 3px}
+  .active-baby .info .meta{font-size:11.5px;color:var(--primary-active);font-weight:700;margin:0;letter-spacing:.2px}
+  .switch-btn{display:inline-flex;align-items:center;gap:4px;padding:7px 14px;background:#fff;color:var(--primary-active);font-size:12px;font-weight:800;border-radius:var(--radius-pill);border:none;cursor:pointer;font-family:inherit;box-shadow:0 3px 0 0 color-mix(in srgb, var(--primary-active) 35%, transparent);transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .switch-btn:active{transform:translateY(2px);box-shadow:0 1px 0 0 color-mix(in srgb, var(--primary-active) 35%, transparent)}
+
+  /* Logout — centered danger text-button */
+  .logout-btn{margin-top:8px;display:flex;align-items:center;justify-content:center;width:100%;padding:16px;background:var(--surface);border-radius:var(--radius-card);color:var(--error);font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:inherit;transition:background .15s}
+  .logout-btn:active{background:var(--error-bg)}
+
+  /* Trash select mode */
+  .select-btn{padding:6px 14px;border:none;background:transparent;color:var(--primary-active);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;border-radius:var(--radius-pill);flex-shrink:0}
+  .select-btn:active{background:rgba(0,0,0,.04)}
+  .select-btn.cancel{color:var(--fg-soft)}
+  .selected-count{font-size:13px;font-weight:800;color:var(--fg-strong);padding:6px 10px;background:var(--primary-bg);border-radius:var(--radius-pill);color:var(--primary-active)}
+  .check{width:24px;height:24px;border-radius:50%;border:2px solid var(--border-light);flex-shrink:0;display:grid;place-items:center;color:#fff;font-size:13px;font-weight:800;background:var(--surface-2);transition:background .15s, border-color .15s}
+  .check.checked{background:var(--primary);border-color:var(--primary)}
+  .trash-card.select-row{display:flex;align-items:center;gap:12px;padding:12px 14px}
+  .trash-card.select-row .body-col{flex:1;min-width:0}
+  .trash-card.select-row .body-col .trash-meta{margin-bottom:4px}
+  .trash-card.select-row .body-col .trash-content{margin:0}
+  .batch-action-bar{position:absolute;left:12px;right:12px;bottom:12px;background:var(--surface-2);border-radius:var(--radius-base);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow-soft-lg);z-index:5}
+  .batch-action-bar .info{font-size:13px;font-weight:700;color:var(--fg)}
+  .batch-action-bar .info .count{color:var(--primary-active);font-weight:800}
+  .batch-action-bar .danger{padding:9px 18px;background:var(--error);color:#fff;border:none;border-radius:var(--radius-pill);font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;box-shadow:0 4px 0 0 var(--error-active);transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .batch-action-bar .danger:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--error-active)}
+  .batch-action-bar .danger:disabled{opacity:.4;pointer-events:none}
+
+  /* Delete confirm Modal */
+  .modal-scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);z-index:10}
+  .modal{position:absolute;left:16px;right:16px;top:50%;transform:translateY(-50%);background:var(--surface-2);border-radius:var(--radius-lg);padding:22px 24px;box-shadow:var(--shadow-soft-lg);z-index:20}
+  .modal h4{margin:0 0 8px;font-size:17px;font-weight:800;color:var(--fg-strong)}
+  .modal p{margin:0 0 18px;font-size:13.5px;line-height:1.65;color:var(--fg)}
+  .modal .actions{display:flex;gap:10px}
+  .modal .btn{flex:1;height:44px;display:flex;align-items:center;justify-content:center;border-radius:var(--radius-pill);font-size:14px;font-weight:800;border:none;cursor:pointer;font-family:inherit;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .modal .btn.cancel{background:var(--surface);color:var(--fg);box-shadow:0 4px 0 0 var(--press)}
+  .modal .btn.cancel:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--press)}
+  .modal .btn.confirm{background:var(--error);color:#fff;box-shadow:0 4px 0 0 var(--error-active)}
+  .modal .btn.confirm:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--error-active)}
+
+  /* Tabbar */
+  .ph-tabbar{height:64px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;border-top:1px solid var(--border-light);flex-shrink:0}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--fg-soft);font-weight:700;cursor:pointer;background:transparent;border:none;font-family:inherit}
+  .tab.active{color:var(--primary-active)}
+  .tab .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;transition:transform .35s var(--ease-back),background .25s,box-shadow .35s var(--ease-back),color .25s}
+  .tab.active .dot{background:var(--primary);color:#fff;transform:translateY(-6px);box-shadow:0 4px 0 0 var(--press)}
+</style>
+</head>
+<body>
+
+<h2>Profile / Me 设置</h2>
+<p class="subtitle">三屏:Me hub(主页)/ 宝宝管理(含切换器)/ 回收站</p>
+
+<div class="phones">
+
+  <!-- Me hub -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <div class="ph-title">我的</div>
+      </div>
+      <div class="body">
+        <div class="user-card">
+          <div class="ava ava-xl peach">妈</div>
+          <div class="user-info">
+            <p class="name">妈妈</p>
+            <span class="role">家庭主理人</span>
+          </div>
+          <button class="edit-me" aria-label="编辑资料">✎</button>
+        </div>
+
+        <div class="sect-title">正在记录</div>
+        <div class="active-baby">
+          <div class="ava ava-lg m">乐</div>
+          <div class="info">
+            <p class="name">小乐</p>
+            <p class="meta">1岁3月 · 第 456 天</p>
+          </div>
+          <button class="switch-btn">切换 ›</button>
+        </div>
+
+        <div class="sect-title">家庭管理</div>
+        <div class="list-card">
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="11" r="0.8" fill="currentColor" stroke="none"/><circle cx="15" cy="11" r="0.8" fill="currentColor" stroke="none"/><path d="M9 15c1 1 2 1.5 3 1.5s2-.5 3-1.5"/></svg></span>
+            <span class="label">宝宝</span>
+            <span class="meta-r">2 个</span>
+            <span class="chev">›</span>
+          </button>
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c0-3 2.5-5 6-5s6 2 6 5"/><path d="M14.5 20c.5-2 2-3.5 4-3.5"/></svg></span>
+            <span class="label">家庭成员</span>
+            <span class="meta-r">4 人</span>
+            <span class="chev">›</span>
+          </button>
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><polygon points="12,2.5 14.5,9 21.5,9 16,13.5 18,20.5 12,16.5 6,20.5 8,13.5 2.5,9 9.5,9"/></svg></span>
+            <span class="label">里程碑</span>
+            <span class="meta-r">18 个</span>
+            <span class="chev">›</span>
+          </button>
+        </div>
+
+        <div class="sect-title">其他</div>
+        <div class="list-card">
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M8 6V4c0-1 .5-2 2-2h4c1.5 0 2 1 2 2v2"/><path d="M19 6l-1 14c0 1-1 2-2 2H8c-1 0-2-1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg></span>
+            <span class="label">回收站</span>
+            <span class="meta-r">3 条</span>
+            <span class="chev">›</span>
+          </button>
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><path d="M21 15v4c0 1-1 2-2 2H5c-1 0-2-1-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></span>
+            <span class="label">数据导出 / 备份</span>
+            <span class="chev">›</span>
+          </button>
+          <button class="row">
+            <span class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="11" x2="12" y2="17"/><circle cx="12" cy="8" r="0.6" fill="currentColor" stroke="none"/></svg></span>
+            <span class="label">关于 Babyloom<span class="sub">v2.0.0 · 自托管</span></span>
+            <span class="chev">›</span>
+          </button>
+        </div>
+
+        <button class="logout-btn">退出登录</button>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab active"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">① Me hub · 我的设置主页</div>
+  </div>
+
+  <!-- Babies management -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header has-back">
+        <button class="back" aria-label="返回">‹</button>
+        <div class="ph-title">宝宝管理</div>
+      </div>
+      <div class="body">
+        <div class="baby-card active">
+          <div class="ava ava-lg m">乐</div>
+          <div class="info">
+            <p class="name">小乐 <span class="badge">记录中</span></p>
+            <p class="meta">女 · 2024 年 2 月 1 日 · 1岁3月</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="baby-card">
+          <div class="ava ava-lg b">安</div>
+          <div class="info">
+            <p class="name">小安</p>
+            <p class="meta">男 · 2021 年 9 月 17 日 · 3岁8月</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <button class="add-baby">＋ 添加宝宝</button>
+
+        <div style="margin-top:14px;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius-base);font-size:12px;color:var(--fg-soft);line-height:1.55">
+          点击宝宝卡片设为"记录中"。新建记录会默认归到当前宝宝。
+        </div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab active"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">② 宝宝管理 · 切换 + 列表 + 添加</div>
+  </div>
+
+  <!-- Trash -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header has-back" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <button class="back" aria-label="返回">‹</button>
+          <div class="ph-title">回收站<span class="sub">3 条记录</span></div>
+        </div>
+        <button class="select-btn">选择</button>
+      </div>
+      <div class="body">
+        <div class="trash-info-bar">
+          <span class="icon">ℹ</span>
+          <span>删除的记录会留在这里,可随时恢复</span>
+        </div>
+
+        <div class="trash-card">
+          <div class="trash-meta">
+            <div class="ava m">乐</div>
+            <span>小乐 · 5 月 16 日</span>
+            <span style="margin-left:auto">删除于 2 天前</span>
+          </div>
+          <p class="trash-content">今天早晨起得特别早,5 点多就醒了,精神状态比我都好。</p>
+          <div class="trash-actions">
+            <button class="trash-btn purge">永久删除</button>
+            <button class="trash-btn restore">恢复</button>
+          </div>
+        </div>
+
+        <div class="trash-card">
+          <div class="trash-meta">
+            <div class="ava b">安</div>
+            <span>小安 · 5 月 14 日</span>
+            <span style="margin-left:auto">删除于 4 天前</span>
+          </div>
+          <p class="trash-content">第一次自己穿袜子,只穿了一只就跑了。</p>
+          <div class="trash-actions">
+            <button class="trash-btn purge">永久删除</button>
+            <button class="trash-btn restore">恢复</button>
+          </div>
+        </div>
+
+        <div class="trash-card">
+          <div class="trash-meta">
+            <div class="ava m">乐</div>
+            <span>小乐 · 5 月 10 日</span>
+            <span style="margin-left:auto">删除于 8 天前</span>
+          </div>
+          <p class="trash-content">误把奶奶的咖啡当成可乐尝了一口,皱了眉头。</p>
+          <div class="trash-actions">
+            <button class="trash-btn purge">永久删除</button>
+            <button class="trash-btn restore">恢复</button>
+          </div>
+        </div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab active"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">③ 回收站 · owner 视角(恢复 + 永久删除)</div>
+  </div>
+
+  <!-- Trash batch select mode (owner only) -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header has-back" style="justify-content:space-between">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <button class="back" aria-label="返回">‹</button>
+          <div class="ph-title">回收站<span class="sub">选择要删除的记录</span></div>
+        </div>
+        <button class="select-btn cancel">取消</button>
+      </div>
+      <div class="body" style="padding-bottom:80px">
+        <div class="trash-card select-row">
+          <div class="check checked">✓</div>
+          <div class="body-col">
+            <div class="trash-meta">
+              <div class="ava m">乐</div>
+              <span>小乐 · 5 月 16 日</span>
+              <span style="margin-left:auto">2 天前删除</span>
+            </div>
+            <p class="trash-content">今天早晨起得特别早,5 点多就醒了。</p>
+          </div>
+        </div>
+        <div class="trash-card select-row">
+          <div class="check checked">✓</div>
+          <div class="body-col">
+            <div class="trash-meta">
+              <div class="ava b">安</div>
+              <span>小安 · 5 月 14 日</span>
+              <span style="margin-left:auto">4 天前删除</span>
+            </div>
+            <p class="trash-content">第一次自己穿袜子,只穿了一只就跑了。</p>
+          </div>
+        </div>
+        <div class="trash-card select-row">
+          <div class="check"></div>
+          <div class="body-col">
+            <div class="trash-meta">
+              <div class="ava m">乐</div>
+              <span>小乐 · 5 月 10 日</span>
+              <span style="margin-left:auto">8 天前删除</span>
+            </div>
+            <p class="trash-content">误把奶奶的咖啡当成可乐尝了一口。</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="batch-action-bar">
+        <div class="info">已选 <span class="count">2 条</span></div>
+        <button class="danger">永久删除</button>
+      </div>
+    </div>
+    <div class="caption">④ 批量永久删除 · owner 进入选择模式</div>
+  </div>
+
+  <!-- Delete confirm Modal -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header has-back" style="justify-content:space-between;filter:brightness(.7)">
+        <div style="display:flex;align-items:center;gap:8px;flex:1">
+          <button class="back" aria-label="返回">‹</button>
+          <div class="ph-title">回收站<span class="sub">选择要删除的记录</span></div>
+        </div>
+        <button class="select-btn cancel">取消</button>
+      </div>
+      <div class="body" style="padding-bottom:80px;filter:brightness(.7)">
+        <div class="trash-card select-row">
+          <div class="check checked">✓</div>
+          <div class="body-col">
+            <div class="trash-meta">
+              <div class="ava m">乐</div>
+              <span>小乐 · 5 月 16 日</span>
+            </div>
+            <p class="trash-content">今天早晨起得特别早…</p>
+          </div>
+        </div>
+        <div class="trash-card select-row">
+          <div class="check checked">✓</div>
+          <div class="body-col">
+            <div class="trash-meta">
+              <div class="ava b">安</div>
+              <span>小安 · 5 月 14 日</span>
+            </div>
+            <p class="trash-content">第一次自己穿袜子…</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-scrim"></div>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <h4 id="modal-title">永久删除 2 条记录?</h4>
+        <p>此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。</p>
+        <div class="actions">
+          <button class="btn cancel">取消</button>
+          <button class="btn confirm">永久删除</button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">⑤ 永久删除二次确认 Modal(规范 §4.7)</div>
+  </div>
+
+</div>
+
+<div style="max-width:1000px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>Me hub 结构</b>:用户卡 / 正在记录 / 家庭管理 / 其他 / 退出登录。每段用 sect-title 分隔</li>
+  <li><b>列表图标用 inline SVG,不用 emoji</b>(<b>新增规范</b>):emoji 在不同 OS / 浏览器渲染极不一致(👶 大而彩,🗑 小而简,👨‍👩‍👧 等 ZWJ 复合 emoji 会渲染失败落到字符 fallback)。规定:<b>UI 系统图标必须用 inline SVG</b>(Lucide / Heroicons 风,24x24 viewBox,1.8px stroke,<code>currentColor</code> 着色,无 fill);emoji 仅用作内容(用户输入/正文)</li>
+  <li><b>"正在记录" featured card</b> — <b>独立视觉</b>:primary-bg 浅薄荷底 + 1.5px 半透明 mint 边 + 大头像 + 名字 + 月龄,右侧 <code>切换 ›</code> 白底胶囊按钮(带浅 mint 按压阴影)。和下方的灰底 list-card 形成层次差异,体现"这是激活态"</li>
+  <li><b>单宝宝场景</b> — 当全家只有 1 个宝宝时:<b>切换按钮和 chevron 整体隐藏</b>,卡片不可点;只保留头像 + 名字 + 月龄作为信息展示。区分"只能看"和"可切换"两种状态,避免误触</li>
+
+  <li style="margin-top:10px"><b>退出登录</b> — 改为<b>独立的居中红字按钮</b>(不再是 list-card 包裹一行的尴尬结构):surface 底、红色文字、无图标、居中。:active 时 error-bg 浅红反馈</li>
+
+  <li style="margin-top:10px"><b>角色权限可见性</b>(<b>三处分支需在实施时严格判断</b>):
+    <ul>
+      <li>用户卡 role badge:owner = "家庭主理人"(mint-bg)/ editor = "编辑成员"(surface-2)/ viewer = "仅查看"(灰)</li>
+      <li><b>"家庭管理"分组</b>(宝宝 / 成员 / 里程碑):<b>仅 owner 可见</b>。editor 和 viewer 完全不显示这一整段(包括 sect-title)</li>
+      <li><b>"回收站"行</b>(在"其他"分组内):<b>owner 与 editor 可见</b>,viewer 不显示</li>
+    </ul>
+  </li>
+
+  <li style="margin-top:10px"><b>宝宝管理(②)</b>:卡片列表;当前"记录中"用 mint outline + primary-bg 浅底 + "记录中"标签。点其他卡片切换 → server-side preference 更新 + Toast。点 chevron 进 <code>/profile/babies/[id]</code> 编辑详情。底部 dashed "+ 添加宝宝"跳 <code>/onboarding/baby</code></li>
+
+  <li style="margin-top:10px"><b>回收站(③ + ④)</b>:
+    <ul>
+      <li><b>无自动清除策略</b>:删除的记录无限期留在回收站,直到 owner 手动永久清除</li>
+      <li>info-bar 文案:"删除的记录会留在这里,可随时恢复"(<b>不提"主理人可永久清除"</b>,避免给 editor/viewer 误导)</li>
+      <li><b>单条按钮可见性按角色</b>:<b>owner 看到 [永久删除 + 恢复]</b>;<b>editor 只看到 [恢复]</b>(永久删除按钮隐藏)</li>
+      <li><b>批量删除(④,仅 owner)</b>:顶部 "选择" 文本按钮 → 进入选择模式:卡片右上的按钮变身左侧圆形 checkbox + 行内可点切换;header 标题不变(<code>回收站</code>),副标改为"选择要删除的记录",右侧变为"取消"。<b>已选数量只在底部 batch-action-bar 显示一次</b>("已选 N 条 + [永久删除]"),不在顶部重复;N=0 时按钮 disabled。editor 完全看不到顶部"选择"入口</li>
+      <li><b>永久删除二次确认 Modal(⑤)</b>:无论单条或批量都弹同款 Modal,沿用<b>规范 §4.7 + popups-reference.html</b>:
+        <ul>
+          <li>标题(<code>--text-xl --font-bold --color-fg-strong</code>):"永久删除 N 条记录?"</li>
+          <li>正文(<code>--text-base --leading-base</code>):"此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。"</li>
+          <li>按钮行:左 [取消](默认浮起灰胶囊)/ 右 [永久删除](danger 红胶囊,主操作位置)</li>
+          <li><b>destructive Modal 禁止点遮罩关</b>(§4.7 规则),只能点取消或确认</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+
+  <li style="margin-top:10px"><b>成员管理 / 里程碑设置</b> 沿用相同 list-card + row 模式,不再单独画</li>
+  <li><b>"我的资料"编辑</b>:点用户卡右上 ✎ 进 <code>/profile/me</code>,改名字 / 改头像 / 改密码(沿用 Login Onboarding 的字段样式)</li>
+</ul>
+</div>
+
+</body>
+</html>
