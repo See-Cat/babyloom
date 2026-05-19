@@ -66,12 +66,12 @@
   .segmented .seg.active{background:var(--surface-2);color:var(--fg);box-shadow:var(--shadow-soft-sm)}
   .segmented .seg:active{transform:scale(.97)}
 
-  .avatar-pick{display:flex;align-items:center;gap:14px;background:var(--surface);border-radius:var(--radius-card);padding:14px 16px;cursor:pointer}
-  .avatar-pick .ava{width:48px;height:48px;border-radius:50%;background:var(--avatar-pink);display:grid;place-items:center;color:#fff;font-weight:800;font-size:20px;flex-shrink:0;border:2px dashed rgba(255,255,255,.6)}
-  .avatar-pick .info{flex:1;min-width:0}
-  .avatar-pick .info .ttl{font-size:13.5px;font-weight:700;color:var(--fg);margin:0 0 2px}
-  .avatar-pick .info .sub{font-size:11px;color:var(--fg-soft);font-weight:600}
-  .avatar-pick .chev{color:var(--fg-soft);font-size:14px}
+  /* Avatar picker — large centered circle with camera badge */
+  .avatar-pick{position:relative;width:88px;height:88px;border:none;background:transparent;cursor:pointer;padding:0;font-family:inherit}
+  .ava-big{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:34px;background:var(--avatar-pink)}
+  .ava-big.empty{background:var(--bg-disabled);color:var(--fg-disabled);font-size:36px;font-weight:400}
+  .avatar-pick .cam{position:absolute;right:0;bottom:0;width:28px;height:28px;border-radius:50%;background:var(--primary);display:grid;place-items:center;box-shadow:0 0 0 3px var(--bg)}
+  .avatar-pick:active .ava-big{transform:scale(.96);transition:transform .15s var(--ease)}
 
   /* Top safe area decoration */
   .top-bar{height:6px;background:linear-gradient(90deg,var(--primary),var(--avatar-pink),var(--warning));opacity:.18}
@@ -169,22 +169,22 @@
           <span class="dot"></span>
           <span>添加第一个宝宝</span>
         </div>
-        <div class="brand" style="margin-bottom:24px">
-          <div class="mascot">👶</div>
-          <h1 style="font-size:22px">第一个宝宝</h1>
-          <p class="lead">先添加一个宝宝,就可以开始记录啦</p>
+        <div style="text-align:center;margin-bottom:16px">
+          <h1 style="font-size:22px;font-weight:800;color:var(--fg-strong);margin:0 0 4px">第一个宝宝</h1>
+          <p style="font-size:13px;color:var(--fg-soft);margin:0;font-weight:500">先添加一个宝宝,就可以开始记录啦</p>
         </div>
-        <div class="avatar-pick">
-          <div class="ava">＋</div>
-          <div class="info">
-            <p class="ttl">添加头像</p>
-            <p class="sub">可选 · 之后也能在设置里改</p>
-          </div>
-          <div class="chev">›</div>
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px">
+          <button class="avatar-pick" aria-label="设置头像">
+            <span class="ava-big">小</span>
+            <span class="cam">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </span>
+          </button>
+          <p style="font-size:11px;color:var(--fg-soft);margin:0;text-align:center;font-weight:500">头像可选 · 不上传时自动用名字首字</p>
         </div>
-        <div class="field" style="margin-top:14px">
+        <div class="field">
           <label for="n">名字</label>
-          <input id="n" class="input" placeholder="例如 小乐">
+          <input id="n" class="input" placeholder="例如 小乐" value="小乐">
         </div>
         <div class="field">
           <label for="b">生日</label>
@@ -216,12 +216,19 @@
           <span class="dot"></span>
           <span>添加第一个宝宝</span>
         </div>
-        <div class="brand" style="margin-bottom:24px">
-          <div class="mascot">👶</div>
-          <h1 style="font-size:22px">第一个宝宝</h1>
-          <p class="lead">先添加一个宝宝,就可以开始记录啦</p>
+        <div style="text-align:center;margin-bottom:16px">
+          <h1 style="font-size:22px;font-weight:800;color:var(--fg-strong);margin:0 0 4px">第一个宝宝</h1>
+          <p style="font-size:13px;color:var(--fg-soft);margin:0;font-weight:500">先添加一个宝宝,就可以开始记录啦</p>
         </div>
-        <div class="field" style="margin-top:14px">
+        <div style="display:flex;flex-direction:column;align-items:center;gap:10px;margin-bottom:14px">
+          <button class="avatar-pick" aria-label="设置头像">
+            <span class="ava-big">小</span>
+            <span class="cam">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </span>
+          </button>
+        </div>
+        <div class="field">
           <label for="n2">名字</label>
           <input id="n2" class="input" value="小乐">
         </div>
@@ -293,7 +300,7 @@
   <li><b>Brand mascot</b> — Login 用 🌱(成长的种子),Onboarding 用 👶(直接呼应主题)。emoji 替代矢量 logo,零成本零依赖</li>
   <li><b>错误展示</b> — 不用红字一行,改为 error-bg 红底圆角块 + ! 圆点 icon,信息密度高且可被聋哑用户/读屏察觉;同时把出错字段 border 染红</li>
   <li><b>性别用 segmented control</b> — 替代丑陋的 native <code>&lt;select&gt;</code>,3 个选项 × Tag-pill 风格,选中态用 surface-2 浮起 + soft 阴影。a11y 上 <code>role="radiogroup"</code> + <code>aria-checked</code></li>
-  <li><b>Onboarding 头像</b> — 用 dashed 内圈头像 + 整块 Card 作为"添加头像"按钮,可选(标注"之后也能改")</li>
+  <li><b>Onboarding 头像</b> — <b>大圆 avatar picker</b>(88px)居中,右下叠相机角标(28px mint 圆 + 3px 页面色描边)。<b>未上传时显示名字首字</b>作为 fallback,跟随名字输入实时变化。fallback 头像底色按 <code>hash(babyId) % 8</code> 分配,一旦分配跟随终生。<b>头像可选</b>(下方一行小字说明,无需独立 dashed Card)</li>
   <li><b>步骤指示</b> — Onboarding 顶部 step dot:当前步骤为胶囊形 mint,后续为小灰圆。本期只有 1 步,但保留结构以便后续多步扩展</li>
   <li><b>Footer link</b> — Login 底部一行"家里还没有账号? README →",承接 babyloom 自托管定位</li>
   <li><b>生日选择器</b> — <b>不用原生 <code>&lt;input type="date"&gt;</code></b>(桌面端浏览器外观各异、Animal Crossing 风不搭)。改成可点击的 date-row 触发 BottomSheet 滚轮选择器:三列 (年/月/日),中间高亮带,选中项加大加粗,上下渐隐 mask。年份范围 = 今年 - 10 ~ 今年(宝宝最大 10 岁,后续可配置)。a11y 上保留 <code>aria-label="选择生日"</code>,确认后回填到 date-row 文字</li>
