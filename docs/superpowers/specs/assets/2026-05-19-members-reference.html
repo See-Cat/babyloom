@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Family members mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5; --bg-disabled:#f0ece2;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --error:#e05a5a; --error-active:#c94444; --error-bg:#fbe4e4;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --avatar-yellow:#f5c31c; --avatar-peach:#e59266; --avatar-purple:#b77dee;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --shadow-soft-lg:0 8px 24px 0 rgba(61,52,40,.14);
+    --ease:cubic-bezier(.4,0,.2,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  .header{padding:16px 6px 8px 6px;display:flex;align-items:center;gap:8px}
+  .back{width:36px;height:36px;border:none;background:transparent;color:var(--fg);font-size:22px;cursor:pointer;border-radius:50%;display:grid;place-items:center;font-family:inherit;flex-shrink:0}
+  .back:active{background:rgba(0,0,0,.05)}
+  .ph-title{font-size:22px;font-weight:800;color:var(--fg-strong);line-height:1.15;flex:1}
+  .ph-title .sub{display:block;font-size:11px;font-weight:600;color:var(--fg-soft);margin-top:3px}
+  .save-btn{height:36px;padding:0 16px;border:none;background:var(--primary);color:#fff;font-weight:700;font-size:13px;border-radius:var(--radius-pill);cursor:pointer;box-shadow:0 4px 0 0 var(--primary-active);font-family:inherit;margin-right:12px;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .save-btn:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--primary-active);transition-duration:.08s}
+  .save-btn:disabled{opacity:.5;box-shadow:none;pointer-events:none}
+
+  .body{flex:1;overflow-y:auto;padding:0 16px 24px;display:flex;flex-direction:column;gap:12px;scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+
+  /* Member card */
+  .member-card{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--surface);border-radius:var(--radius-card);cursor:pointer}
+  .member-card.self{background:var(--primary-bg);border:1.5px solid color-mix(in srgb, var(--primary) 30%, transparent)}
+  .ava{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex-shrink:0;background:var(--avatar-pink)}
+  .ava-sm{width:32px;height:32px;font-size:13px}
+  .ava-md{width:40px;height:40px;font-size:15px}
+  .ava-lg{width:48px;height:48px;font-size:17px}
+  .ava.b{background:var(--avatar-blue)} .ava.m{background:var(--avatar-mint)} .ava.y{background:var(--avatar-yellow);color:#724a00}
+  .ava.peach{background:var(--avatar-peach)} .ava.purple{background:var(--avatar-purple)}
+  .member-card .info{flex:1;min-width:0}
+  .member-card .name-row{display:flex;align-items:center;gap:8px;margin:0 0 3px}
+  .member-card .nickname{font-size:15px;font-weight:800;color:var(--fg-strong);margin:0}
+  .member-card .meta{font-size:11.5px;color:var(--fg-soft);font-weight:600;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .role-badge{font-size:10px;font-weight:800;padding:2px 8px;border-radius:var(--radius-pill);letter-spacing:.3px}
+  .role-badge.owner{color:var(--primary-active);background:var(--primary-bg)}
+  .role-badge.editor{color:var(--fg-strong);background:var(--surface-2)}
+  .role-badge.viewer{color:var(--fg-soft);background:var(--bg-disabled)}
+  .chev{color:var(--fg-soft);font-size:14px;flex-shrink:0}
+  .add-row{display:flex;align-items:center;justify-content:center;gap:8px;padding:14px;background:var(--surface-2);border:2px dashed var(--border-light);border-radius:var(--radius-card);color:var(--fg-soft);font-weight:700;font-size:13.5px;cursor:pointer;font-family:inherit}
+  .add-row:active{background:var(--surface)}
+
+  /* Form inputs */
+  .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+  .field label{font-size:11px;color:var(--fg-soft);font-weight:700;letter-spacing:.3px;text-transform:uppercase;padding-left:4px}
+  .field .hint{font-size:11px;color:var(--fg-soft);font-weight:500;padding-left:4px;line-height:1.45}
+  .input{display:block;width:100%;height:44px;padding:0 16px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-sm);font-family:inherit;font-size:14px;color:var(--fg);box-shadow:var(--shadow-soft-sm);transition:border-color .25s var(--ease),box-shadow .25s var(--ease);outline:none}
+  .input::placeholder{color:var(--fg-disabled)}
+  .input:focus,.input.focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)}
+  .input.error{border-color:var(--error);box-shadow:0 0 0 3px rgba(224,90,90,.22),var(--shadow-soft-sm)}
+
+  /* Segmented control (role picker) */
+  .segmented{display:flex;background:var(--surface);padding:4px;border-radius:var(--radius-pill);gap:4px}
+  .segmented .seg{flex:1;height:36px;border:none;background:transparent;border-radius:var(--radius-pill);font-family:inherit;font-size:13px;font-weight:700;color:var(--fg-soft);cursor:pointer;transition:background .2s,color .2s;display:flex;align-items:center;justify-content:center;gap:6px}
+  .segmented .seg.active{background:var(--surface-2);color:var(--fg);box-shadow:var(--shadow-soft-sm)}
+  .seg-detail{font-size:11px;color:var(--fg-soft);padding:8px 12px;line-height:1.55}
+
+  .err-msg{display:flex;align-items:center;gap:6px;background:var(--error-bg);color:var(--error-active);border-radius:var(--radius-sm);padding:10px 14px;font-size:12.5px;font-weight:600;margin:0 0 12px}
+  .err-msg::before{content:'!';width:16px;height:16px;border-radius:50%;background:var(--error);color:#fff;display:grid;place-items:center;font-weight:800;font-size:11px;flex-shrink:0}
+
+  /* Avatar picker */
+  .avatar-pick{position:relative;width:88px;height:88px;border:none;background:transparent;cursor:pointer;padding:0;font-family:inherit}
+  .ava-big{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:800;font-size:34px;background:var(--avatar-peach)}
+  .ava-big.empty{background:var(--bg-disabled);color:var(--fg-disabled);font-size:36px;font-weight:400}
+  .avatar-pick .cam{position:absolute;right:0;bottom:0;width:28px;height:28px;border-radius:50%;background:var(--primary);display:grid;place-items:center;box-shadow:0 0 0 3px var(--bg)}
+  .avatar-pick:active .ava-big{transform:scale(.96);transition:transform .15s var(--ease)}
+
+  /* ActionSheet */
+  .scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);z-index:10}
+  .action-sheet{position:absolute;left:12px;right:12px;bottom:12px;z-index:20}
+  .action-sheet .group{background:var(--surface-2);border-radius:var(--radius-base);overflow:hidden;box-shadow:var(--shadow-soft-lg)}
+  .action-sheet .item{display:block;width:100%;padding:16px 18px;font-size:14.5px;font-weight:700;color:var(--fg);background:transparent;border:none;border-bottom:1px solid var(--border-light);cursor:pointer;text-align:center;font-family:inherit;transition:background .15s}
+  .action-sheet .item:last-child{border-bottom:none}
+  .action-sheet .item:active{background:rgba(0,0,0,.05)}
+  .action-sheet .item.destructive{color:var(--error)}
+  .action-sheet .cancel-block{margin-top:8px;background:var(--surface-2);border-radius:var(--radius-base);box-shadow:var(--shadow-soft-lg)}
+  .action-sheet .cancel-block button{display:block;width:100%;padding:16px 18px;font-size:14.5px;font-weight:800;color:var(--fg);background:transparent;border:none;cursor:pointer;text-align:center;font-family:inherit}
+  .action-sheet .cancel-block button:active{background:rgba(0,0,0,.04)}
+  .sheet-title{padding:12px 18px;text-align:center;font-size:11px;color:var(--fg-soft);font-weight:700;background:var(--surface-2);border-bottom:1px solid var(--border-light);letter-spacing:.3px}
+</style>
+</head>
+<body>
+
+<h2>家庭成员管理 + 添加成员</h2>
+<p class="subtitle">三屏:成员列表 / 添加成员表单 / 成员操作 ActionSheet · 全部 owner-only</p>
+
+<div class="phones">
+
+  <!-- Members list -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back" aria-label="返回">‹</button>
+        <div class="ph-title">家庭成员<span class="sub">4 人</span></div>
+      </div>
+      <div class="body">
+        <div class="member-card self">
+          <div class="ava ava-lg peach">妈</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">妈妈</p>
+              <span class="role-badge owner">主理人</span>
+            </div>
+            <p class="meta">@mama · 你自己</p>
+          </div>
+        </div>
+
+        <div class="member-card">
+          <div class="ava ava-lg b">爸</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">爸爸</p>
+              <span class="role-badge editor">编辑成员</span>
+            </div>
+            <p class="meta">@baba · 加入 2024 年 8 月</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="member-card">
+          <div class="ava ava-lg y">奶</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">奶奶</p>
+              <span class="role-badge editor">编辑成员</span>
+            </div>
+            <p class="meta">@nainai · 加入 2024 年 9 月</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <div class="member-card">
+          <div class="ava ava-lg purple">外</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">外婆</p>
+              <span class="role-badge viewer">仅查看</span>
+            </div>
+            <p class="meta">@waipo · 加入 2025 年 1 月</p>
+          </div>
+          <span class="chev">›</span>
+        </div>
+
+        <button class="add-row">＋ 添加成员</button>
+
+        <div style="margin-top:6px;padding:12px 14px;background:var(--surface-2);border-radius:var(--radius-base);font-size:12px;color:var(--fg-soft);line-height:1.55">
+          家庭成员可以登录、记录或浏览。点击卡片管理(改密码 / 切换角色 / 移除)。
+        </div>
+      </div>
+    </div>
+    <div class="caption">① 成员列表(owner 视角)</div>
+  </div>
+
+  <!-- Add member form -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <button class="back" aria-label="返回">‹</button>
+        <div class="ph-title">添加成员</div>
+        <button class="save-btn">保存</button>
+      </div>
+      <div class="body">
+        <div style="display:flex;flex-direction:column;align-items:center;padding:18px 16px 8px;gap:10px">
+          <button class="avatar-pick" aria-label="设置头像">
+            <span class="ava-big">爷</span>
+            <span class="cam">
+              <svg viewBox="0 0 24 24" width="14" height="14" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            </span>
+          </button>
+          <p style="font-size:11px;color:var(--fg-soft);margin:0;text-align:center;font-weight:500;line-height:1.55">头像可选 · 不上传时自动用昵称首字</p>
+        </div>
+
+        <div class="field">
+          <label for="nickname">昵称</label>
+          <input id="nickname" class="input" placeholder="例如:爷爷" value="爷爷">
+          <span class="hint">家庭里显示的称呼,会出现在记录的"作者"位置</span>
+        </div>
+
+        <div class="field">
+          <label for="username">用户名</label>
+          <input id="username" class="input" placeholder="字母 / 数字,4-20 位">
+          <span class="hint">用于登录,不可重复;之后可在成员管理里改</span>
+        </div>
+
+        <div class="field">
+          <label for="password">初始密码</label>
+          <input id="password" type="password" class="input focus" placeholder="至少 8 位">
+          <span class="hint">告诉家人这个密码,他们登录后可自己改</span>
+        </div>
+
+        <div class="field">
+          <label>角色</label>
+          <div class="segmented" role="radiogroup">
+            <button class="seg active" role="radio" aria-checked="true">编辑成员</button>
+            <button class="seg" role="radio" aria-checked="false">仅查看</button>
+          </div>
+          <div class="seg-detail">
+            <b style="color:var(--fg)">编辑成员</b>:可以新建/编辑自己的记录,看全部内容,不能管理家庭设置
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">② 添加成员表单</div>
+  </div>
+
+  <!-- Member action sheet -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header" style="filter:brightness(.7)">
+        <button class="back">‹</button>
+        <div class="ph-title">家庭成员<span class="sub">4 人</span></div>
+      </div>
+      <div class="body" style="filter:brightness(.7)">
+        <div class="member-card" style="background:var(--bg-disabled)">
+          <div class="ava ava-lg y">奶</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">奶奶</p>
+              <span class="role-badge editor">编辑成员</span>
+            </div>
+            <p class="meta">@nainai · 加入 2024 年 9 月</p>
+          </div>
+        </div>
+        <div class="member-card">
+          <div class="ava ava-lg purple">外</div>
+          <div class="info">
+            <div class="name-row">
+              <p class="nickname">外婆</p>
+              <span class="role-badge viewer">仅查看</span>
+            </div>
+            <p class="meta">@waipo · 加入 2025 年 1 月</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim"></div>
+      <div class="action-sheet">
+        <div class="group">
+          <div class="sheet-title">奶奶 · @nainai</div>
+          <button class="item">改名 / 改头像</button>
+          <button class="item">重置密码</button>
+          <button class="item">切换为「仅查看」</button>
+          <button class="item destructive">移除成员</button>
+        </div>
+        <div class="cancel-block">
+          <button>取消</button>
+        </div>
+      </div>
+    </div>
+    <div class="caption">③ 点成员卡片 · 管理 ActionSheet</div>
+  </div>
+
+</div>
+
+<div style="max-width:1000px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>整页 owner-only</b> — 路由层做权限判断,editor / viewer 完全访问不到这个页面</li>
+
+  <li style="margin-top:8px"><b>成员列表(①)</b>:
+    <ul>
+      <li>"你自己"用 primary-bg 浅薄荷底 + mint 半透明边突出(类比 Profile 的"正在记录"卡)。<b>自己卡片不带 chevron</b>(无可执行管理操作 — 改自己信息走 <code>/profile/me</code>)</li>
+      <li>每张卡:头像 + 昵称 + role badge + meta(<code>@用户名 · 加入年月</code>)+ chevron</li>
+      <li><b>三种 role badge</b>:owner = "主理人"(mint-bg)/ editor = "编辑成员"(surface-2 灰)/ viewer = "仅查看"(灰)。同 Me hub 的 role 表现一致</li>
+      <li>底部 dashed "+ 添加成员"卡跳 <code>/profile/members/new</code></li>
+      <li>底部 hint 文案说明"点击卡片管理",承接上面的 chevron 提示</li>
+    </ul>
+  </li>
+
+  <li style="margin-top:8px"><b>添加成员表单(②)</b>:
+    <ul>
+      <li><b>顶部 avatar picker</b>:88px 大圆,点击打开 ActionSheet "拍照 / 从相册选择 / 移除头像"。右下叠相机 SVG 角标(28px mint 圆 + 3px 页面色描边,营造"按钮叠在头像上"的浮起感)</li>
+      <li><b>头像非必填</b>,未上传时显示<b>昵称首字</b>作为 fallback。字符随昵称输入<b>实时变化</b>(打字时直接预览效果)。昵称为空时显示占位 ?</li>
+      <li>fallback 头像底色:首次保存成员时按 <code>hash(userId) % 8</code> 分配,落到 8 色头像板某一色;一旦分配后<b>跟随该用户终生不变</b></li>
+      <li>顶部不再放装饰 emoji,因为 avatar 本身已经承担了"视觉锚点"角色</li>
+      <li>有顶栏(因为是 owner 在已登录状态里走的子页,与 Login / Onboarding 的沉浸态不同)</li>
+      <li><b>顶栏右上"保存"</b>(空字段时 disabled),沿用 EntryComposer 模式 — 避开键盘遮挡。返回(<code>‹</code>)= 取消,未保存时弹 ActionSheet 二次确认</li>
+      <li><b>4 个字段 + hint</b>:每个 label 下有一行 hint(<code>--text-xs --fg-soft</code>)解释填什么/为什么,降低首次使用心理门槛</li>
+      <li><b>角色 segmented control</b>(两选项):编辑成员 / 仅查看。<b>"主理人"不在可选范围</b>(owner 唯一,迁移所有权另走流程)。下方 seg-detail 区域随选择变化,解释当前角色权限</li>
+      <li>用户名校验:实时校验长度 / 字符集 / 不重复;失败时 input 染红 + 下方 err-msg 块</li>
+      <li>密码字段默认为 focus 状态(说明"键盘焦点),hint 提示"告诉家人后他们登录后可自己改"</li>
+    </ul>
+  </li>
+
+  <li style="margin-top:8px"><b>成员管理 ActionSheet(③)</b>:
+    <ul>
+      <li>点非自己的成员卡 → ActionSheet 弹起。顶部 sheet-title 小灰文字显示成员标识(<code>奶奶 · @nainai</code>),提供操作目标的强反馈</li>
+      <li><b>4 项操作</b>:改名/改头像 · 重置密码 · 切换角色 · 移除成员(destructive)</li>
+      <li><b>"切换角色"文案动态</b>:editor 显示"切换为「仅查看」",viewer 显示"切换为「编辑成员」"。无需多级菜单</li>
+      <li>重置密码 / 改名 → 跳出独立的小 Modal 表单(各 1 个输入框)。<b>不在 ActionSheet 内放表单</b>(违反 ActionSheet 的"快速选择"语义)</li>
+      <li><b>移除成员二次确认 Modal</b>(沿用 §4.7):"确认移除 N 名成员? 该成员将无法登录,但他们已记录的内容会保留。",destructive 按钮在右</li>
+    </ul>
+  </li>
+
+  <li style="margin-top:8px"><b>"主理人"特例</b>:
+    <ul>
+      <li>主理人(owner)自己的卡片不显示 chevron,无 ActionSheet</li>
+      <li>本期不支持迁移主理人角色(留 P6+,涉及到所有权迁移的复杂度)</li>
+      <li>主理人想改自己的名字 / 密码 / 头像 → 走 <code>/profile/me</code></li>
+    </ul>
+  </li>
+</ul>
+</div>
+
+</body>
+</html>

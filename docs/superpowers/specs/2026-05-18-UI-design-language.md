@@ -783,6 +783,35 @@ Wheels 区域:
 - 屏幕阅读器:朗读"2024 年 8 月 1 日,已选中,共 11 项,当前第 5 项"
 - reduced-motion:Sheet 进场 300ms → 1ms;滚轮 snap 跳跃式不平滑;无振动
 
+### 4.16 AvatarPicker(头像设置器)
+
+用于"添加宝宝"、"添加成员"、"编辑我的资料"等任何需要可选上传头像的场景。
+
+```
+容器:        <button type="button">
+形状:        88px 圆
+背景:        avatar 色板某一色(按 hash(id) % 8 分配,一旦分配跟随终生)
+fallback:    昵称首字(中文 1 字 / 英文首字母大写),字号 34px,粗体白字
+            未输入昵称时显示 ? 占位
+camera 角标: 右下叠 28×28 mint 圆,内含 14×14 相机 SVG(白色 stroke)
+            外圈 3px 页面色(--color-bg)描边,营造"浮起按钮叠在头像上"的层次
+点击:        打开 ActionSheet:[拍照] [从相册选择] [移除头像](已上传时显示)[取消]
+:active:     头像本体 scale(.96) 反馈,150ms
+下方:        可选小字 hint("头像可选 · 不上传时自动用昵称首字"),--text-xs --fg-soft
+            位于头像下方 10px gap,文案居中
+```
+
+**关键规则**:
+
+- **头像永远非必填**:用户跳过即用 fallback 首字
+- **fallback 首字实时跟随昵称输入变化**:打字时立即预览,提供反馈
+- **fallback 底色一旦分配不变**:按 `hash(userId | babyId) % 8` 算,即使后来换昵称,色卡保持一致(用户的视觉识别锚点)
+- **上传后 fallback 隐藏**:`<img>` 元素覆盖在字符之上
+- 上传规格:JPEG / PNG / WebP,最大 5MB,裁剪到正方,缩放到 256×256 服务端存储
+- 上传失败时显示 Toast(error variant)+ 头像保持上一状态
+
+实施细节见 `assets/2026-05-19-members-reference.html` 第 2 屏和 `assets/2026-05-19-login-onboarding-reference.html` 第 3 屏。
+
 ---
 
 ## 5. 动效规范
@@ -1072,6 +1101,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **Gallery 画廊 + 全屏 viewer** | [`assets/2026-05-19-gallery-reference.html`](./assets/2026-05-19-gallery-reference.html) | 3 列正方网格 / 月分组 sticky / 视频角标 / 空态 / 全屏 viewer |
 | **Calendar 日历** | [`assets/2026-05-19-calendar-reference.html`](./assets/2026-05-19-calendar-reference.html) | 月份格子 + 当日 mint 点 + 选中日预览 + 当日年龄块 + 年月 picker |
 | **Profile / Me 设置** | [`assets/2026-05-19-profile-reference.html`](./assets/2026-05-19-profile-reference.html) | Me hub / 宝宝管理(切换中) / 回收站(owner) / 批量删除 / 永久删除 Modal |
+| **家庭成员管理 + 添加** | [`assets/2026-05-19-members-reference.html`](./assets/2026-05-19-members-reference.html) | 成员列表(owner-only)/ 添加成员表单(含 AvatarPicker)/ 成员操作 ActionSheet |
 
 实施流程:
 
