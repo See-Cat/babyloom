@@ -1019,6 +1019,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **EntryComposer 新记录** | [`assets/2026-05-19-entry-composer-reference.html`](./assets/2026-05-19-entry-composer-reference.html) | 空态 / 填写中 / 时间胶囊 DateTimePicker / 里程碑全集 BottomSheet |
 | **Entry 详情** | [`assets/2026-05-19-entry-detail-reference.html`](./assets/2026-05-19-entry-detail-reference.html) | 带媒体 carousel / 纯文字 / ⋯ ActionSheet(编辑 + 移到回收站) |
 | **Gallery 画廊 + 全屏 viewer** | [`assets/2026-05-19-gallery-reference.html`](./assets/2026-05-19-gallery-reference.html) | 3 列正方网格 / 月分组 sticky / 视频角标 / 空态 / 全屏 viewer |
+| **Calendar 日历** | [`assets/2026-05-19-calendar-reference.html`](./assets/2026-05-19-calendar-reference.html) | 月份格子 + 当日 mint 点 + 选中日预览 + 当日年龄块 + 年月 picker |
 
 实施流程:
 
