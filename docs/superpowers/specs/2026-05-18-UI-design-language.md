@@ -406,10 +406,15 @@ a11y:
 边框:        2px solid --color-border-light
 阴影:        --shadow-soft-sm
 高度(Input): 40px;  padding 0 14px
-:focus:      outline: 3px solid var(--color-focus); outline-offset: 0;
-             border-color: var(--color-focus)
+:focus:      border-color: var(--color-focus);
+             box-shadow: 0 0 0 3px rgba(245,195,28,.25), var(--shadow-soft-sm);
+             outline: none
+             ⚠️ 不要用 `outline: 3px solid var(--color-focus)` —— 2px border 与 3px outline 同色堆叠
+             会形成 5px 实色黄带,过于笨重。改用半透明黄晕。
 :disabled:   opacity 0.5; background: var(--color-bg-disabled)
 error 态:    border-color: var(--color-error)
+error + focus: border-color: var(--color-error);
+             box-shadow: 0 0 0 3px rgba(224,90,90,.22), var(--shadow-soft-sm)
 ```
 
 Textarea:`min-height: 100px`,`resize: none`,通过 JS 监听 input 事件 auto-resize 到最多 6 行;**不允许显式 resize 手柄**(会破坏视觉一致)。

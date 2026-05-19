@@ -101,8 +101,9 @@
   /* === Input === */
   .input{display:block;width:240px;height:40px;padding:0 14px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-sm);font-family:inherit;font-size:var(--text-base);color:var(--fg);box-shadow:var(--shadow-soft-sm);transition:border-color var(--duration-base) var(--ease),box-shadow var(--duration-base) var(--ease);outline:none}
   .input::placeholder{color:var(--fg-disabled)}
-  .input:focus,.input.focus{border-color:var(--focus);outline:3px solid var(--focus);outline-offset:0}
+  .input:focus,.input.focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)}
   .input.error{border-color:var(--error)}
+  .input.error:focus,.input.error.focus{border-color:var(--error);box-shadow:0 0 0 3px rgba(224,90,90,.22),var(--shadow-soft-sm)}
   .input:disabled,.input.disabled{opacity:.5;background:var(--bg-disabled);cursor:not-allowed}
   .input-wrap{position:relative;display:inline-block}
   .input-wrap .leading{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--fg-soft);font-size:var(--text-base);pointer-events:none}
@@ -111,7 +112,7 @@
   .input-wrap.with-trailing .input{padding-right:36px}
   .input-error-msg{display:block;margin-top:6px;font-size:var(--text-xs);color:var(--error-active);font-weight:var(--font-semibold)}
   .textarea{width:240px;min-height:100px;padding:12px 14px;background:var(--surface-2);border:2px solid var(--border-light);border-radius:var(--radius-card);font-family:inherit;font-size:var(--text-base);color:var(--fg);box-shadow:var(--shadow-soft-sm);resize:none;line-height:var(--leading-base);outline:none}
-  .textarea:focus{border-color:var(--focus);outline:3px solid var(--focus)}
+  .textarea:focus{border-color:var(--focus);box-shadow:0 0 0 3px rgba(245,195,28,.25),var(--shadow-soft-sm)}
 
   /* === Switch === */
   .switch{position:relative;width:40px;height:24px;border-radius:var(--radius-pill);background:var(--border-light);cursor:pointer;transition:background var(--duration-base) var(--ease);border:none;padding:0;display:inline-block;flex-shrink:0}
