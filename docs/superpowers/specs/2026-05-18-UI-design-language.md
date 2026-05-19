@@ -306,7 +306,8 @@ babyloom 是手机为主的家庭 PWA。**所有 `:hover` 状态必须用 `@medi
 | Modal / BottomSheet / ActionSheet 容器 | `--shadow-soft-lg` | 浮起感 |
 | Toast | `--shadow-soft-md` | |
 | Input / Textarea / Select | `--shadow-soft-sm` | 极弱深度 |
-| Input(:focus) | `--shadow-soft-sm` + `outline: 3px solid var(--color-focus)` | 黄色聚焦环 |
+| Input(:focus) | `--shadow-soft-sm` + 半透明黄晕 `0 0 0 3px rgba(245,195,28,.25)` | 软光晕焦点环 |
+| DateRow(DatePicker 触发器) | `--shadow-soft-sm` | 同 Input |
 | Dashed Card(空态) | ❌ 无 | 改用 `border: 2px dashed var(--color-border-light)` |
 
 ---
@@ -418,6 +419,8 @@ error + focus: border-color: var(--color-error);
 ```
 
 Textarea:`min-height: 100px`,`resize: none`,通过 JS 监听 input 事件 auto-resize 到最多 6 行;**不允许显式 resize 手柄**(会破坏视觉一致)。
+
+**禁止使用原生 `<input type="date">` / `<input type="datetime-local">` / `<input type="time">`**:桌面端浏览器渲染各异、与 Animal Crossing 视觉脱节。日期/时间字段统一用 §4.15 DatePicker。
 
 ### 4.4 Switch
 
@@ -632,6 +635,103 @@ iOS 风菜单,自下而上,用于**对当前对象的多个操作**(编辑 / 复
 - Body 顶部直接接 Header 内容(无强分割线)
 - Body 滚动到底部时 Tabbar 顶部的 1px 分隔线**不强化**(`--color-border-light` 即可)
 - 标题:`--text-2xl` 字重 `--font-bold`,副标 `--text-xs` `--font-semibold` 色 `--color-fg-soft`
+
+### 4.15 DatePicker(复合组件)
+
+替代原生 `<input type="date">`。由两部分组成:**触发器(DateRow)** + **滚轮 BottomSheet**。
+
+#### 4.15.1 DateRow(触发器)
+
+视觉与 Input 相同,但语义是按钮:
+
+```
+元素:        <button type="button">
+背景:        --color-surface-2 (#fdfdf5)
+高度:        44px(与 Input 高一致)
+内边距:      0 16px
+边框:        2px solid --color-border-light
+圆角:        --radius-sm (16px)
+阴影:        --shadow-soft-sm
+左侧文字:    已选日期 "2024 年 8 月 1 日"(--color-fg);
+            未选时 "选择生日"(--color-fg-disabled)
+右侧:        chevron `›`(--color-fg-soft, --text-sm)
+:focus:      border-color: var(--color-focus);
+             box-shadow: 0 0 0 3px rgba(245,195,28,.25), var(--shadow-soft-sm)
+:active:     无 transform(它是触发器,不是按压物件);仅触发 Sheet 弹起
+:disabled:   opacity 0.5; cursor: not-allowed
+a11y:        aria-haspopup="dialog";打开 Sheet 后 aria-expanded="true"
+```
+
+#### 4.15.2 滚轮 BottomSheet
+
+iOS 风三列滚轮,装在 BottomSheet 容器里(继承 §4.12 全部样式)。
+
+```
+Sheet header(替代标题位):
+  ┌─ 取消(左,--color-fg-soft,--font-semibold,--text-md)
+  ├─ 选择生日(中,--font-bold,--color-fg-strong,--text-md)
+  └─ 确定(右,--color-primary-active,--font-bold,--text-md)
+  padding: 0 20px 14px
+
+Wheels 区域:
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr  ← 年列略宽(4 位 vs 2 位)
+  height: 200px
+  padding: 0 16px
+  position: relative
+
+中心高亮带:
+  ::before 伪元素;left/right 16,top 50% translateY(-50%)
+  height: 40px(= 单项高度)
+  background: --color-surface
+  border-radius: --radius-sm
+  pointer-events: none; z-index: 0
+
+每列 wheel:
+  position: relative; height: 100%; overflow: hidden; z-index: 1
+  mask: linear-gradient(180deg, transparent, #000 35%, #000 65%, transparent)
+  内部 .wheel-track 通过 transform: translateY(-N * 40px) 移动定位
+
+每个 .wheel-item:
+  height: 40px(必须 = 高亮带高度)
+  display: flex; align-items: center; justify-content: center
+  font-variant-numeric: tabular-nums  ← 等宽数字,避免抖动
+  默认: --color-fg-soft, --font-semibold, --text-base
+  .near(中心 ±1): --color-fg, --font-semibold
+  .selected(中心): --color-fg-strong, --font-bold, --text-lg(16px)
+  transition: color .2s, font-weight .2s
+```
+
+#### 4.15.3 数据规则
+
+| 列 | 范围 | 备注 |
+|---|---|---|
+| 年 | `今年 - 10` ~ `今年` | 宝宝最大 10 岁;若需扩展放配置项,**不要无限滚动** |
+| 月 | 1 ~ 12 | |
+| 日 | 1 ~ `daysInMonth(年,月)` | 切换年/月后自动夹紧(若日>当月最大,落到最大日) |
+
+未来日期(今年今月今日之后)在年/月/日列里**显示但不可选**(灰色 + `pointer-events: none`),或者在确定时校验报错。MVP 选简单的"显示+确认时校验"。
+
+#### 4.15.4 交互
+
+```
+打开:        点 DateRow → Sheet 进场(§4.12 标准 translateY 100→0 300ms)
+                      → 初始位置滚到当前选中值(若 DateRow 无值,默认今天 - 365 天)
+滚动:        touch:swipe 上下;鼠标:滚轮也行
+惯性:        松手后惯性滑动 + 吸附到最近的 40px 网格(snap-to-grid)
+振动反馈:   每滚过一个 item 触发 navigator.vibrate(8)(若可用);桌面无效果
+取消:        关闭 Sheet,不修改 DateRow
+确定:        关闭 Sheet,把三列选中值写回 DateRow 文字 + 触发 onChange
+关闭手势:   下拉 handle 超过 80px 松手 → 视作取消;点遮罩 → 视作取消;ESC → 视作取消
+```
+
+#### 4.15.5 a11y / reduced-motion
+
+- Sheet 打开时焦点落到"确定"按钮
+- 滚轮列加 `role="listbox"`,每项 `role="option" aria-selected`
+- 键盘:↑/↓ 切换聚焦列的值;Tab 切换到下一列
+- 屏幕阅读器:朗读"2024 年 8 月 1 日,已选中,共 11 项,当前第 5 项"
+- reduced-motion:Sheet 进场 300ms → 1ms;滚轮 snap 跳跃式不平滑;无振动
 
 ---
 
@@ -872,6 +972,7 @@ ken-burns、loading 斜纹、stripe 动画必须**完全停止**。
 - ❌ 用 `outline: none` 移除焦点环 → 重新设计焦点环,不要移除
 - ❌ 用 `<div role="button">` → 用真正的 `<button>`,获得 a11y / 键盘默认行为
 - ❌ Loading 按钮还允许点击 → 必须 `pointer-events: none` + `aria-busy`
+- ❌ 用 `<input type="date">` / `<select>` 等原生 form control → 桌面/iOS/Android 渲染各异,与 AC 风脱节。日期用 §4.15 DatePicker,枚举用 segmented control 或 BottomSheet
 
 ---
 
@@ -913,6 +1014,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **组件状态参考** | [`assets/2026-05-18-components-reference.html`](./assets/2026-05-18-components-reference.html) | 全部 14 类基础组件 × 全部状态(default / focus / active / disabled / loading / error / empty),Tokens 快查 |
 | **弹窗交互预览** | [`assets/2026-05-18-popups-reference.html`](./assets/2026-05-18-popups-reference.html) | Modal / BottomSheet / ActionSheet 三种弹窗的实际渲染与进退场动画 |
 | **Timeline 页 + 动效** | [`assets/2026-05-18-timeline-motion-reference.html`](./assets/2026-05-18-timeline-motion-reference.html) | Timeline 完整页 + 进场 / 按压 / Tabbar 切换 / Hero ken-burns / reduced-motion 模拟 |
+| **Login + Onboarding** | [`assets/2026-05-19-login-onboarding-reference.html`](./assets/2026-05-19-login-onboarding-reference.html) | Pre-auth 沉浸态 / 错误展示 / 性别 segmented / DatePicker 滚轮 BottomSheet |
 
 实施流程:
 
