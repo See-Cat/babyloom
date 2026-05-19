@@ -1017,6 +1017,7 @@ P5 实施计划如果已经按旧 spec 落了部分代码,这次纠偏会涉及:
 | **Login + Onboarding** | [`assets/2026-05-19-login-onboarding-reference.html`](./assets/2026-05-19-login-onboarding-reference.html) | Pre-auth 沉浸态 / 错误展示 / 性别 segmented / DatePicker 滚轮 BottomSheet |
 | **EntryComposer 新记录** | [`assets/2026-05-19-entry-composer-reference.html`](./assets/2026-05-19-entry-composer-reference.html) | 空态 / 填写中 / 时间胶囊 DateTimePicker / 里程碑全集 BottomSheet |
 | **Entry 详情** | [`assets/2026-05-19-entry-detail-reference.html`](./assets/2026-05-19-entry-detail-reference.html) | 带媒体 carousel / 纯文字 / ⋯ ActionSheet(编辑 + 移到回收站) |
+| **Gallery 画廊 + 全屏 viewer** | [`assets/2026-05-19-gallery-reference.html`](./assets/2026-05-19-gallery-reference.html) | 3 列正方网格 / 月分组 sticky / 视频角标 / 空态 / 全屏 viewer |
 
 实施流程:
 

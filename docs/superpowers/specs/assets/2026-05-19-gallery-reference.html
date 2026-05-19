@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Gallery mockup</title>
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14; --fg-disabled:#c4b89e;
+    --border:#aaa69d; --border-light:#e8e2d6;
+    --primary:#19c8b9; --primary-active:#13a89b; --primary-bg:#e6f9f6;
+    --warning:#f5c31c; --focus:#f5c31c;
+    --press:#bdaea0;
+    --avatar-pink:#f8a6b2; --avatar-blue:#889df0; --avatar-mint:#19c8b9;
+    --avatar-yellow:#f5c31c; --avatar-peach:#e59266;
+    --radius-sm:16px; --radius-base:18px; --radius-card:20px; --radius-lg:24px; --radius-pill:999px;
+    --shadow-soft-sm:0 2px 4px 0 rgba(61,52,40,.06);
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-back:cubic-bezier(.34,1.56,.64,1);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);padding:32px;font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif;color:var(--fg);font-weight:500}
+  h2{font-size:18px;font-weight:800;color:var(--fg-strong);margin:0 0 4px}
+  .subtitle{font-size:12px;color:var(--fg-soft);margin:0 0 24px}
+  .phones{display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+  .phone-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .caption{font-size:12px;color:var(--fg-soft);font-weight:600}
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+
+  /* === Header === */
+  .header{padding:16px 18px 8px;display:flex;align-items:center;justify-content:space-between}
+  .ph-title{font-size:22px;font-weight:800;color:var(--fg-strong);line-height:1.15}
+  .ph-title .sub{display:block;font-size:11px;font-weight:600;color:var(--fg-soft);margin-top:3px}
+  .baby-pill{display:flex;align-items:center;gap:4px;padding:3px 10px 3px 3px;background:var(--surface-2);border-radius:999px;box-shadow:0 3px 0 0 var(--press);cursor:pointer;border:none;font-family:inherit}
+  .baby-pill:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--press)}
+  .baby-pill .caret{font-size:10px;color:var(--fg-soft)}
+  .ava{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;flex-shrink:0;background:var(--avatar-mint)}
+  .ava.b{background:var(--avatar-blue)} .ava.p{background:var(--avatar-pink)} .ava.y{background:var(--avatar-yellow);color:#724a00}
+
+  /* === Body === */
+  .body{flex:1;overflow-y:auto;padding:0 14px 14px;scrollbar-width:none}
+  .body::-webkit-scrollbar{display:none}
+
+  /* Year/month group */
+  .month-head{display:flex;align-items:baseline;gap:10px;padding:14px 4px 8px;position:sticky;top:0;background:var(--bg);z-index:2}
+  .month-head .ym{font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .month-head .count{font-size:11px;font-weight:700;color:var(--fg-soft)}
+
+  /* Grid */
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:10px}
+  .tile{position:relative;aspect-ratio:1;border-radius:var(--radius-sm);overflow:hidden;background:linear-gradient(135deg,#ffd6a8,#f8a6b2);cursor:pointer}
+  .tile.b{background:linear-gradient(135deg,#a8e6f5,#7cc4e8)}
+  .tile.g{background:linear-gradient(135deg,#c8f5d6,#7ce8a4)}
+  .tile.y{background:linear-gradient(135deg,#fff3b8,#ffd668)}
+  .tile.p{background:linear-gradient(135deg,#ffd0e0,#ff9eb5)}
+  .tile.m{background:linear-gradient(135deg,#b8eee7,#19c8b9)}
+  .tile:active{transform:scale(.97);transition:transform .12s var(--ease)}
+  /* Video badge */
+  .video-badge{position:absolute;right:6px;bottom:6px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:999px;display:inline-flex;align-items:center;gap:3px;backdrop-filter:blur(4px)}
+
+  /* === Tabbar === */
+  .ph-tabbar{height:64px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;border-top:1px solid var(--border-light);flex-shrink:0}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--fg-soft);font-weight:700;cursor:pointer;background:transparent;border:none;font-family:inherit}
+  .tab.active{color:var(--primary-active)}
+  .tab .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;transition:transform .35s var(--ease-back),background .25s,box-shadow .35s var(--ease-back),color .25s}
+  .tab.active .dot{background:var(--primary);color:#fff;transform:translateY(-6px);box-shadow:0 4px 0 0 var(--press)}
+
+  /* === Empty state === */
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;gap:8px}
+  .empty .icon{font-size:48px;margin-bottom:8px}
+  .empty .ttl{font-size:15px;font-weight:800;color:var(--fg-strong);margin:0}
+  .empty .sub{font-size:13px;color:var(--fg-soft);margin:0 0 12px;line-height:1.55;font-weight:500}
+  .empty .cta{display:inline-flex;align-items:center;gap:6px;padding:11px 22px;background:var(--primary);color:#fff;border-radius:999px;font-weight:700;font-size:13px;border:none;box-shadow:0 5px 0 0 var(--primary-active);font-family:inherit;cursor:pointer;transition:transform .12s var(--ease),box-shadow .12s var(--ease)}
+  .empty .cta:active{transform:translateY(4px);box-shadow:0 1px 0 0 var(--primary-active)}
+
+  /* === Fullscreen viewer === */
+  .viewer{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;z-index:20}
+  .viewer-head{position:absolute;top:0;left:0;right:0;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;z-index:2;background:linear-gradient(180deg,rgba(0,0,0,.55),transparent)}
+  .viewer-head .meta{color:#fff;font-size:12px;font-weight:600;line-height:1.4;flex:1}
+  .viewer-head .meta b{font-weight:800;display:block;font-size:13px}
+  .viewer-head .meta .when{opacity:.75;font-size:11px;font-weight:600}
+  .viewer-btn{width:36px;height:36px;background:rgba(0,0,0,.4);backdrop-filter:blur(8px);border:none;color:#fff;font-size:18px;border-radius:50%;cursor:pointer;display:grid;place-items:center;font-family:inherit;font-weight:700}
+  .viewer-stage{flex:1;display:grid;place-items:center;position:relative}
+  .viewer-stage .img{width:100%;aspect-ratio:4/5;background:linear-gradient(135deg,#ffd6a8,#f8a6b2)}
+  .viewer-counter{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.45);color:#fff;font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;backdrop-filter:blur(8px);z-index:2}
+  .viewer-thumbs{display:flex;gap:6px;padding:14px 16px 24px;overflow-x:auto;background:rgba(0,0,0,.4);scrollbar-width:none}
+  .viewer-thumbs::-webkit-scrollbar{display:none}
+  .viewer-thumb{flex-shrink:0;width:44px;height:44px;border-radius:8px;border:2px solid transparent;background:linear-gradient(135deg,#ffd6a8,#f8a6b2);cursor:pointer;opacity:.5;transition:opacity .2s, border-color .2s}
+  .viewer-thumb.active{opacity:1;border-color:#fff}
+  .viewer-thumb.b{background:linear-gradient(135deg,#a8e6f5,#7cc4e8)}
+  .viewer-thumb.g{background:linear-gradient(135deg,#c8f5d6,#7ce8a4)}
+</style>
+</head>
+<body>
+
+<h2>Gallery 画廊 + 全屏 viewer</h2>
+<p class="subtitle">三个状态:有内容(月分组) / 空态 / 点开全屏 viewer</p>
+
+<div class="phones">
+
+  <!-- with content -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <div class="ph-title">画廊<span class="sub">小乐 · 共 56 张</span></div>
+        <button class="baby-pill"><div class="ava">乐</div><div class="caret">▾</div></button>
+      </div>
+      <div class="body">
+        <div class="month-head">
+          <span class="ym">2025 年 5 月</span>
+          <span class="count">23 张</span>
+        </div>
+        <div class="grid">
+          <div class="tile"></div>
+          <div class="tile b"></div>
+          <div class="tile g"></div>
+          <div class="tile y"><span class="video-badge">▶ 0:18</span></div>
+          <div class="tile p"></div>
+          <div class="tile"></div>
+          <div class="tile m"></div>
+          <div class="tile b"></div>
+          <div class="tile">
+            <span class="video-badge">▶ 1:04</span>
+          </div>
+        </div>
+
+        <div class="month-head">
+          <span class="ym">2025 年 4 月</span>
+          <span class="count">18 张</span>
+        </div>
+        <div class="grid">
+          <div class="tile g"></div>
+          <div class="tile"></div>
+          <div class="tile p"></div>
+          <div class="tile b"></div>
+          <div class="tile y"></div>
+          <div class="tile m"></div>
+        </div>
+
+        <div class="month-head">
+          <span class="ym">2025 年 3 月</span>
+          <span class="count">15 张</span>
+        </div>
+        <div class="grid">
+          <div class="tile p"></div>
+          <div class="tile g"></div>
+          <div class="tile"></div>
+        </div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab active"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">① 默认 · 月分组 + 3 列</div>
+  </div>
+
+  <!-- empty -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="header">
+        <div class="ph-title">画廊<span class="sub">小乐 · 还没有照片</span></div>
+        <button class="baby-pill"><div class="ava">乐</div><div class="caret">▾</div></button>
+      </div>
+      <div class="empty">
+        <div class="icon">📸</div>
+        <p class="ttl">还没有照片</p>
+        <p class="sub">在记录里上传图片或视频,这里就会出现</p>
+        <button class="cta">＋ 新建一条记录</button>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab active"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">② 空态</div>
+  </div>
+
+  <!-- viewer -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="viewer">
+        <div class="viewer-head">
+          <button class="viewer-btn" aria-label="关闭">✕</button>
+          <div class="meta" style="margin:0 12px">
+            <b>第一次自己端着小碗吃完一整碗粥</b>
+            <span class="when">妈妈 · 5 月 19 日 14:32</span>
+          </div>
+          <button class="viewer-btn" aria-label="更多">⋯</button>
+        </div>
+        <span class="viewer-counter">2 / 3</span>
+        <div class="viewer-stage">
+          <div class="img" style="background:linear-gradient(135deg,#a8e6f5,#7cc4e8);width:100%;aspect-ratio:4/5"></div>
+        </div>
+        <div class="viewer-thumbs">
+          <div class="viewer-thumb"></div>
+          <div class="viewer-thumb b active"></div>
+          <div class="viewer-thumb g"></div>
+        </div>
+      </div>
+    </div>
+    <div class="caption">③ 全屏 viewer(Gallery + Entry 详情共用)</div>
+  </div>
+
+</div>
+
+<div style="max-width:900px;margin:40px auto 0;background:var(--surface-2);border-radius:20px;padding:18px 22px;font-size:13px;line-height:1.75;color:var(--fg)">
+<b style="color:var(--fg-strong)">设计要点</b>
+<ul style="margin:8px 0 0;padding-left:18px">
+  <li><b>顶栏统一</b> — 与 Timeline 一致:标题(画廊)+ 副标(月龄/统计)+ 右侧 baby-pill。<b>移除原有的 BabyTabs 横向 chip 列表</b>(P5 实现里有),改为 baby-pill,因为相册和时间轴是同一组宝宝切换语义,UI 统一更易学</li>
+  <li><b>月分组标题 sticky</b> — <code>position: sticky; top: 0; background: var(--bg)</code>。"2025 年 5 月 · 23 张"。滚动时本月标题贴顶,下个月标题来时顶替。提供时间感的同时不占恒定空间</li>
+  <li><b>3 列正方</b> — 间距 4px(比 EntryComposer 的 6px 略紧,因为整页都是图);圆角 16px(<code>--radius-sm</code>)。<b>不用阴影、不加 hover lift</b>,平面铺陈</li>
+  <li><b>视频角标</b> — 右下 <code>▶ 0:18</code>(分:秒),半透明黑底 + blur,与媒体内容色无关都清晰</li>
+  <li><b>点击行为</b> — 缩略图点击:有 entryId 关联 → 直接进 <code>/entry/[id]</code>(详情页内部用 viewer 浏览);无 entryId(独立媒体) → 当场打开全屏 viewer</li>
+  <li><b>空态(②)</b> — emoji 📸 + 标题 + 引导文案 + 主 CTA 跳 <code>/entry/new</code>。<b>不显示空的 Tabbar 标题</b>("画廊")副标改为"还没有照片"提示</li>
+  <li><b>全屏 viewer(③)</b> — 黑底全屏;顶部毛玻璃头(关闭 ✕ / 媒体所属 entry 摘要 / ⋯ 更多)+ 居中媒体(自适应宽高比)+ 底部缩略图条(选中加白边)。Gallery 直接点开独立媒体 / Entry 详情点 carousel 都用这个组件</li>
+  <li><b>viewer ⋯ 菜单</b> — ActionSheet:"下载到本地 / 设为里程碑封面(若进入的是里程碑相册) / 移到回收站"。具体项目按权限和上下文显示</li>
+  <li><b>无限滚动</b> — 月分组按 24 张/页分批加载;到底显示"已经到底啦 🌱"小字脚标</li>
+</ul>
+</div>
+
+</body>
+</html>
