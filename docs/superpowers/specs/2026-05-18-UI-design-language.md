@@ -300,7 +300,7 @@ babyloom 是手机为主的家庭 PWA。**所有 `:hover` 状态必须用 `@medi
 | Button(Ghost / Text / Link) | ❌ 无 | |
 | Button(Loading 态) | ❌ 无 | 按钮"锁住",不再响应按压 |
 | FAB | `--shadow-press-lg` → `-lg-active`,阴影色用 `--color-press-shadow-primary`(与 mint 主色协调) | `translateY(4px)` |
-| 切宝宝胶囊 / Baby Pill | `--shadow-press-sm` → `-sm-active` | `translateY(2px)` |
+| 小型可按胶囊(含头像/图标的浮起胶囊) | `--shadow-press-sm` → `-sm-active` | `translateY(2px)` |
 | Tabbar 激活胶囊 | `--shadow-press-md` 永驻 | 激活时上凸 `-6px`,无按压切换 |
 | Switch 手柄 | `--shadow-press-sm` | 切换时仅水平位移 |
 | Modal / BottomSheet / ActionSheet 容器 | `--shadow-soft-lg` | 浮起感 |
@@ -623,7 +623,7 @@ iOS 风菜单,自下而上,用于**对当前对象的多个操作**(编辑 / 复
 
 ```
 ┌───────────────────────────┐ 
-│ Header (sticky, 顶部 18px) │ 包含标题 / 副标 / 右侧 baby-pill 或 action
+│ Header (sticky, 顶部 18px) │ 包含标题 / 副标 / 右侧通常为空
 ├───────────────────────────┤
 │ Body (flex: 1, scrollable) │ 内容区,左右 padding 16
 ├───────────────────────────┤
@@ -861,13 +861,14 @@ ken-burns、loading 斜纹、stripe 动画必须**完全停止**。
 **Header**
 
 - 左:`小乐的成长` (`--text-2xl --font-bold`) + 副标 `1岁3月 · 第 456 天` (`--text-xs --font-semibold --color-fg-soft`)
-- 右:Baby Pill(头像 32 + 下拉箭头)。**点击打开 BottomSheet 切换宝宝**
+- 右:**空**(不放任何按钮)
 
 **不要的元素**(已讨论决定移除):
 
 - ❌ 全部/今天/本周/里程碑 筛选 chips —— 增加视觉噪音,实际使用率低
 - ❌ 搜索图标 —— 不是高频操作,放到 Profile/Me 子路由更合适
 - ❌ Hero 上的"月龄"黄色角标 —— 与 Header 副标重复
+- ❌ **切换宝宝 Pill** —— 切换宝宝是低频操作(多数家庭只有 1 个宝宝;有 2+ 时切换也不频繁);从所有页面 header 移除,**统一收到 Profile/Me 子页**
 
 **Hero**(`/timeline` 顶部固定一块,跟随 entry 数据):
 

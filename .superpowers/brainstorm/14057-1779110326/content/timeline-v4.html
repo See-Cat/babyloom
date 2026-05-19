@@ -1,0 +1,219 @@
+<style>
+  :root{
+    --ac-bg:#f8f8f0; --ac-fg:#3d3327; --ac-muted:#8a7a68; --ac-line:#e6dccf;
+    --ac-mint:#19c8b9; --ac-mint-dark:#13a89b; --ac-yellow:#ffcc00;
+    --ac-cream:#fff8e8; --ac-pink:#ff9eb5; --ac-blue:#7cc4e8;
+    --ac-shadow:#bdaea0;
+  }
+  .phones{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:24px}
+  @media(max-width:1100px){.phones{grid-template-columns:1fr;gap:48px}}
+  .phone{
+    border:8px solid #2a2218;border-radius:42px;background:var(--ac-bg);
+    width:100%;max-width:360px;height:760px;margin:0 auto;overflow:hidden;
+    display:flex;flex-direction:column;color:var(--ac-fg);
+    font-family:'Nunito','Noto Sans SC',sans-serif;position:relative;
+    box-shadow:0 20px 50px rgba(0,0,0,.25);
+  }
+  .ph-head{padding:16px 18px 10px;display:flex;align-items:center;justify-content:space-between;background:var(--ac-bg)}
+  .ph-title{font-weight:900;font-size:22px;letter-spacing:.3px;color:var(--ac-fg)}
+  .ph-title .sub{display:block;font-size:11px;font-weight:700;color:var(--ac-muted);margin-top:2px;letter-spacing:.5px}
+  .baby-pill{display:flex;align-items:center;gap:4px;padding:3px 4px 3px 3px;background:#fff;border-radius:999px;border:2px solid var(--ac-line);box-shadow:0 3px 0 0 var(--ac-shadow)}
+  .baby-pill .caret{font-size:10px;color:var(--ac-muted);padding-right:6px}
+  .ph-body{flex:1;overflow:hidden;padding:0 14px 14px;position:relative}
+  .scroll{height:100%;overflow:hidden;-webkit-mask:linear-gradient(180deg,black 92%,transparent)}
+  .ph-tabbar{height:64px;border-top:2px solid var(--ac-line);background:#fff8e8;display:flex;align-items:center;justify-content:space-around;padding-bottom:6px}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--ac-muted);font-weight:700}
+  .tab.active{color:var(--ac-mint-dark)}
+  .tab .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:transparent;font-size:18px}
+  .tab.active .dot{background:var(--ac-mint);color:white;transform:translateY(-6px);box-shadow:0 5px 0 0 var(--ac-mint-dark)}
+  .ava{width:32px;height:32px;border-radius:50%;background:var(--ac-pink);display:grid;place-items:center;color:white;font-weight:800;font-size:13px;flex-shrink:0}
+  .ava.b{background:var(--ac-blue)} .ava.y{background:var(--ac-yellow);color:#3d3327} .ava.g{background:var(--ac-mint)}
+  .card{background:#fff;border-radius:20px;padding:14px;margin-bottom:12px;border:2px solid var(--ac-line);box-shadow:0 4px 0 0 var(--ac-shadow)}
+  .meta{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .meta .who{font-weight:800;font-size:13px}
+  .meta .when{font-size:11px;color:var(--ac-muted)}
+  .body{font-size:13px;line-height:1.55;margin:0 0 8px}
+  .thumbs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;border-radius:12px;overflow:hidden}
+  .thumb{aspect-ratio:1;background:linear-gradient(135deg,#ffd6a8,#ffb6c8)}
+  .thumb.b{background:linear-gradient(135deg,#a8e6f5,#7cc4e8)}
+  .thumb.g{background:linear-gradient(135deg,#c8f5d6,#7ce8a4)}
+  .fab{position:absolute;right:14px;bottom:78px;width:56px;height:56px;border-radius:50%;background:var(--ac-mint);color:white;display:grid;place-items:center;font-size:28px;font-weight:900;box-shadow:0 6px 0 0 var(--ac-mint-dark);border:2px solid var(--ac-mint-dark);z-index:5}
+
+  .hero{position:relative;border-radius:24px;overflow:hidden;height:200px;margin:6px 0 14px;border:2px solid var(--ac-line);box-shadow:0 5px 0 0 var(--ac-shadow);background:linear-gradient(135deg,#ffd6a8,#ff9eb5)}
+  .hero.text{background:linear-gradient(135deg,#fff8e8,#ffe9b8);height:130px;display:flex;align-items:center;padding:14px 16px}
+  .hero.empty{background:repeating-linear-gradient(45deg,#fff8e8,#fff8e8 12px,#fbeed0 12px,#fbeed0 24px);height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:14px}
+  .hero .corner{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);color:white;border-radius:999px;padding:4px 10px;font-size:11px;font-weight:800;backdrop-filter:blur(4px)}
+  .hero .overlay{position:absolute;inset:auto 0 0 0;padding:14px;background:linear-gradient(to top,rgba(0,0,0,.6),transparent 80%);color:white}
+  .hero .overlay h3{margin:0;font-size:15px;font-weight:900;line-height:1.35}
+  .hero .overlay .sub{font-size:11px;opacity:.85;margin-top:2px;font-weight:600}
+  .hero.text .txt{width:100%}
+  .hero.text h3{margin:0;font-size:15px;font-weight:900;line-height:1.4;color:var(--ac-fg)}
+  .hero.text .sub{font-size:11px;color:var(--ac-muted);margin-top:6px;font-weight:700}
+  .hero.empty .icon{font-size:36px}
+  .hero.empty .title{font-weight:900;font-size:14px}
+  .hero.empty .sub{font-size:12px;color:var(--ac-muted)}
+  .hero.empty .cta{margin-top:4px;padding:8px 16px;background:var(--ac-mint);color:white;border-radius:999px;font-weight:800;font-size:12px;border:2px solid var(--ac-mint-dark);box-shadow:0 3px 0 0 var(--ac-mint-dark)}
+
+  .caption{font-size:12px;color:var(--ac-muted);margin-top:8px;text-align:center;font-weight:700}
+</style>
+
+<h2>Timeline v4 — 月龄只留在标题副标</h2>
+<p class="subtitle">Hero 上去掉黄色月龄角标;带图 Hero 只留右上 📷 角标</p>
+
+<div class="phones">
+
+  <!-- 1: with media -->
+  <div>
+    <div class="phone">
+      <div class="ph-head">
+        <div class="ph-title">小乐的成长<span class="sub">1岁3月 · 第 456 天</span></div>
+        <div class="baby-pill"><div class="ava g">乐</div><div class="caret">▾</div></div>
+      </div>
+      <div class="ph-body">
+        <div class="scroll">
+          <div class="hero">
+            <span class="corner">📷 3</span>
+            <div class="overlay">
+              <h3>第一次自己端着小碗吃完一整碗粥</h3>
+              <div class="sub">妈妈 · 今天 14:32</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="meta">
+              <div class="ava b">爸</div>
+              <div><div class="who">爸爸</div><div class="when">今天 09:10</div></div>
+            </div>
+            <p class="body">早晨在公园里追鸽子,跑得比上周稳多了 🐦</p>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava y">奶</div>
+              <div><div class="who">奶奶</div><div class="when">昨天 19:45</div></div>
+            </div>
+            <p class="body">晚上叫了一声"奶奶"🥹</p>
+            <div class="thumbs"><div class="thumb g"></div></div>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava">妈</div>
+              <div><div class="who">妈妈</div><div class="when">昨天 12:00</div></div>
+            </div>
+            <p class="body">中午睡了 90 分钟,醒来心情很好。</p>
+          </div>
+        </div>
+        <div class="fab">+</div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab active"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">① 带图 Hero</div>
+  </div>
+
+  <!-- 2: text-only -->
+  <div>
+    <div class="phone">
+      <div class="ph-head">
+        <div class="ph-title">小乐的成长<span class="sub">1岁3月 · 第 456 天</span></div>
+        <div class="baby-pill"><div class="ava g">乐</div><div class="caret">▾</div></div>
+      </div>
+      <div class="ph-body">
+        <div class="scroll">
+          <div class="hero text">
+            <div class="txt">
+              <h3>今天叫了一声"奶奶",清清楚楚。</h3>
+              <div class="sub">奶奶 · 今天 19:45</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="meta">
+              <div class="ava">妈</div>
+              <div><div class="who">妈妈</div><div class="when">今天 12:00</div></div>
+            </div>
+            <p class="body">中午睡了 90 分钟,醒来心情很好。</p>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava b">爸</div>
+              <div><div class="who">爸爸</div><div class="when">昨天 18:20</div></div>
+            </div>
+            <p class="body">第一次在小区里碰到同龄小朋友,会主动伸手要分享饼干。</p>
+            <div class="thumbs"><div class="thumb"></div><div class="thumb b"></div></div>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava y">奶</div>
+              <div><div class="who">奶奶</div><div class="when">昨天 09:00</div></div>
+            </div>
+            <p class="body">早餐喝了大半杯牛奶。</p>
+          </div>
+        </div>
+        <div class="fab">+</div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab active"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">② 文字 Hero</div>
+  </div>
+
+  <!-- 3: empty -->
+  <div>
+    <div class="phone">
+      <div class="ph-head">
+        <div class="ph-title">小乐的成长<span class="sub">1岁3月 · 第 456 天</span></div>
+        <div class="baby-pill"><div class="ava g">乐</div><div class="caret">▾</div></div>
+      </div>
+      <div class="ph-body">
+        <div class="scroll">
+          <div class="hero empty">
+            <div class="icon">🌱</div>
+            <div class="title">今天还没有记录</div>
+            <div class="sub">写一条吧,哪怕只是一句话</div>
+            <div class="cta">＋ 现在写</div>
+          </div>
+
+          <div class="card">
+            <div class="meta">
+              <div class="ava y">奶</div>
+              <div><div class="who">奶奶</div><div class="when">昨天 19:45</div></div>
+            </div>
+            <p class="body">晚上叫了一声"奶奶"🥹</p>
+            <div class="thumbs"><div class="thumb g"></div></div>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava b">爸</div>
+              <div><div class="who">爸爸</div><div class="when">昨天 18:20</div></div>
+            </div>
+            <p class="body">第一次在小区里碰到同龄小朋友。</p>
+            <div class="thumbs"><div class="thumb"></div><div class="thumb b"></div></div>
+          </div>
+          <div class="card">
+            <div class="meta">
+              <div class="ava">妈</div>
+              <div><div class="who">妈妈</div><div class="when">昨天 12:00</div></div>
+            </div>
+            <p class="body">中午睡了 90 分钟。</p>
+          </div>
+        </div>
+        <div class="fab">+</div>
+      </div>
+      <div class="ph-tabbar">
+        <div class="tab active"><div class="dot">🌱</div>时间轴</div>
+        <div class="tab"><div class="dot">📷</div>相册</div>
+        <div class="tab"><div class="dot">📅</div>日历</div>
+        <div class="tab"><div class="dot">👤</div>我</div>
+      </div>
+    </div>
+    <div class="caption">③ 空态 Hero</div>
+  </div>
+</div>

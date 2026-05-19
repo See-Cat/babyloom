@@ -1,0 +1,192 @@
+<style>
+  :root{
+    --bg:#f8f8f0; --surface:#f7f3df; --surface-2:#fdfdf5;
+    --fg:#794f27; --fg-soft:#9f927d; --fg-strong:#5d3a14;
+    --border-light:#e8e2d6; --border:#aaa69d;
+    --mint:#19c8b9; --mint-dark:#13a89b;
+    --yellow:#f5c31c; --error:#e05a5a; --error-active:#c94444;
+    --press:#bdaea0;
+    --pink:#f8a6b2; --blue:#889df0; --peach:#e59266;
+    --ease:cubic-bezier(.4,0,.2,1);
+    --ease-back:cubic-bezier(.34,1.56,.64,1);
+  }
+  body{font-family:Nunito,'Noto Sans SC','Zen Maru Gothic',sans-serif}
+  .stage{display:flex;gap:32px;flex-wrap:wrap;margin-top:20px;align-items:flex-start}
+
+  /* phone */
+  .phone{border:8px solid #2a2218;border-radius:42px;background:var(--bg);width:360px;height:760px;overflow:hidden;display:flex;flex-direction:column;color:var(--fg);position:relative;box-shadow:0 20px 50px rgba(0,0,0,.18);flex-shrink:0}
+  .ph-head{padding:18px 20px 10px;display:flex;align-items:center;justify-content:space-between}
+  .ph-title{font-weight:800;font-size:22px;color:var(--fg);line-height:1.15}
+  .ph-title .sub{display:block;font-size:11px;font-weight:600;color:var(--fg-soft);margin-top:3px}
+  .baby-pill{display:flex;align-items:center;gap:4px;padding:3px 10px 3px 3px;background:var(--surface-2);border-radius:999px;box-shadow:0 3px 0 0 var(--press);cursor:pointer;transition:transform .12s var(--ease),box-shadow .12s var(--ease);user-select:none;border:none;font-family:inherit}
+  .baby-pill:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--press)}
+  .baby-pill .caret{font-size:10px;color:var(--fg-soft)}
+  .ava{width:32px;height:32px;border-radius:50%;background:var(--mint);display:grid;place-items:center;color:white;font-weight:700;font-size:13px}
+  .ava.b{background:var(--blue)} .ava.p{background:var(--pink)} .ava.y{background:var(--yellow);color:#724a00}
+  .ph-body{flex:1;padding:0 16px 14px;display:flex;flex-direction:column;gap:12px;position:relative;overflow:hidden}
+  .card{background:var(--surface);border-radius:20px;padding:16px 18px}
+  .card .meta{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .card .who{font-weight:700;font-size:13px}
+  .card .when{font-size:11px;color:var(--fg-soft)}
+  .card .body{font-size:13.5px;line-height:1.6;margin:0}
+  .ph-tabbar{height:64px;background:var(--bg);display:flex;align-items:center;justify-content:space-around;padding-bottom:6px;border-top:1px solid var(--border-light)}
+  .tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--fg-soft);font-weight:700;cursor:pointer;user-select:none}
+  .tab.active{color:var(--mint-dark)}
+  .tab .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-size:18px;transition:transform .35s var(--ease-back),background .25s,box-shadow .35s var(--ease-back),color .25s}
+  .tab.active .dot{background:var(--mint);color:white;transform:translateY(-6px);box-shadow:0 4px 0 0 var(--press)}
+
+  /* trigger row */
+  .trigger-row{display:flex;flex-direction:column;gap:10px;padding:14px;background:var(--surface);border-radius:20px}
+  .trigger-row .hint{font-size:11px;color:var(--fg-soft);font-weight:600;margin-bottom:2px}
+  .btn{padding:11px 16px;border-radius:999px;font-weight:700;font-size:13px;cursor:pointer;border:none;transition:transform .12s var(--ease),box-shadow .12s var(--ease);font-family:inherit;color:white;background:var(--mint);box-shadow:0 4px 0 0 var(--mint-dark)}
+  .btn:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--mint-dark);transition-duration:.08s}
+  .btn.default{background:var(--surface-2);color:var(--fg);box-shadow:0 3px 0 0 var(--press)}
+  .btn.default:active{transform:translateY(2px);box-shadow:0 1px 0 0 var(--press)}
+  .btn.danger{background:var(--error);box-shadow:0 4px 0 0 var(--error-active)}
+  .btn.danger:active{transform:translateY(3px);box-shadow:0 1px 0 0 var(--error-active)}
+
+  /* ---- popups inside phone ---- */
+  .scrim{position:absolute;inset:0;background:rgba(61,52,40,.45);opacity:0;pointer-events:none;transition:opacity .25s var(--ease);z-index:10}
+  .scrim.show{opacity:1;pointer-events:auto}
+
+  /* Modal */
+  .modal{position:absolute;left:16px;right:16px;top:50%;transform:translateY(calc(-50% + 8px)) scale(.96);background:var(--surface-2);border-radius:24px;padding:22px 24px;box-shadow:0 8px 24px 0 rgba(61,52,40,.14);opacity:0;pointer-events:none;transition:transform .25s var(--ease),opacity .25s var(--ease);z-index:20}
+  .modal.show{opacity:1;pointer-events:auto;transform:translateY(-50%) scale(1)}
+  .modal h3{margin:0 0 8px;font-size:18px;font-weight:800;color:var(--fg-strong)}
+  .modal p{margin:0 0 18px;font-size:13.5px;line-height:1.6;color:var(--fg)}
+  .modal .row{display:flex;gap:10px}
+  .modal .row .btn{flex:1}
+
+  /* BottomSheet */
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:var(--surface-2);border-radius:24px 24px 0 0;padding:18px 20px 28px;box-shadow:0 -8px 24px 0 rgba(61,52,40,.14);transform:translateY(100%);transition:transform .3s var(--ease);z-index:20}
+  .sheet.show{transform:translateY(0)}
+  .sheet .handle{width:36px;height:4px;background:var(--border-light);border-radius:2px;margin:0 auto 14px}
+  .sheet h3{margin:0 0 14px;font-size:15px;font-weight:800;color:var(--fg-strong)}
+  .sheet .baby-row{display:flex;align-items:center;gap:12px;padding:10px 6px;border-radius:14px;cursor:pointer;user-select:none}
+  .sheet .baby-row:active{background:rgba(0,0,0,.04)}
+  .sheet .baby-row.active{background:var(--surface)}
+  .sheet .baby-row .name{font-weight:700;font-size:14px;flex:1}
+  .sheet .baby-row .age{font-size:11px;color:var(--fg-soft);font-weight:600}
+  .sheet .baby-row .check{color:var(--mint-dark);font-weight:800;font-size:16px;opacity:0}
+  .sheet .baby-row.active .check{opacity:1}
+  .sheet .add{display:flex;align-items:center;gap:10px;padding:12px 6px;color:var(--mint-dark);font-weight:700;font-size:13.5px;cursor:pointer;margin-top:6px;border-top:1px solid var(--border-light);padding-top:14px}
+
+  /* ActionSheet */
+  .action{position:absolute;left:12px;right:12px;bottom:12px;transform:translateY(120%);transition:transform .3s var(--ease);z-index:20}
+  .action.show{transform:translateY(0)}
+  .action .group{background:var(--surface-2);border-radius:18px;overflow:hidden;box-shadow:0 8px 24px 0 rgba(61,52,40,.14)}
+  .action .item{padding:16px 18px;font-size:14.5px;font-weight:700;color:var(--fg);cursor:pointer;user-select:none;border-bottom:1px solid var(--border-light);background:transparent;transition:background .15s;text-align:center}
+  .action .item:last-child{border-bottom:none}
+  .action .item:active{background:rgba(0,0,0,.05)}
+  .action .item.destructive{color:var(--error)}
+  .action .item.emphasized{color:var(--mint-dark)}
+  .action .cancel{margin-top:8px;background:var(--surface-2);border-radius:18px;padding:16px 18px;text-align:center;font-size:14.5px;font-weight:800;color:var(--fg);cursor:pointer;user-select:none;box-shadow:0 8px 24px 0 rgba(61,52,40,.14)}
+  .action .cancel:active{background:rgba(0,0,0,.04)}
+
+  /* Side info panel */
+  .panel{flex:1;min-width:280px;max-width:480px;background:var(--surface-2);border-radius:20px;padding:20px 22px;color:var(--fg)}
+  .panel h3{margin:0 0 6px;font-size:16px;font-weight:800}
+  .panel .desc{font-size:12px;color:var(--fg-soft);margin-bottom:14px;line-height:1.55}
+  .panel ul{margin:0 0 0;padding-left:18px;font-size:13px;line-height:1.7}
+  .panel code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:11px}
+</style>
+
+<h2>弹窗样式预览</h2>
+<p class="subtitle">Modal / BottomSheet / ActionSheet 的实际视觉与动效</p>
+
+<div class="stage">
+  <div class="phone">
+    <div class="ph-head">
+      <div class="ph-title">小乐的成长<span class="sub">1岁3月 · 第 456 天</span></div>
+      <button class="baby-pill" onclick="openSheet()"><div class="ava">乐</div><div class="caret">▾</div></button>
+    </div>
+    <div class="ph-body">
+      <div class="trigger-row">
+        <div class="hint">点击下面按钮预览三种弹窗</div>
+        <button class="btn" onclick="openModal()">Modal · 确认删除</button>
+        <button class="btn default" onclick="openSheet()">BottomSheet · 切换宝宝</button>
+        <button class="btn default" onclick="openAction()">ActionSheet · entry 操作</button>
+      </div>
+      <div class="card">
+        <div class="meta"><div class="ava p">妈</div><div><div class="who">妈妈</div><div class="when">今天 14:32</div></div></div>
+        <p class="body">第一次自己端着小碗吃完一整碗粥。</p>
+      </div>
+      <div class="card">
+        <div class="meta"><div class="ava b">爸</div><div><div class="who">爸爸</div><div class="when">今天 09:10</div></div></div>
+        <p class="body">早晨在公园里追鸽子,跑得比上周稳多了 🐦</p>
+      </div>
+
+      <!-- Popups -->
+      <div class="scrim" id="scrim" onclick="closeAll()"></div>
+
+      <div class="modal" id="modal" role="dialog" aria-modal="true">
+        <h3>确认删除这条记录?</h3>
+        <p>删除后会进回收站,30 天内可以恢复。</p>
+        <div class="row">
+          <button class="btn default" onclick="closeAll()">取消</button>
+          <button class="btn danger" onclick="closeAll()">删除</button>
+        </div>
+      </div>
+
+      <div class="sheet" id="sheet" role="dialog" aria-modal="true">
+        <div class="handle"></div>
+        <h3>切换宝宝</h3>
+        <div class="baby-row active">
+          <div class="ava">乐</div>
+          <div class="name">小乐</div>
+          <div class="age">1岁3月</div>
+          <div class="check">✓</div>
+        </div>
+        <div class="baby-row">
+          <div class="ava b">安</div>
+          <div class="name">小安</div>
+          <div class="age">3岁8月</div>
+          <div class="check">✓</div>
+        </div>
+        <div class="add">＋ 添加新宝宝</div>
+      </div>
+
+      <div class="action" id="action" role="dialog" aria-modal="true">
+        <div class="group">
+          <div class="item emphasized" onclick="closeAll()">编辑</div>
+          <div class="item" onclick="closeAll()">复制内容</div>
+          <div class="item" onclick="closeAll()">设为里程碑</div>
+          <div class="item destructive" onclick="closeAll()">移到回收站</div>
+        </div>
+        <div class="cancel" onclick="closeAll()">取消</div>
+      </div>
+    </div>
+    <div class="ph-tabbar">
+      <div class="tab active"><div class="dot">🌱</div>时间轴</div>
+      <div class="tab"><div class="dot">📷</div>相册</div>
+      <div class="tab"><div class="dot">📅</div>日历</div>
+      <div class="tab"><div class="dot">👤</div>我</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>三种弹窗的用法分工</h3>
+    <ul>
+      <li><b>Modal</b> · 居中对话框,用于<b>确认/警告/输入</b>。两个按钮(取消 + 主操作),主操作有按压阴影。背景<code>#fdfdf5</code>,radius 24,无 blob 装饰。</li>
+      <li><b>BottomSheet</b> · 自下而上拉起,用于<b>从列表中选择</b>(切宝宝、选成员、Milestone 多选)。顶部有 4px 横条 handle 提示可拖。背景<code>#fdfdf5</code>。</li>
+      <li><b>ActionSheet</b> · iOS 风格菜单,用于<b>对当前对象的多个操作</b>(编辑/删除/复制等)。最多 5-6 项。emphasized = mint 主色,destructive = error 红。取消按钮独立成块。</li>
+    </ul>
+    <div class="desc" style="margin-top:14px;margin-bottom:0">
+      <b>共同的视觉规则</b>:容器用 <code>0 8px 24px rgba(61,52,40,.14)</code> 软阴影浮起、内部元素全平面、遮罩 <code>rgba(61,52,40,.45)</code>、ESC 与点遮罩关闭。<br><br>
+      <b>禁用</b>:Modal/Sheet 顶部 blob clip-path 装饰(原 P5 spec 列了,实际太花,本规范取消)。
+    </div>
+  </div>
+</div>
+
+<script>
+  function openModal(){ closeAll(); document.getElementById('scrim').classList.add('show'); document.getElementById('modal').classList.add('show'); }
+  function openSheet(){ closeAll(); document.getElementById('scrim').classList.add('show'); document.getElementById('sheet').classList.add('show'); }
+  function openAction(){ closeAll(); document.getElementById('scrim').classList.add('show'); document.getElementById('action').classList.add('show'); }
+  function closeAll(){
+    document.getElementById('scrim').classList.remove('show');
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('sheet').classList.remove('show');
+    document.getElementById('action').classList.remove('show');
+  }
+  document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAll(); });
+</script>
