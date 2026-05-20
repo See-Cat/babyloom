@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
@@ -7,7 +7,8 @@ import { getAuth } from '@/lib/auth/server';
 import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { buildMonthGrid, formatDateInTimezone, listEntryDays } from '@/lib/db/queries/calendar';
-import { babies, familyMembers } from '@/lib/db/schema';
+import { listReadableBabies } from '@/lib/db/queries/permissions';
+import { familyMembers } from '@/lib/db/schema';
 import { MonthCalendar } from '@/components/features/MonthCalendar';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
@@ -35,11 +36,13 @@ export default async function CalendarPage({
     .get();
   if (!member) redirect('/login');
 
-  const familyBabies = db
-    .select()
-    .from(babies)
-    .where(and(eq(babies.familyId, member.familyId), eq(babies.status, 'active')))
-    .all();
+  const familyBabies = listReadableBabies({
+    db,
+    familyId: member.familyId,
+    familyMemberId: member.id,
+    role: member.role as 'owner' | 'editor' | 'viewer',
+    userId: session.user.id
+  });
   if (familyBabies.length === 0) redirect('/onboarding/baby');
 
   const config = loadConfig({ dataDir });

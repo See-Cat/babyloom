@@ -1,0 +1,16 @@
+name: Docker Smoke
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t babyloom:local .
+      - name: Smoke test compose stack
+        run: ./scripts/docker-smoke.sh

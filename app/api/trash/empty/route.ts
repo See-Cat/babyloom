@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { type TrashType } from '@/lib/db/queries/trash';
 import { jsonBadRequest } from '@/lib/permissions/responses';
 import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
@@ -19,6 +20,8 @@ export const POST = withAuthorizedActionRoute({
   action: 'trash:empty',
   allowRoles: ['owner']
 })(async (req, viewer) => {
+  assertWritesAllowed();
+
   const type = parseType(new URL(req.url).searchParams.get('type'));
   if (!type) return jsonBadRequest('bad_type');
 

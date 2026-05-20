@@ -25,3 +25,13 @@ export class NotFoundError extends Error {
     this.name = 'NotFoundError';
   }
 }
+
+export class ServiceUnavailableError extends Error {
+  constructor(
+    public readonly detail: string,
+    public readonly retryAfterSeconds: number
+  ) {
+    super(`service_unavailable: ${detail}`);
+    this.name = 'ServiceUnavailableError';
+  }
+}

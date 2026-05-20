@@ -16,3 +16,5 @@ docs/superpowers/plans/_*.md
 .sisyphus/
 .claude/
 .pnpm-store/
+public/sw*
+public/swe-worker*

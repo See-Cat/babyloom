@@ -45,10 +45,33 @@ pnpm typecheck
 - `pnpm build` — production build (standalone output)
 - `pnpm db:generate` — generate Drizzle migrations from schema changes
 - `pnpm db:migrate` — apply pending migrations to the configured SQLite file
+- `pnpm docker:build` — build `babyloom:local`
+- `pnpm docker:up` — start the Docker Compose stack
+- `pnpm docker:logs` — follow app container logs
 
 ## Configuration
 
-All runtime configuration lives in `data/config.yaml`. See spec §4 for the full schema (P0 ships only the `owner` and `log` sections).
+All runtime configuration lives in `data/config.yaml`. Use `config.yaml.example` as the starting point.
+
+## Deploy on QNAP
+
+1. Clone this repository on the NAS.
+2. Copy `config.yaml.example` to `data/config.yaml`.
+3. Edit `data/config.yaml`: set a strong owner password, set `app.secret` to at least 32 random characters, and set `app.baseUrl` to the NAS-accessible URL, such as `http://192.168.1.10` or `https://baby.mynas.local`. Leaving `app.baseUrl` at localhost will break login from other devices.
+4. Run `pnpm docker:build`, then `pnpm docker:up`.
+5. Browse to `http://<nas-ip>` and log in with the configured owner account.
+
+BabyLoom does not terminate HTTPS. Put it behind the NAS reverse proxy, or use a Caddy/Traefik sidecar for TLS. A minimal Caddy front door looks like:
+
+```caddyfile
+baby.mynas.local {
+  reverse_proxy 127.0.0.1:80
+}
+```
+
+Daily logs live in `data/logs/`. Owner-only backups are available from `/profile/data`.
+
+BabyLoom 离线时只读。新增、编辑、上传、删除和备份导出都需要在线。
 
 ## Reset Owner Password
 

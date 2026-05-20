@@ -1,6 +1,7 @@
-import { resolve } from 'node:path';
+import { join, resolve } from 'node:path';
 import { loadConfig } from '@/lib/config/load';
 import { createLogger } from '@/lib/log/server';
+import { pruneOldLogs } from '@/lib/log/prune';
 import { runMigrations } from '@/lib/db/migrate';
 import { bootstrapOwner } from '@/lib/bootstrap/owner';
 import { startReconcileWorker } from '@/lib/media/reconcile';
@@ -12,8 +13,11 @@ export async function startup() {
 
   const config = loadConfig({ dataDir });
   const log = createLogger({ dataDir, level: config.log.level }).child({ module: 'startup' });
+  const logsDir = join(dataDir, 'logs');
 
   log.info({ dataDir }, 'starting babyloom');
+  await pruneOldLogs({ logsDir, log });
+  scheduleLogPrune(logsDir, log);
 
   runMigrations(dataDir);
   log.info('migrations applied');
@@ -32,4 +36,14 @@ export async function startup() {
 export function ensureStartup() {
   startupPromise ??= startup();
   return startupPromise;
+}
+
+let pruneTimer: ReturnType<typeof setInterval> | null = null;
+
+function scheduleLogPrune(logsDir: string, log: ReturnType<typeof createLogger>) {
+  if (pruneTimer) return;
+  pruneTimer = setInterval(() => {
+    pruneOldLogs({ logsDir, log }).catch((err) => log.warn({ err }, 'scheduled log prune failed'));
+  }, 24 * 60 * 60 * 1000);
+  pruneTimer.unref?.();
 }

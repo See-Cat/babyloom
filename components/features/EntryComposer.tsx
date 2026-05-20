@@ -3,6 +3,8 @@
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Textarea';
 import type { UploadedMedia } from '@/components/media/UploadButton';
+import { requireOnline } from '@/lib/client/require-online';
+import { useToast } from '@/lib/hooks/useToast';
 import { MediaUploader } from './MediaUploader';
 import { MilestonePicker, type MilestonePickerItem } from './MilestonePicker';
 
@@ -47,8 +49,19 @@ export function EntryComposer({
   submitting = false,
   uploadedMedia = []
 }: EntryComposerProps) {
+  const toast = useToast();
+
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (!requireOnline(toast)) event.preventDefault();
+  }
+
+  function onSaveClick() {
+    if (!requireOnline(toast)) return;
+    onSubmitClick?.();
+  }
+
   return (
-    <form action={action} className="flex flex-col gap-[var(--space-4)]">
+    <form action={action} className="flex flex-col gap-[var(--space-4)]" onSubmit={onSubmit}>
       <Textarea
         name={contentName}
         required
@@ -67,7 +80,7 @@ export function EntryComposer({
         <Button type="button" variant="ghost" onClick={onCancel}>
           取消
         </Button>
-        <Button type={onSubmitClick ? 'button' : 'submit'} disabled={submitting} onClick={onSubmitClick}>
+        <Button type={onSubmitClick ? 'button' : 'submit'} disabled={submitting} onClick={onSubmitClick ? onSaveClick : undefined}>
           {submitting ? pendingLabel : submitLabel}
         </Button>
       </div>

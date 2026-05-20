@@ -19,3 +19,10 @@ export function jsonUnauthorized() {
 export function jsonBadRequest(detail: string) {
   return NextResponse.json({ error: 'bad_request', detail }, { status: 400 });
 }
+
+export function jsonServiceUnavailable(detail: string, retryAfterSeconds: number) {
+  return NextResponse.json(
+    { error: 'service_unavailable', detail },
+    { status: 503, headers: { 'Retry-After': String(retryAfterSeconds) } }
+  );
+}

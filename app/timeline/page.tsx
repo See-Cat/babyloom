@@ -7,6 +7,7 @@ import { getAuth } from '@/lib/auth/server';
 import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { getDayUtcRange } from '@/lib/db/queries/calendar';
+import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { babies, entries, entryMedia, familyMembers, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
@@ -35,11 +36,13 @@ export default async function TimelinePage({
     .get();
   if (!member) redirect('/login');
 
-  const familyBabies = db
-    .select()
-    .from(babies)
-    .where(and(eq(babies.familyId, member.familyId), eq(babies.status, 'active')))
-    .all();
+  const familyBabies = listReadableBabies({
+    db,
+    familyId: member.familyId,
+    familyMemberId: member.id,
+    role: member.role as 'owner' | 'editor' | 'viewer',
+    userId: session.user.id
+  });
 
   if (familyBabies.length === 0) redirect('/onboarding/baby');
 

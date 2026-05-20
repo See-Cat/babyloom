@@ -1,0 +1,15 @@
+owner:
+  username: babyloom
+  password: change-me-on-first-login
+  nickname: 家长
+family:
+  name: 我的家
+app:
+  baseUrl: http://localhost
+  secret: change-me-to-at-least-32-random-characters
+  # timezone: Asia/Shanghai
+# log:
+#   level: info
+# media:
+#   maxPhotoBytes: 50000000
+#   maxVideoBytes: 500000000

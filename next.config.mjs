@@ -1,6 +1,17 @@
+import withSerwistInit from '@serwist/next';
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  additionalPrecacheEntries: [{ url: '/offline', revision: String(Date.now()) }]
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingIncludes: {
+    '/*': ['./lib/db/migrations/**/*']
+  },
   serverExternalPackages: [
     'better-sqlite3',
     'bindings',
@@ -10,7 +21,6 @@ const nextConfig = {
     'fluent-ffmpeg',
     'formidable',
     'pino',
-    'pino-roll',
     'sharp'
   ],
   webpack: (config, { isServer, nextRuntime, webpack }) => {
@@ -29,7 +39,6 @@ const nextConfig = {
         'fluent-ffmpeg': false,
         'formidable': false,
         'pino': false,
-        'pino-roll': false,
         'sharp': false
       };
     }
@@ -64,4 +73,4 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

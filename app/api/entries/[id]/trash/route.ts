@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies, entries } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
@@ -39,6 +40,8 @@ export const POST = withAuthorizedResource({
     authorId: row.authorId
   })
 })(async (req, _ctx, row) => {
+  assertWritesAllowed();
+
   const userId = await getSessionUserId(req);
   const { db } = getDb({ dataDir });
   const now = Date.now();

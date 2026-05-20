@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import {
   babies,
@@ -118,6 +119,8 @@ export const PATCH = withAuthorizedResource({
   allowedStatuses: ['active'],
   toResource: toEntryResource
 })(async (req, _ctx, row, userId) => {
+  assertWritesAllowed();
+
   let body: unknown;
   try {
     body = await req.json();
@@ -176,6 +179,8 @@ export const DELETE = withAuthorizedResource({
   allowedStatuses: ['trashed'],
   toResource: toEntryResource
 })(async (_req, _ctx, row) => {
+  assertWritesAllowed();
+
   purgeEntry(dataDir, row.id);
   return Response.json({ purged: row.id });
 });

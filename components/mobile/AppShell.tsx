@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/cn';
+import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { Tabbar } from './Tabbar';
 
 export interface AppShellProps {
@@ -19,6 +20,7 @@ export function AppShell({ title, leftSlot, rightSlot, children, className }: Ap
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[var(--color-fg)]">
+      <OfflineBanner />
       <header className="sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] border-b border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-4)] pt-[env(safe-area-inset-top)]">
         <div className="min-w-10">{leftSlot}</div>
         <h1 className="text-center text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{title}</h1>

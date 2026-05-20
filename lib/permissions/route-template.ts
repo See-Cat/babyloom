@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server';
 import type { Action, PermissionResource } from './actions';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from './errors';
-import { jsonNotFound, jsonUnauthorized, UUID_RE } from './responses';
+import { ForbiddenError, NotFoundError, ServiceUnavailableError, UnauthorizedError } from './errors';
+import { jsonNotFound, jsonServiceUnavailable, jsonUnauthorized, UUID_RE } from './responses';
 import { getSessionUserId } from './session';
 import { assertPermission } from './assert';
 import { getDb } from '@/lib/db/client';
@@ -73,6 +73,9 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
         return await handler(req, { params: params }, row, userId);
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
+        if (e instanceof ServiceUnavailableError) {
+          return jsonServiceUnavailable(e.detail, e.retryAfterSeconds);
+        }
         throw e;
       }
     };
@@ -120,6 +123,9 @@ export function withAuthorizedActionRoute(opts: WithAuthorizedActionRouteOpts) {
         return await handler(req, { userId, role, familyId: member.familyId });
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
+        if (e instanceof ServiceUnavailableError) {
+          return jsonServiceUnavailable(e.detail, e.retryAfterSeconds);
+        }
         throw e;
       }
     };

@@ -2,6 +2,8 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/Button';
+import { requireOnline } from '@/lib/client/require-online';
+import { useToast } from '@/lib/hooks/useToast';
 
 export interface UploadedMedia {
   mediaId: string;
@@ -18,15 +20,18 @@ export interface UploadButtonProps {
 }
 
 export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className }: UploadButtonProps) {
+  const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
   async function handleFiles(files: FileList) {
+    if (!requireOnline(toast)) return;
     setBusy(true);
     setError(null);
     try {
       for (const file of Array.from(files)) {
+        warnIfHevc(file, toast);
         const form = new FormData();
         form.append('babyId', babyId);
         form.append('clientUploadId', crypto.randomUUID());
@@ -66,7 +71,9 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         size="sm"
         variant="secondary"
         disabled={disabled || busy}
-        onClick={() => inputRef.current?.click()}
+        onClick={() => {
+          if (requireOnline(toast)) inputRef.current?.click();
+        }}
       >
         {busy ? '上传中…' : '添加照片 / 视频'}
       </Button>
@@ -77,6 +84,16 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
       )}
     </div>
   );
+}
+
+function warnIfHevc(file: File, toast: ReturnType<typeof useToast>) {
+  const name = file.name.toLowerCase();
+  if (file.type !== 'video/quicktime' && !name.endsWith('.mov') && !name.endsWith('.hevc') && !name.endsWith('.h265')) {
+    return;
+  }
+  toast.show({
+    message: 'iOS 拍摄的 HEVC 视频在部分浏览器无法播放。如需在所有设备上观看,建议先转码为 H.264。'
+  });
 }
 
 async function pollUntilReady(mediaId: string): Promise<void> {

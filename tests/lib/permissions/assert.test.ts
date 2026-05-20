@@ -381,3 +381,55 @@ describe('assertPermission §5.4 matrix', () => {
       .toThrow(/owner_only/);
   });
 });
+
+describe('evaluate', () => {
+  it.each([
+    'media:purge',
+    'entry:purge',
+    'baby:purge',
+    'member:manage',
+    'family:manage',
+    'milestone:manage',
+    'system:backup',
+    'system:logs'
+  ] as const)('does not widen editor permissions for owner-only %s', async (action) => {
+    const { evaluate } = await import('@/lib/permissions/assert');
+
+    expect(
+      evaluate({
+        role: 'editor',
+        userId: 'editor-id',
+        action,
+        override: { canRead: 1, canWrite: 1, canDelete: 1 }
+      })
+    ).toEqual({ allow: false, reason: 'owner_only' });
+  });
+
+  it('uses override as a narrowing gate before role ownership', async () => {
+    const { evaluate } = await import('@/lib/permissions/assert');
+
+    expect(
+      evaluate({
+        role: 'editor',
+        userId: 'editor-id',
+        action: 'entry:write',
+        ownership: { babyId: 'baby-id', authorId: 'editor-id' },
+        override: { canRead: 1, canWrite: 0, canDelete: 1 }
+      })
+    ).toEqual({ allow: false, reason: 'baby_perm_canWrite_denied' });
+  });
+
+  it('lets the role matrix decide after an allow bit', async () => {
+    const { evaluate } = await import('@/lib/permissions/assert');
+
+    expect(
+      evaluate({
+        role: 'viewer',
+        userId: 'viewer-id',
+        action: 'entry:write',
+        ownership: { babyId: 'baby-id', authorId: 'viewer-id' },
+        override: { canRead: 1, canWrite: 1, canDelete: 1 }
+      })
+    ).toEqual({ allow: false, reason: 'viewer_cannot_write' });
+  });
+});

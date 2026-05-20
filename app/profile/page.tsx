@@ -7,6 +7,7 @@ import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
+import { InstallChip } from '@/components/features/InstallChip';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 
@@ -37,7 +38,9 @@ export default async function ProfilePage() {
       ? [
           { href: '/profile/babies', label: '宝宝管理' },
           { href: '/profile/members', label: '成员管理' },
-          { href: '/profile/milestones', label: '里程碑设置' }
+          { href: '/profile/members/permissions', label: '宝宝权限' },
+          { href: '/profile/milestones', label: '里程碑设置' },
+          { href: '/profile/data', label: '数据' }
         ]
       : [])
   ];
@@ -55,6 +58,7 @@ export default async function ProfilePage() {
           </div>
         </div>
       </Card>
+      <InstallChip />
       <nav className="grid gap-[var(--space-3)]">
         {links.map((link) => (
           <Link key={link.href} href={link.href}>
