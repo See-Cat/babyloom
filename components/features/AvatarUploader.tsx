@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/hooks/useToast';
 
 export interface AvatarUploaderProps {
@@ -36,6 +37,7 @@ export function AvatarUploader({ currentUrl, fallbackName, target }: AvatarUploa
   }
 
   async function upload() {
+    if (!requireOnline(toast)) return;
     if (!file) {
       inputRef.current?.click();
       return;
@@ -68,7 +70,7 @@ export function AvatarUploader({ currentUrl, fallbackName, target }: AvatarUploa
           className="sr-only"
           onChange={(event) => onPick(event.currentTarget.files?.[0] ?? null)}
         />
-        <Button type="button" size="sm" variant="secondary" onClick={() => inputRef.current?.click()}>
+        <Button type="button" size="sm" variant="secondary" onClick={() => requireOnline(toast) && inputRef.current?.click()}>
           更换头像
         </Button>
         {file && (

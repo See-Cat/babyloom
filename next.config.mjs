@@ -1,3 +1,11 @@
+import withSerwistInit from '@serwist/next';
+
+const withSerwist = withSerwistInit({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
+  additionalPrecacheEntries: [{ url: '/offline', revision: String(Date.now()) }]
+});
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -65,4 +73,4 @@ const nextConfig = {
   }
 };
 
-export default nextConfig;
+export default withSerwist(nextConfig);

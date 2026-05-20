@@ -34,6 +34,10 @@ describe('babyloom/no-raw-color', () => {
         {
           filename: '/repo/tests/unit/example.test.ts',
           code: `const fixture = '#ffcc00';`
+        },
+        {
+          filename: '/repo/app/layout.tsx',
+          code: `export function Layout(){ return <meta name="theme-color" content="#19c8b9" />; }`
         }
       ],
       invalid: [

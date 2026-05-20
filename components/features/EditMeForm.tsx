@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/hooks/useToast';
 
 export type FormActionResult = { ok: true; message: string } | { ok: false; message: string };
@@ -25,6 +26,7 @@ export function EditMeForm({ initial, updateMyName, changeMyPassword }: EditMeFo
 
   async function onNameSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!requireOnline(toast)) return;
     setNameError(null);
     const form = new FormData(event.currentTarget);
     const name = String(form.get('name') ?? '').trim();
@@ -41,6 +43,7 @@ export function EditMeForm({ initial, updateMyName, changeMyPassword }: EditMeFo
 
   async function onPasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!requireOnline(toast)) return;
     setPasswordError(null);
     const form = new FormData(event.currentTarget);
     const input = {

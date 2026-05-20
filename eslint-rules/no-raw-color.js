@@ -9,11 +9,25 @@ function isCheckedFile(filename) {
 function checkText(context, node, text) {
   if (typeof text !== 'string') return;
   if (!RAW_COLOR_PATTERN.test(text)) return;
+  if (isThemeColorMetaContent(node)) return;
 
   context.report({
     node,
     messageId: 'rawColor'
   });
+}
+
+function isThemeColorMetaContent(node) {
+  const attr = node.parent;
+  const opening = attr?.parent;
+  if (attr?.type !== 'JSXAttribute' || attr.name?.name !== 'content') return false;
+  if (opening?.type !== 'JSXOpeningElement' || opening.name?.name !== 'meta') return false;
+  return opening.attributes.some((candidate) => (
+    candidate.type === 'JSXAttribute' &&
+    candidate.name?.name === 'name' &&
+    candidate.value?.type === 'Literal' &&
+    candidate.value.value === 'theme-color'
+  ));
 }
 
 module.exports = {

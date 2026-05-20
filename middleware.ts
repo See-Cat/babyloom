@@ -1,11 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth', '/api/health', '/api/log/client', '/_next', '/favicon.ico'];
+const PUBLIC_PATHS = ['/login', '/api/auth', '/api/health', '/api/log/client', '/_next', '/favicon.ico', '/manifest.webmanifest', '/icons'];
 const CSP = [
   "default-src 'self'",
   "img-src 'self' data: blob:",
   "media-src 'self' blob:",
-  "script-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
   "object-src 'none'",
   "frame-ancestors 'none'",

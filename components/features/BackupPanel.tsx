@@ -3,12 +3,14 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/Button';
 import { ToastContext } from '@/components/ui/ToastProvider';
+import { requireOnline } from '@/lib/client/require-online';
 
 export function BackupPanel() {
   const [busy, setBusy] = React.useState(false);
   const toast = React.useContext(ToastContext);
 
   async function downloadBackup() {
+    if (!requireOnline(toast)) return;
     setBusy(true);
     try {
       const res = await fetch('/api/backup', { method: 'POST' });

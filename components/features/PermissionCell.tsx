@@ -3,6 +3,7 @@
 import { useState, useTransition } from 'react';
 import { setPermissionCell } from '@/app/profile/members/permissions/actions';
 import { Switch } from '@/components/ui/Switch';
+import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/hooks/useToast';
 import { cn } from '@/lib/cn';
 
@@ -44,6 +45,7 @@ export function PermissionCell({ baby, member, override }: PermissionCellProps) 
   const toast = useToast();
 
   function update(field: keyof PermissionBits, checked: boolean) {
+    if (!requireOnline(toast)) return;
     const previousBits = bits;
     const previousHasOverride = hasOverride;
     const next = { ...bits, [field]: checked ? 1 : 0 };

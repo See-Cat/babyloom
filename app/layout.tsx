@@ -13,6 +13,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="preload" as="font" type="font/woff2" crossOrigin="" href="/fonts/nunito-400.woff2" />
         <link rel="preload" as="font" type="font/woff2" crossOrigin="" href="/fonts/noto-sans-sc-400.woff2" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <meta name="theme-color" content={`#${'19c8b9'}`} />
       </head>
       <body>
         <ClientErrorBoundary>

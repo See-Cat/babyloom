@@ -71,6 +71,8 @@ baby.mynas.local {
 
 Daily logs live in `data/logs/`. Owner-only backups are available from `/profile/data`.
 
+BabyLoom 离线时只读。新增、编辑、上传、删除和备份导出都需要在线。
+
 ## Reset Owner Password
 
 Edit `data/config.yaml` → restart the app. The bootstrap step replaces the owner's password hash on every boot.
