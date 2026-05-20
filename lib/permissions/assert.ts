@@ -12,7 +12,7 @@ export interface AssertPermissionOptions {
 // Owner-only actions (spec §5.2 "管理宝宝/成员/里程碑/家庭" + §5.4 right column).
 // These IGNORE baby_member_permissions entirely — they go straight to the role matrix.
 // This is the §5.3 invariant: override is a scope gate, not an authorization grant.
-const OWNER_ONLY_ACTIONS = new Set<Action>([
+export const OWNER_ONLY_ACTIONS = new Set<Action>([
   'baby:write',
   'baby:trash',
   'baby:restore',
@@ -29,7 +29,7 @@ const OWNER_ONLY_ACTIONS = new Set<Action>([
 
 // Map an Action to the (canRead | canWrite | canDelete) bit it needs against baby_member_permissions.
 // Returns null when the action is owner-only OR not baby-scoped — override cannot apply.
-function babyPermBit(action: Action): 'canRead' | 'canWrite' | 'canDelete' | null {
+export function babyPermBit(action: Action): 'canRead' | 'canWrite' | 'canDelete' | null {
   if (OWNER_ONLY_ACTIONS.has(action)) return null;
   switch (action) {
     case 'baby:read':
@@ -47,6 +47,44 @@ function babyPermBit(action: Action): 'canRead' | 'canWrite' | 'canDelete' | nul
       return 'canDelete';
     default:
       return null; // trash:view and other non-baby-scoped actions
+  }
+}
+
+export interface PermissionOverride {
+  canRead: number;
+  canWrite: number;
+  canDelete: number;
+}
+
+export interface EvaluateOptions {
+  role: 'owner' | 'editor' | 'viewer';
+  override?: PermissionOverride | null;
+  action: Action;
+  ownership?: PermissionResource;
+  userId: string;
+}
+
+export interface EvaluateResult {
+  allow: boolean;
+  reason: string;
+}
+
+export function evaluate(opts: EvaluateOptions): EvaluateResult {
+  if (OWNER_ONLY_ACTIONS.has(opts.action) && opts.role !== 'owner') {
+    return { allow: false, reason: 'owner_only' };
+  }
+
+  const bit = babyPermBit(opts.action);
+  if (bit && opts.ownership?.babyId && opts.override && opts.override[bit] !== 1) {
+    return { allow: false, reason: `baby_perm_${bit}_denied` };
+  }
+
+  try {
+    checkOwnershipMatrix(opts.action, opts.role, opts.userId, opts.ownership);
+    return { allow: true, reason: 'allowed' };
+  } catch (e) {
+    if (e instanceof ForbiddenError) return { allow: false, reason: e.reason };
+    throw e;
   }
 }
 
@@ -180,9 +218,10 @@ export async function assertPermission(
   //   - No override row → fall through to role matrix (override is opt-in).
   //
   // Codex round 10 finding #1: removing the early `return` here was the entire fix.
+  let override: PermissionOverride | null = null;
   const bit = babyPermBit(action);
   if (bit && resource?.babyId) {
-    const override = db
+    override = db
       .select()
       .from(babyMemberPermissions)
       .where(
@@ -191,14 +230,10 @@ export async function assertPermission(
           eq(babyMemberPermissions.familyMemberId, member.id)
         )
       )
-      .get();
-
-    if (override && override[bit] !== 1) {
-      throw new ForbiddenError(action, `baby_perm_${bit}_denied`);
-    }
-    // Either no override (default allow per role) or override allows — fall through.
+      .get() ?? null;
   }
 
   // 4. Role-based ownership matrix — final authority on allow/deny
-  checkOwnershipMatrix(action, role, userId, resource);
+  const result = evaluate({ role, override, action, ownership: resource, userId });
+  if (!result.allow) throw new ForbiddenError(action, result.reason);
 }

@@ -1,12 +1,13 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { babies, familyMembers } from '@/lib/db/schema';
+import { familyMembers } from '@/lib/db/schema';
 import { groupMediaByMonth, listGalleryMedia } from '@/lib/db/queries/gallery';
+import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { GalleryGrid } from '@/components/features/GalleryGrid';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
@@ -33,11 +34,13 @@ export default async function GalleryPage({
     .get();
   if (!member) redirect('/login');
 
-  const familyBabies = db
-    .select()
-    .from(babies)
-    .where(and(eq(babies.familyId, member.familyId), eq(babies.status, 'active')))
-    .all();
+  const familyBabies = listReadableBabies({
+    db,
+    familyId: member.familyId,
+    familyMemberId: member.id,
+    role: member.role as 'owner' | 'editor' | 'viewer',
+    userId: session.user.id
+  });
   if (familyBabies.length === 0) redirect('/onboarding/baby');
 
   const sp = await searchParams;

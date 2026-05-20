@@ -100,6 +100,13 @@ export default function MembersAdminPage() {
 
       {error && <p role="alert" className="mb-[var(--space-2)] text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
 
+      <Link
+        href="/profile/members/permissions"
+        className="mb-[var(--space-4)] block rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] font-semibold text-[var(--color-fg-strong)] shadow-[var(--shadow-card)]"
+      >
+        宝宝权限
+      </Link>
+
       <div className="mb-[var(--space-6)]">
         <FamilyMemberList
           members={members}
