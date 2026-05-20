@@ -3,6 +3,7 @@ import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies, media } from '@/lib/db/schema';
 import { OutputBadRequestError, resolveOutputVariant } from '@/lib/media/output';
@@ -126,6 +127,8 @@ export const DELETE = withAuthorizedResource({
   allowedStatuses: ['trashed'],
   toResource: (row) => ({ babyId: row.babyId, mediaId: row.id, uploadedBy: row.uploadedBy })
 })(async (_req, _ctx, row) => {
+  assertWritesAllowed();
+
   await purgeMedia(dataDir, row.id, row.relativePath);
   return Response.json({ purged: row.id });
 });

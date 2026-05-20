@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies, media } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
@@ -35,6 +36,8 @@ export const POST = withAuthorizedResource({
   allowedStatuses: ['ready'],
   toResource: (row) => ({ babyId: row.babyId, mediaId: row.id, uploadedBy: row.uploadedBy })
 })(async (_req, _ctx, row, userId) => {
+  assertWritesAllowed();
+
   const { db } = getDb({ dataDir });
   db.update(media)
     .set({ status: 'trashed', deletedAt: Date.now(), deletedBy: userId, updatedAt: Date.now() })

@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
@@ -46,6 +47,8 @@ export const PATCH = withAuthorizedResource({
   allowedStatuses: ['active'],
   toResource: (row) => ({ babyId: row.id })
 })(async (req, _ctx, row) => {
+  assertWritesAllowed();
+
   let body: unknown;
   try {
     body = await req.json();
@@ -79,6 +82,8 @@ export const DELETE = withAuthorizedResource({
   allowedStatuses: ['trashed'],
   toResource: (row) => ({ babyId: row.id })
 })(async (_req, _ctx, row) => {
+  assertWritesAllowed();
+
   const result = purgeBaby(dataDir, row.id);
   if (!result.purged) {
     return Response.json(

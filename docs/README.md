@@ -78,6 +78,10 @@ babyloom/
 - 软删除+垃圾桶
 - NAS文件存储
 
+## 手动恢复备份
+
+从 `/profile/data` 导出的备份 zip 当前只覆盖手动恢复流程：先停止容器或 Node 进程，将 zip 解压到一个新的空数据目录，确认其中的 `snapshot.db` 放到 `db/babyloom.sqlite`，并将 `media/` 目录一并放入数据目录根部，然后用这个数据目录重新启动服务。恢复 UI 和自动备份属于后续迭代。
+
 ## 贡献指南
 
 1. Fork 项目

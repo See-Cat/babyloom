@@ -37,7 +37,8 @@ export default async function ProfilePage() {
       ? [
           { href: '/profile/babies', label: '宝宝管理' },
           { href: '/profile/members', label: '成员管理' },
-          { href: '/profile/milestones', label: '里程碑设置' }
+          { href: '/profile/milestones', label: '里程碑设置' },
+          { href: '/profile/data', label: '数据' }
         ]
       : [])
   ];

@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
@@ -23,6 +24,8 @@ export const POST = withAuthorizedResource({
     deletedBy: row.deletedBy ?? undefined
   })
 })(async (_req, _ctx, row) => {
+  assertWritesAllowed();
+
   const { db } = getDb({ dataDir });
   db.update(babies)
     .set({

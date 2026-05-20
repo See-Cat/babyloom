@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import {
   babies,
   entries,
@@ -100,6 +101,8 @@ export const POST = withAuthorizedAction({
       : { authorId: userId };
   }
 })(async (req, userId) => {
+  assertWritesAllowed();
+
   let body: unknown;
   try {
     body = await req.json();

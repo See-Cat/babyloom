@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server';
 import type { Action, PermissionResource } from './actions';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from './errors';
-import { jsonNotFound, jsonUnauthorized } from './responses';
+import { ForbiddenError, NotFoundError, ServiceUnavailableError, UnauthorizedError } from './errors';
+import { jsonNotFound, jsonServiceUnavailable, jsonUnauthorized } from './responses';
 import { getSessionUserId } from './session';
 import { assertPermission } from './assert';
 
@@ -34,6 +34,9 @@ export function withAuthorizedAction(opts: WithAuthorizedActionOpts) {
         return await handler(req, userId);
       } catch (e) {
         if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
+        if (e instanceof ServiceUnavailableError) {
+          return jsonServiceUnavailable(e.detail, e.retryAfterSeconds);
+        }
         throw e;
       }
     };

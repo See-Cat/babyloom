@@ -2,10 +2,21 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest } from 'next/server';
 import { resolve } from 'node:path';
+import { assertWritesAllowed } from '@/lib/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { entryMedia } from '@/lib/db/schema';
-import { ForbiddenError, NotFoundError, UnauthorizedError } from '@/lib/permissions/errors';
-import { jsonNotFound, jsonUnauthorized, UUID_RE } from '@/lib/permissions/responses';
+import {
+  ForbiddenError,
+  NotFoundError,
+  ServiceUnavailableError,
+  UnauthorizedError
+} from '@/lib/permissions/errors';
+import {
+  jsonNotFound,
+  jsonServiceUnavailable,
+  jsonUnauthorized,
+  UUID_RE
+} from '@/lib/permissions/responses';
 import { getSessionUserId } from '@/lib/permissions/session';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
 
@@ -20,6 +31,15 @@ interface Ctx {
 }
 
 async function handle(req: NextRequest, ctx: Ctx, op: 'attach' | 'detach'): Promise<Response> {
+  try {
+    assertWritesAllowed();
+  } catch (e) {
+    if (e instanceof ServiceUnavailableError) {
+      return jsonServiceUnavailable(e.detail, e.retryAfterSeconds);
+    }
+    throw e;
+  }
+
   let userId: string;
   try {
     userId = await getSessionUserId(req);
