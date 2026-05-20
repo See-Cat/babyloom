@@ -1,6 +1,7 @@
 import pino, { type Logger } from 'pino';
-import { mkdirSync } from 'node:fs';
+import { createWriteStream, mkdirSync, type WriteStream } from 'node:fs';
 import { join } from 'node:path';
+import { Writable } from 'node:stream';
 
 export interface LoggerOptions {
   dataDir: string;
@@ -26,32 +27,42 @@ function todayLogFile(logsDir: string): string {
   return join(logsDir, `app-${new Date().toISOString().slice(0, 10)}.log`);
 }
 
+function createDailyFileStream(logsDir: string): Writable {
+  let currentPath = '';
+  let stream: WriteStream | null = null;
+
+  return new Writable({
+    write(chunk, _encoding, callback) {
+      const nextPath = todayLogFile(logsDir);
+      if (nextPath !== currentPath) {
+        stream?.end();
+        currentPath = nextPath;
+        stream = createWriteStream(currentPath, { flags: 'a' });
+      }
+      stream!.write(chunk, callback);
+    },
+    final(callback) {
+      if (!stream) {
+        callback();
+        return;
+      }
+      stream.end(callback);
+    }
+  });
+}
+
 export function createLogger(opts: LoggerOptions): Logger {
   const logsDir = join(opts.dataDir, 'logs');
   mkdirSync(logsDir, { recursive: true });
 
-  return pino({
-    level: opts.level,
-    redact: {
-      paths: REDACT_PATHS,
-      censor: '[REDACTED]'
+  return pino(
+    {
+      level: opts.level,
+      redact: {
+        paths: REDACT_PATHS,
+        censor: '[REDACTED]'
+      }
     },
-    transport: {
-      targets: [
-        {
-          target: 'pino/file',
-          level: opts.level,
-          options: { destination: 1 }
-        },
-        {
-          target: 'pino/file',
-          level: opts.level,
-          options: {
-            destination: todayLogFile(logsDir),
-            mkdir: true
-          }
-        }
-      ]
-    }
-  });
+    pino.multistream([{ stream: process.stdout }, { stream: createDailyFileStream(logsDir) }])
+  );
 }

@@ -1,6 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  outputFileTracingIncludes: {
+    '/*': ['./lib/db/migrations/**/*']
+  },
   serverExternalPackages: [
     'better-sqlite3',
     'bindings',
@@ -10,7 +13,6 @@ const nextConfig = {
     'fluent-ffmpeg',
     'formidable',
     'pino',
-    'pino-roll',
     'sharp'
   ],
   webpack: (config, { isServer, nextRuntime, webpack }) => {
@@ -29,7 +31,6 @@ const nextConfig = {
         'fluent-ffmpeg': false,
         'formidable': false,
         'pino': false,
-        'pino-roll': false,
         'sharp': false
       };
     }

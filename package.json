@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx lib/db/migrate.ts",
+    "docker:build": "docker build -t babyloom:local .",
+    "docker:up": "docker compose up -d",
+    "docker:logs": "docker compose logs -f app",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test"
@@ -26,7 +29,6 @@
     "js-yaml": "^4.1.0",
     "next": "15.0.3",
     "pino": "^9.5.0",
-    "pino-roll": "^3.0.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "sharp": "^0.34.5",

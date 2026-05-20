@@ -7,7 +7,8 @@ const ALLOWED_WRAPPERS = new Set([
   'withAuthorizedActionRoute'
 ]);
 const EXEMPT_FILES = new Set([
-  '/app/api/entries/[id]/media/[mediaId]/attach/route.ts'
+  '/app/api/entries/[id]/media/[mediaId]/attach/route.ts',
+  '/app/api/log/client/route.ts'
 ]);
 
 // Walk a CallExpression's callee chain to find the leftmost Identifier.
