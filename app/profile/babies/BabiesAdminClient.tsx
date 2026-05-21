@@ -7,6 +7,7 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { BabyCard } from '@/components/features/BabyCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Toast } from '@/components/ui/Toast';
@@ -103,7 +104,12 @@ export default function BabiesAdminPage() {
       {creating ? (
         <Card className="flex flex-col gap-[var(--space-3)]">
           <Input label="名字" placeholder="名字" value={newBaby.name} onChange={(e) => setNewBaby({ ...newBaby, name: e.target.value })} />
-          <Input label="生日" type="text" inputMode="numeric" pattern="\d{4}-\d{2}-\d{2}" placeholder="2026-05-21" value={newBaby.birthday} onChange={(e) => setNewBaby({ ...newBaby, birthday: e.target.value })} />
+          <DatePicker
+            name="birthday"
+            label="生日"
+            value={newBaby.birthday}
+            onChange={(birthday) => setNewBaby({ ...newBaby, birthday })}
+          />
           <SegmentedControl
             ariaLabel="性别"
             value={newBaby.gender}

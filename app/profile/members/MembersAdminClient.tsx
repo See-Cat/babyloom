@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { AppShell } from '@/components/mobile/AppShell';
-import { FamilyMemberList } from '@/components/features/FamilyMemberList';
+import { FamilyMemberList, type FamilyMemberListItem } from '@/components/features/FamilyMemberList';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
@@ -27,7 +29,9 @@ export default function MembersAdminPage() {
     nickname: '',
     role: 'editor' as 'editor' | 'viewer'
   });
-  const [resetFor, setResetFor] = useState<string | null>(null);
+  const [activeMember, setActiveMember] = useState<FamilyMemberListItem | null>(null);
+  const [resetFor, setResetFor] = useState<FamilyMemberListItem | null>(null);
+  const [removeFor, setRemoveFor] = useState<FamilyMemberListItem | null>(null);
   const [resetPassword, setResetPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -69,8 +73,8 @@ export default function MembersAdminPage() {
   }
 
   async function remove(userId: string) {
-    if (!confirm('确定移除该成员? 该成员将无法登录。')) return;
     await fetch(`/api/family-members/${userId}`, { method: 'DELETE' });
+    setRemoveFor(null);
     reload();
   }
 
@@ -111,30 +115,7 @@ export default function MembersAdminPage() {
       <div className="mb-[var(--space-6)]">
         <FamilyMemberList
           members={members}
-          onRoleChange={changeRole}
-          onResetPassword={setResetFor}
-          onRemove={remove}
-          resetSlot={(m) =>
-            resetFor === m.userId ? (
-              <div className="mt-[var(--space-3)] flex flex-col gap-[var(--space-2)] sm:flex-row sm:items-end">
-                <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码 (≥8 位)" label="新密码" />
-                <Button type="button" size="sm" onClick={() => resetPwd(m.userId)}>
-                  保存
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    setResetFor(null);
-                    setResetPassword('');
-                  }}
-                >
-                  取消
-                </Button>
-              </div>
-            ) : null
-          }
+          onSelect={setActiveMember}
         />
       </div>
 
@@ -167,6 +148,73 @@ export default function MembersAdminPage() {
           + 添加成员
         </Button>
       )}
+      {activeMember && (
+        <ActionSheet
+          open={Boolean(activeMember)}
+          onOpenChange={(open) => {
+            if (!open) setActiveMember(null);
+          }}
+          title={`${activeMember.nickname} · @${activeMember.username}`}
+          options={[
+            {
+              label: '重置密码',
+              onSelect: () => setResetFor(activeMember)
+            },
+            {
+              label: activeMember.role === 'editor' ? '切换为「仅查看」' : '切换为「编辑成员」',
+              onSelect: () => changeRole(activeMember.userId, activeMember.role === 'editor' ? 'viewer' : 'editor')
+            },
+            {
+              label: '移除成员',
+              destructive: true,
+              onSelect: () => setRemoveFor(activeMember)
+            }
+          ]}
+        />
+      )}
+      <Dialog
+        open={Boolean(resetFor)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetFor(null);
+            setResetPassword('');
+          }
+        }}
+        title="重置密码"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setResetFor(null)}>
+              取消
+            </Button>
+            <Button type="button" onClick={() => resetFor && resetPwd(resetFor.userId)}>
+              保存
+            </Button>
+          </>
+        }
+      >
+        <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码 (至少 8 位)" label="新密码" />
+      </Dialog>
+      <Dialog
+        open={Boolean(removeFor)}
+        onOpenChange={(open) => {
+          if (!open) setRemoveFor(null);
+        }}
+        title="移除成员"
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setRemoveFor(null)}>
+              取消
+            </Button>
+            <Button type="button" variant="error" onClick={() => removeFor && remove(removeFor.userId)}>
+              移除
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+          确认移除 {removeFor?.nickname ?? '该成员'}? 该成员将无法登录,但他们已记录的内容会保留。
+        </p>
+      </Dialog>
     </AppShell>
   );
 }
