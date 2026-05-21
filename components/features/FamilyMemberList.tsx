@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
 export interface FamilyMemberListItem {
   memberId: string;
@@ -34,15 +35,16 @@ export function FamilyMemberList({ members, onRemove, onResetPassword, onRoleCha
               </div>
               {member.role !== 'owner' && (
                 <div className="flex flex-wrap gap-[var(--space-2)]">
-                  <select
-                    aria-label={`${member.nickname} 的角色`}
+                  <SegmentedControl
+                    ariaLabel={`${member.nickname} 的角色`}
                     value={member.role}
-                    onChange={(event) => onRoleChange?.(member.userId, event.target.value as 'editor' | 'viewer')}
-                    className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-1)] text-[var(--text-sm)]"
-                  >
-                    <option value="editor">editor</option>
-                    <option value="viewer">viewer</option>
-                  </select>
+                    onChange={(value) => onRoleChange?.(member.userId, value as 'editor' | 'viewer')}
+                    className="grid-cols-2"
+                    options={[
+                      { value: 'editor', label: 'editor' },
+                      { value: 'viewer', label: 'viewer' }
+                    ]}
+                  />
                   <Button type="button" size="sm" variant="secondary" onClick={() => onResetPassword?.(member.userId)}>
                     改密码
                   </Button>

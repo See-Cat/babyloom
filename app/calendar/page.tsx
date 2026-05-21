@@ -11,9 +11,7 @@ import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { familyMembers } from '@/lib/db/schema';
 import { MonthCalendar } from '@/components/features/MonthCalendar';
 import { AppShell } from '@/components/mobile/AppShell';
-import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { Tag } from '@/components/ui/Tag';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -53,13 +51,13 @@ export default async function CalendarPage({
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
       : familyBabies[0].id;
+  const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const grid = buildMonthGrid(ym, timezone);
   const daySet = listEntryDays({ db, babyId: selectedBabyId, ym, timezone });
   const todayIso = formatDateInTimezone(Date.now(), timezone);
 
   return (
-    <AppShell title="日历">
-      <BabyTabs babies={familyBabies} selectedBabyId={selectedBabyId} ym={ym} />
+    <AppShell title="日历" subtitle={selectedBaby.name}>
       <div className="mb-[var(--space-4)] flex items-center justify-between gap-[var(--space-3)]">
         <Link href={`/calendar?babyId=${selectedBabyId}&ym=${shiftMonth(ym, -1)}`}>
           <Button variant="ghost" size="sm">上一月</Button>
@@ -71,30 +69,6 @@ export default async function CalendarPage({
       </div>
       <MonthCalendar babyId={selectedBabyId} grid={grid} daySet={daySet} todayIso={todayIso} />
     </AppShell>
-  );
-}
-
-function BabyTabs({
-  babies,
-  selectedBabyId,
-  ym
-}: {
-  babies: Array<{ id: string; name: string; avatarUrl: string | null }>;
-  selectedBabyId: string;
-  ym: string;
-}) {
-  if (babies.length <= 1) return null;
-  return (
-    <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
-      {babies.map((baby) => (
-        <Link key={baby.id} href={`/calendar?babyId=${baby.id}&ym=${ym}`}>
-          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
-            <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
-            {baby.name}
-          </Tag>
-        </Link>
-      ))}
-    </div>
   );
 }
 

@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm';
-import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
@@ -10,8 +9,6 @@ import { groupMediaByMonth, listGalleryMedia } from '@/lib/db/queries/gallery';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { GalleryGrid } from '@/components/features/GalleryGrid';
 import { AppShell } from '@/components/mobile/AppShell';
-import { Avatar } from '@/components/ui/Avatar';
-import { Tag } from '@/components/ui/Tag';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -48,36 +45,12 @@ export default async function GalleryPage({
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
       : familyBabies[0].id;
+  const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId }));
 
   return (
-    <AppShell title="画廊">
-      <BabyTabs babies={familyBabies} selectedBabyId={selectedBabyId} route="/gallery" />
+    <AppShell title="画廊" subtitle={selectedBaby.name}>
       <GalleryGrid groups={groups} />
     </AppShell>
-  );
-}
-
-function BabyTabs({
-  babies,
-  selectedBabyId,
-  route
-}: {
-  babies: Array<{ id: string; name: string; avatarUrl: string | null }>;
-  selectedBabyId: string;
-  route: string;
-}) {
-  if (babies.length <= 1) return null;
-  return (
-    <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
-      {babies.map((baby) => (
-        <Link key={baby.id} href={`${route}?babyId=${baby.id}`}>
-          <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
-            <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
-            {baby.name}
-          </Tag>
-        </Link>
-      ))}
-    </div>
   );
 }

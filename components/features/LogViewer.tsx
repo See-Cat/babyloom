@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import type { LogRow } from '@/lib/logs/tail';
 
 export function LogViewer({ rows }: { rows: LogRow[] }) {
@@ -18,18 +19,19 @@ export function LogViewer({ rows }: { rows: LogRow[] }) {
   return (
     <div className="grid gap-[var(--space-3)]">
       <div className="grid gap-[var(--space-2)] sm:grid-cols-3">
-        <select
-          className="min-h-10 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-3)] text-[var(--text-base)]"
+        <SegmentedControl
+          className="grid-cols-5"
           value={params.get('level') ?? ''}
-          onChange={(e) => setParam('level', e.target.value)}
-          aria-label="level"
-        >
-          <option value="">全部级别</option>
-          <option value="debug">debug</option>
-          <option value="info">info</option>
-          <option value="warn">warn</option>
-          <option value="error">error</option>
-        </select>
+          onChange={(value) => setParam('level', value)}
+          ariaLabel="level"
+          options={[
+            { value: '', label: '全部' },
+            { value: 'debug', label: 'debug' },
+            { value: 'info', label: 'info' },
+            { value: 'warn', label: 'warn' },
+            { value: 'error', label: 'error' }
+          ]}
+        />
         <Input
           value={params.get('module') ?? ''}
           onChange={(e) => setParam('module', e.target.value)}

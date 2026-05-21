@@ -24,20 +24,24 @@ export function Tabbar() {
 
   return (
     <nav className="bl-tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-3)] pb-[calc(var(--space-2)+env(safe-area-inset-bottom))] pt-[var(--space-2)]" aria-label="主导航">
-      <ul className="mx-auto grid max-w-lg grid-cols-4 gap-[var(--space-2)]">
+      <ul className="mx-auto flex h-16 max-w-lg items-center justify-around">
         {items.map((item) => {
           const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const className = cn(
-            'flex min-h-12 flex-col items-center justify-center gap-1 rounded-[var(--radius-pill)] text-[var(--text-xs)] font-bold text-[var(--color-fg-soft)] transition-[background-color,box-shadow,transform,color] duration-[var(--duration-slow)] ease-[var(--ease-out-back)]',
-            active && 'translate-y-[-6px] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-press-md)]',
+            'flex min-w-14 flex-col items-center justify-center gap-1 text-[var(--text-xs)] font-semibold text-[var(--color-fg-soft)]',
+            active && 'text-[var(--color-primary-active)]',
             item.disabled && 'cursor-not-allowed opacity-45'
+          );
+          const dotClassName = cn(
+            'bl-tabbar__dot flex h-[34px] w-[34px] items-center justify-center rounded-[var(--radius-pill)] text-current transition-[background-color,box-shadow,transform,color] duration-[var(--duration-slow)] ease-[var(--ease-out-back)]',
+            active && 'translate-y-[-6px] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-press-md)]'
           );
 
           return (
             <li key={item.href}>
               {item.disabled ? (
                 <span className={className} aria-disabled="true" style={active ? { color: 'var(--color-on-solid)' } : undefined}>
-                  {item.icon}
+                  <span className={dotClassName}>{item.icon}</span>
                   {item.label}
                 </span>
               ) : (
@@ -45,9 +49,8 @@ export function Tabbar() {
                   href={item.href}
                   className={className}
                   aria-current={active ? 'page' : undefined}
-                  style={active ? { color: 'var(--color-on-solid)' } : undefined}
                 >
-                  {item.icon}
+                  <span className={dotClassName}>{item.icon}</span>
                   {item.label}
                 </Link>
               )}

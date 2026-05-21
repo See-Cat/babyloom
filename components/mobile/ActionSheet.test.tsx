@@ -1,24 +1,34 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionSheet } from './ActionSheet';
 
+vi.mock('@/lib/hooks/useDialog', () => ({
+  useDialog: () => ({ panelRef: { current: null }, panelProps: { role: 'dialog' } })
+}));
+
 describe('ActionSheet', () => {
-  it('renders options and destructive state', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders iOS-style action groups instead of raised buttons', () => {
     const html = renderToStaticMarkup(
       <ActionSheet
         open
-        title="更多"
         onOpenChange={() => undefined}
+        title="记录操作"
         options={[
           { label: '编辑', onSelect: () => undefined },
-          { label: '删除', destructive: true, onSelect: () => undefined }
+          { label: '移到回收站', destructive: true, onSelect: () => undefined }
         ]}
       />
     );
 
+    expect(html).toContain('bl-action-sheet');
     expect(html).toContain('编辑');
-    expect(html).toContain('删除');
-    expect(html).toContain('data-destructive="true"');
+    expect(html).toContain('移到回收站');
+    expect(html).not.toContain('bl-button');
+    expect(html).toContain('text-[var(--color-error)]');
   });
 });

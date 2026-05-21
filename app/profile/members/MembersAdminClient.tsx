@@ -7,6 +7,7 @@ import { FamilyMemberList } from '@/components/features/FamilyMemberList';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
 interface Member {
   memberId: string;
@@ -142,17 +143,16 @@ export default function MembersAdminPage() {
           <Input label="用户名" placeholder="用户名 (3-50, a-z0-9_-)" value={newMember.username} onChange={(e) => setNewMember({ ...newMember, username: e.target.value })} />
           <Input label="昵称" placeholder="昵称" value={newMember.nickname} onChange={(e) => setNewMember({ ...newMember, nickname: e.target.value })} />
           <Input label="初始密码" type="password" placeholder="初始密码 (≥8)" value={newMember.password} onChange={(e) => setNewMember({ ...newMember, password: e.target.value })} />
-          <select
-            aria-label="角色"
+          <SegmentedControl
+            ariaLabel="角色"
             value={newMember.role}
-            onChange={(e) =>
-              setNewMember({ ...newMember, role: e.target.value as 'editor' | 'viewer' })
-            }
-            className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]"
-          >
-            <option value="editor">editor</option>
-            <option value="viewer">viewer</option>
-          </select>
+            onChange={(value) => setNewMember({ ...newMember, role: value as 'editor' | 'viewer' })}
+            className="grid-cols-2"
+            options={[
+              { value: 'editor', label: 'editor' },
+              { value: 'viewer', label: 'viewer' }
+            ]}
+          />
           <div className="flex gap-[var(--space-2)]">
             <Button type="button" size="sm" onClick={createNew}>
               创建

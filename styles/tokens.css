@@ -26,6 +26,7 @@
   --color-error: #e05a5a;
   --color-error-hover: #e87878;
   --color-error-active: #c94444;
+  --color-error-bg: #fbe4e4;
   --color-focus: var(--color-warning);
   --color-press-shadow: #bdaea0;
   --color-press-shadow-primary: #13a89b;
@@ -39,6 +40,9 @@
   --color-avatar-purple: #b77dee;
   --color-avatar-green: #8ac68a;
   --color-scrim: rgba(61, 52, 40, 0.45);
+  --color-press-tint: rgba(61, 52, 40, 0.05);
+  --color-media-scrim: rgba(61, 52, 40, 0.72);
+  --color-media-badge: rgba(61, 52, 40, 0.66);
 
   --color-muted: var(--color-fg-soft);
   --color-accent: var(--color-primary);

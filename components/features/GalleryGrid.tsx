@@ -42,7 +42,7 @@ function GalleryTile({ item }: { item: GalleryMedia }) {
   const label = item.filename || '宝宝照片';
 
   const content = (
-    <span className="relative block aspect-square overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-bg)]">
+    <span className="relative block aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)]">
       <MediaImage
         mediaId={item.id}
         alt={label}
@@ -51,7 +51,7 @@ function GalleryTile({ item }: { item: GalleryMedia }) {
         className="h-full w-full object-cover"
       />
       {item.type === 'video' && (
-        <span className="absolute bottom-1 right-1 rounded-[var(--radius-pill)] bg-[color:var(--color-fg-strong)]/75 px-2 py-1 text-[var(--text-xs)] font-bold text-[color:var(--color-on-solid)]">
+        <span className="absolute bottom-1 right-1 rounded-[var(--radius-pill)] bg-[var(--color-media-badge)] px-2 py-1 text-[var(--text-xs)] font-bold text-[var(--color-fg-inverse)]">
           ▶ {formatDuration(item.durationSec)}
         </span>
       )}

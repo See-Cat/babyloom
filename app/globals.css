@@ -36,3 +36,13 @@ html, body {
     transform: translateY(0);
   }
 }
+
+@keyframes hero-drift {
+  from {
+    transform: scale(1) translate(0, 0);
+  }
+
+  to {
+    transform: scale(1.05) translate(-2%, -1%);
+  }
+}

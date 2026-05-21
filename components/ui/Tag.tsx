@@ -12,23 +12,21 @@ export interface TagProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClass: Record<TagVariant, string> = {
-  neutral: 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]',
-  accent: 'border-[var(--color-accent)] bg-[var(--color-accent)] text-[color:var(--color-on-solid)]',
-  error: 'border-[var(--color-error)] bg-[var(--color-error)] text-[color:var(--color-on-solid)]'
+  neutral: 'bg-[var(--color-bg-disabled)] text-[var(--color-fg-soft)]',
+  accent: 'bg-[var(--color-primary-bg)] text-[var(--color-primary-active)]',
+  error: 'bg-[var(--color-error-bg)] text-[var(--color-error-active)]'
 };
 
 export function Tag({ children, className, variant = 'neutral', removable = false, onRemove, style, ...rest }: TagProps) {
-  const solidVariant = variant === 'accent' || variant === 'error';
-
   return (
     <span
       className={cn(
-        'bl-tag inline-flex items-center gap-1 rounded-[var(--radius-pill)] border px-[var(--space-3)] py-[var(--space-1)] text-[var(--text-sm)] font-semibold',
+        'bl-tag inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-[10px] py-[var(--space-1)] text-[var(--text-sm)] font-semibold',
         variantClass[variant],
         className
       )}
       data-variant={variant}
-      style={{ ...(solidVariant ? { color: 'var(--color-on-solid)' } : {}), ...style }}
+      style={style}
       {...rest}
     >
       {children}

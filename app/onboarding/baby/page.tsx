@@ -5,11 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 
 export default function OnboardingBabyPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [gender, setGender] = useState('other');
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -41,12 +43,22 @@ export default function OnboardingBabyPage() {
           <p className="text-[var(--text-sm)] text-[var(--color-muted)]">先添加一个宝宝才能开始记录</p>
         </div>
         <Input name="name" required placeholder="宝宝名字" label="宝宝名字" />
-        <Input name="birthday" required type="date" label="生日" />
-        <select name="gender" required aria-label="性别" className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]">
-          <option value="girl">女宝</option>
-          <option value="boy">男宝</option>
-          <option value="other">其他</option>
-        </select>
+        <Input name="birthday" required type="text" inputMode="numeric" pattern="\d{4}-\d{2}-\d{2}" placeholder="2026-05-21" label="生日" />
+        <input type="hidden" name="gender" value={gender} />
+        <div className="flex flex-col gap-1 text-[var(--text-sm)] font-semibold text-[var(--color-fg)]">
+          <span>性别</span>
+          <SegmentedControl
+            ariaLabel="性别"
+            value={gender}
+            onChange={setGender}
+            className="grid-cols-3"
+            options={[
+              { value: 'girl', label: '女宝' },
+              { value: 'boy', label: '男宝' },
+              { value: 'other', label: '其他' }
+            ]}
+          />
+        </div>
         {error && <p role="alert" className="text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
         <Button type="submit" disabled={pending} fullWidth>
           {pending ? '创建中…' : '创建宝宝'}

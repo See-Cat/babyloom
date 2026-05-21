@@ -11,7 +11,7 @@ import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { babies, entries, entryMedia, familyMembers, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
-import { Avatar } from '@/components/ui/Avatar';
+import { TimelineHero } from '@/components/features/TimelineHero';
 import { Button } from '@/components/ui/Button';
 import { Tag } from '@/components/ui/Tag';
 
@@ -51,6 +51,7 @@ export default async function TimelinePage({
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
       : familyBabies[0].id;
+  const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const timezone = loadConfig({ dataDir }).app.timezone;
   const dayRange = sp.date ? getDayUtcRange(sp.date, timezone) : null;
 
@@ -84,32 +85,14 @@ export default async function TimelinePage({
     list.push(bridge.mediaId);
     mediaIdsByEntry.set(bridge.entryId, list);
   }
+  const heroRow = rows.find((row) => (mediaIdsByEntry.get(row.entries.id)?.length ?? 0) > 0) ?? rows[0];
+  const listRows = heroRow ? rows.filter((row) => row.entries.id !== heroRow.entries.id) : rows;
 
   return (
     <AppShell
-      title="时光"
-      rightSlot={
-        <Link href={`/entry/new?babyId=${selectedBabyId}`}>
-          <Button size="sm">新记录</Button>
-        </Link>
-      }
+      title={`${selectedBaby.name}的成长`}
+      subtitle={formatBabyAge(selectedBaby.birthday)}
     >
-      {familyBabies.length > 1 && (
-        <div className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
-          {familyBabies.map((baby) => (
-            <Link
-              key={baby.id}
-              href={`/timeline?babyId=${baby.id}${sp.date ? `&date=${sp.date}` : ''}`}
-            >
-              <Tag variant={baby.id === selectedBabyId ? 'accent' : 'neutral'}>
-                <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="sm" />
-                {baby.name}
-              </Tag>
-            </Link>
-          ))}
-        </div>
-      )}
-
       {dayRange && sp.date && (
         <div className="mb-[var(--space-4)]">
           <Link href={`/timeline?babyId=${selectedBabyId}`}>
@@ -118,11 +101,18 @@ export default async function TimelinePage({
         </div>
       )}
 
-      {rows.length === 0 ? (
-        <p className="mt-[var(--space-8)] text-center text-[var(--text-sm)] text-[var(--color-muted)]">还没有记录</p>
-      ) : (
+      <div className="mb-[var(--space-4)]">
+        <TimelineHero
+          babyId={selectedBabyId}
+          entry={heroRow?.entries}
+          authorName={heroRow?.user.name}
+          mediaIds={heroRow ? mediaIdsByEntry.get(heroRow.entries.id) ?? [] : []}
+        />
+      </div>
+
+      {listRows.length > 0 && (
         <ul className="flex flex-col gap-[var(--space-3)]">
-          {rows.map((row) => (
+          {listRows.map((row) => (
             <li key={row.entries.id}>
               <TimelineCard
                 entry={row.entries}
@@ -134,6 +124,25 @@ export default async function TimelinePage({
           ))}
         </ul>
       )}
+      <p className="py-[var(--space-6)] text-center text-[var(--text-sm)] text-[var(--color-fg-soft)]">到这里啦</p>
+      <Link href={`/entry/new?babyId=${selectedBabyId}`} className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-[var(--space-5)] z-[calc(var(--z-tabbar)-1)]">
+        <Button type="button" size="lg" aria-label="新记录">+</Button>
+      </Link>
     </AppShell>
   );
+}
+
+function formatBabyAge(birthday: string) {
+  const birth = new Date(`${birthday}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return '成长记录';
+  const now = new Date();
+  let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();
+  if (now.getUTCDate() < birth.getUTCDate()) months -= 1;
+  months = Math.max(0, months);
+  const years = Math.floor(months / 12);
+  const restMonths = months % 12;
+  const days = Math.max(1, Math.floor((Date.now() - birth.getTime()) / 86_400_000) + 1);
+
+  if (years > 0) return `${years}岁${restMonths}月 · 第 ${days} 天`;
+  return `${restMonths}个月 · 第 ${days} 天`;
 }

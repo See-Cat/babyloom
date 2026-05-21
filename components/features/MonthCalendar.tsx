@@ -47,9 +47,9 @@ function CalendarCell({
   isToday: boolean;
 }) {
   const className = cn(
-    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-md)] text-[var(--text-sm)] font-bold',
+    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--text-sm)] font-bold',
     cell.inMonth ? 'text-[var(--color-fg)]' : 'text-[var(--color-muted)] opacity-45',
-    isToday && 'bg-[var(--color-accent)]/15 ring-1 ring-[var(--color-accent)]'
+    isToday && 'ring-2 ring-[var(--color-primary)]'
   );
   const day = cell.date.getUTCDate();
   const label = `${cell.date.getUTCFullYear()} 年 ${cell.date.getUTCMonth() + 1} 月 ${day} 日`;

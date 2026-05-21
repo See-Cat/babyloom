@@ -8,6 +8,7 @@ import { BabyCard } from '@/components/features/BabyCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Toast } from '@/components/ui/Toast';
 import { useTrashAction } from '@/lib/hooks/useTrashAction';
 
@@ -102,17 +103,18 @@ export default function BabiesAdminPage() {
       {creating ? (
         <Card className="flex flex-col gap-[var(--space-3)]">
           <Input label="名字" placeholder="名字" value={newBaby.name} onChange={(e) => setNewBaby({ ...newBaby, name: e.target.value })} />
-          <Input label="生日" type="date" value={newBaby.birthday} onChange={(e) => setNewBaby({ ...newBaby, birthday: e.target.value })} />
-          <select
-            aria-label="性别"
+          <Input label="生日" type="text" inputMode="numeric" pattern="\d{4}-\d{2}-\d{2}" placeholder="2026-05-21" value={newBaby.birthday} onChange={(e) => setNewBaby({ ...newBaby, birthday: e.target.value })} />
+          <SegmentedControl
+            ariaLabel="性别"
             value={newBaby.gender}
-            onChange={(e) => setNewBaby({ ...newBaby, gender: e.target.value })}
-            className="rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)]"
-          >
-            <option value="girl">女宝</option>
-            <option value="boy">男宝</option>
-            <option value="other">其他</option>
-          </select>
+            onChange={(value) => setNewBaby({ ...newBaby, gender: value })}
+            className="grid-cols-3"
+            options={[
+              { value: 'girl', label: '女宝' },
+              { value: 'boy', label: '男宝' },
+              { value: 'other', label: '其他' }
+            ]}
+          />
           <div className="flex gap-[var(--space-2)]">
             <Button type="button" size="sm" onClick={createBaby}>
               创建

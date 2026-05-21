@@ -9,6 +9,9 @@ describe('Tag', () => {
 
     expect(html).toContain('第一次翻身');
     expect(html).toContain('data-variant="accent"');
+    expect(html).toContain('rounded-[var(--radius-sm)]');
+    expect(html).toContain('bg-[var(--color-primary-bg)]');
+    expect(html).not.toContain('rounded-[var(--radius-pill)]');
   });
 
   it('renders an accessible remove button when removable', () => {

@@ -14,10 +14,11 @@ describe('AppShell', () => {
     usePathname.mockReturnValue('/timeline');
   });
 
-  it('renders title, children, and tabbar on app pages', () => {
-    const html = renderToStaticMarkup(<AppShell title="时光">内容</AppShell>);
+  it('renders title, subtitle, children, and tabbar on app pages', () => {
+    const html = renderToStaticMarkup(<AppShell title="小乐的成长" subtitle="1岁3月 · 第 456 天">内容</AppShell>);
 
-    expect(html).toContain('时光');
+    expect(html).toContain('小乐的成长');
+    expect(html).toContain('1岁3月 · 第 456 天');
     expect(html).toContain('内容');
     expect(html).toContain('bl-tabbar');
   });

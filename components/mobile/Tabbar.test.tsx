@@ -19,6 +19,7 @@ describe('Tabbar', () => {
 
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('时光');
+    expect(html).toContain('bl-tabbar__dot');
     expect(html).toContain('shadow-[var(--shadow-press-md)]');
   });
 
