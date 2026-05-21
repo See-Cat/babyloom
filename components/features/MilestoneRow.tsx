@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -13,8 +14,8 @@ export interface MilestoneRowProps {
     isSystem?: boolean;
   };
   editing?: boolean;
-  editDraft?: { name: string; icon: string };
-  onEditDraftChange?: (draft: { name: string; icon: string }) => void;
+  editDraft?: { name: string };
+  onEditDraftChange?: (draft: { name: string }) => void;
   onEdit?: () => void;
   onCancelEdit?: () => void;
   onSave?: () => void;
@@ -26,8 +27,7 @@ export function MilestoneRow({ milestone, editing, editDraft, onCancelEdit, onEd
     <Card>
       {editing ? (
         <div className="flex flex-col gap-[var(--space-2)]">
-          <Input label="图标" value={editDraft?.icon ?? ''} maxLength={10} onChange={(event) => onEditDraftChange?.({ name: editDraft?.name ?? '', icon: event.target.value })} />
-          <Input label="名称" value={editDraft?.name ?? ''} onChange={(event) => onEditDraftChange?.({ name: event.target.value, icon: editDraft?.icon ?? '' })} />
+          <Input label="名称" value={editDraft?.name ?? ''} onChange={(event) => onEditDraftChange?.({ name: event.target.value })} />
           <div className="flex gap-[var(--space-2)]">
             <Button type="button" size="sm" onClick={onSave}>
               保存
@@ -40,7 +40,7 @@ export function MilestoneRow({ milestone, editing, editDraft, onCancelEdit, onEd
       ) : (
         <div className="flex items-center justify-between gap-[var(--space-3)]">
           <Tag variant={milestone.isSystem ? 'neutral' : 'accent'}>
-            {milestone.icon} {milestone.name}
+            {milestone.name}
           </Tag>
           {!milestone.isSystem && (
             <div className="flex gap-[var(--space-2)]">

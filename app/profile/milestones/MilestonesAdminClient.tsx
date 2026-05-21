@@ -6,6 +6,7 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { MilestoneRow } from '@/components/features/MilestoneRow';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 
 interface Milestone {
@@ -19,9 +20,10 @@ interface Milestone {
 export default function MilestonesAdminPage() {
   const [items, setItems] = useState<Milestone[]>([]);
   const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ name: '', icon: '⭐' });
+  const [draft, setDraft] = useState({ name: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState({ name: '', icon: '' });
+  const [editDraft, setEditDraft] = useState({ name: '' });
+  const [removeFor, setRemoveFor] = useState<Milestone | null>(null);
 
   async function reload() {
     const res = await fetch('/api/milestones');
@@ -35,20 +37,20 @@ export default function MilestonesAdminPage() {
   }, []);
 
   async function create() {
-    if (!draft.name || !draft.icon) return;
+    if (!draft.name) return;
     await fetch('/api/milestones', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(draft)
+      body: JSON.stringify({ ...draft, icon: 'custom' })
     });
     setCreating(false);
-    setDraft({ name: '', icon: '⭐' });
+    setDraft({ name: '' });
     reload();
   }
 
   async function remove(id: string) {
-    if (!confirm('确定删除? 已挂在记录上的会断开关联(不删记录)。')) return;
     await fetch(`/api/milestones/${id}`, { method: 'DELETE' });
+    setRemoveFor(null);
     reload();
   }
 
@@ -59,7 +61,7 @@ export default function MilestonesAdminPage() {
       body: JSON.stringify(editDraft)
     });
     setEditingId(null);
-    setEditDraft({ name: '', icon: '' });
+    setEditDraft({ name: '' });
     reload();
   }
 
@@ -84,9 +86,9 @@ export default function MilestonesAdminPage() {
               onCancelEdit={() => setEditingId(null)}
               onEdit={() => {
                 setEditingId(m.id);
-                setEditDraft({ name: m.name, icon: m.icon });
+                setEditDraft({ name: m.name });
               }}
-              onRemove={() => remove(m.id)}
+              onRemove={() => setRemoveFor(m)}
             />
           </li>
         ))}
@@ -94,7 +96,6 @@ export default function MilestonesAdminPage() {
 
       {creating ? (
         <Card className="flex flex-col gap-[var(--space-3)]">
-          <Input label="emoji" placeholder="emoji (如 🎉)" value={draft.icon} onChange={(e) => setDraft({ ...draft, icon: e.target.value })} maxLength={4} />
           <Input label="名称" placeholder="名称 (如 第一次叫妈妈)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
           <div className="flex gap-[var(--space-2)]">
             <Button type="button" size="sm" onClick={create}>
@@ -110,6 +111,28 @@ export default function MilestonesAdminPage() {
           + 添加里程碑
         </Button>
       )}
+      <Dialog
+        open={Boolean(removeFor)}
+        onOpenChange={(open) => {
+          if (!open) setRemoveFor(null);
+        }}
+        title="删除里程碑"
+        dismissible={false}
+        footer={
+          <>
+            <Button type="button" variant="ghost" onClick={() => setRemoveFor(null)}>
+              取消
+            </Button>
+            <Button type="button" variant="error" onClick={() => removeFor && remove(removeFor.id)}>
+              删除
+            </Button>
+          </>
+        }
+      >
+        <p className="text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+          确认删除 {removeFor?.name ?? '该里程碑'}? 已挂在记录上的会断开关联,不会删除记录。
+        </p>
+      </Dialog>
     </AppShell>
   );
 }
