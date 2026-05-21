@@ -4,12 +4,16 @@ import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
 import { EntryComposer } from '@/components/features/EntryComposer';
+import { Button } from '@/components/ui/Button';
 import type { UploadedMedia } from '@/components/media/UploadButton';
+
+const formId = 'new-entry-form';
 
 function NewEntryForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const babyId = sp.get('babyId') ?? '';
+  const [content, setContent] = useState('');
   const [milestones, setMilestones] = useState<{ id: string; name: string; icon: string }[]>([]);
   const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
   const [uploadedMedia, setUploadedMedia] = useState<UploadedMedia[]>([]);
@@ -83,19 +87,33 @@ function NewEntryForm() {
   }
 
   return (
-    <AppShell title="新记录">
+    <AppShell
+      title="新记录"
+      leftSlot={
+        <button type="button" className="text-[var(--text-sm)] font-bold text-[var(--color-fg)]" onClick={() => router.back()}>
+          返回
+        </button>
+      }
+      rightSlot={
+        <Button type="submit" form={formId} size="sm" disabled={submitting || content.trim().length === 0}>
+          {submitting ? '保存中…' : '保存'}
+        </Button>
+      }
+    >
       <EntryComposer
+        formId={formId}
         action={onSubmit}
         babyId={babyId}
+        content={content}
         milestones={milestones}
         selectedMilestoneIds={selectedMilestoneIds}
         uploadedMedia={uploadedMedia}
         error={error}
         submitting={submitting}
+        onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}
         onRemoveMedia={(mediaId) => setUploadedMedia((prev) => prev.filter((item) => item.mediaId !== mediaId))}
-        onCancel={() => router.back()}
       />
     </AppShell>
   );

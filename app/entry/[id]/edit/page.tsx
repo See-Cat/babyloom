@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
 import { EntryComposer } from '@/components/features/EntryComposer';
+import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+
+const formId = 'edit-entry-form';
 
 interface EntryDto {
   id: string;
@@ -87,8 +90,21 @@ export default function EditEntryPage() {
   }
 
   return (
-    <AppShell title="编辑记录">
+    <AppShell
+      title="编辑记录"
+      leftSlot={
+        <button type="button" className="text-[var(--text-sm)] font-bold text-[var(--color-fg)]" onClick={() => router.back()}>
+          返回
+        </button>
+      }
+      rightSlot={
+        <Button type="submit" form={formId} size="sm" disabled={pending || content.trim().length === 0}>
+          {pending ? '保存中…' : '保存'}
+        </Button>
+      }
+    >
       <EntryComposer
+        formId={formId}
         content={content}
         milestones={allMilestones}
         selectedMilestoneIds={selectedMilestoneIds}
@@ -96,7 +112,6 @@ export default function EditEntryPage() {
         submitting={pending}
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
-        onCancel={() => router.back()}
         onSubmitClick={onSubmit}
       />
     </AppShell>

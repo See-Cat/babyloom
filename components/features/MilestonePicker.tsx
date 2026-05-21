@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import { Tag } from '@/components/ui/Tag';
 
 export interface MilestonePickerItem {
@@ -19,14 +20,16 @@ export function MilestonePicker({ milestones, onToggle, selectedIds }: Milestone
 
   return (
     <div>
-      <p className="mb-[var(--space-2)] text-[var(--text-sm)] font-bold text-[var(--color-fg-strong)]">里程碑</p>
+      <p className="mb-[var(--space-2)] text-[var(--text-xs)] font-bold uppercase tracking-[0.5px] text-[var(--color-fg-soft)]">
+        里程碑(可多选)
+      </p>
       <div className="flex flex-wrap gap-[var(--space-2)]">
         {milestones.map((milestone) => {
           const selected = selectedIds.has(milestone.id);
           return (
-            <button key={milestone.id} type="button" onClick={() => onToggle(milestone.id)}>
+            <button key={milestone.id} type="button" aria-pressed={selected} onClick={() => onToggle(milestone.id)}>
               <Tag variant={selected ? 'accent' : 'neutral'}>
-                {milestone.icon} {milestone.name}
+                {milestone.name}
               </Tag>
             </button>
           );
