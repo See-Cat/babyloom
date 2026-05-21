@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Tag } from '@/components/ui/Tag';
 
 type TrashType = 'entries' | 'media' | 'babies';
+type TrashRole = 'owner' | 'editor';
 
 interface TrashRow {
   id: string;
@@ -34,6 +35,12 @@ const restorePath: Record<TrashType, string> = {
   babies: 'babies'
 };
 
+interface TrashClientProps {
+  role: TrashRole;
+  initialRows?: TrashRow[];
+  initialCounts?: Record<TrashType, number>;
+}
+
 function isTrashType(value: string | null): value is TrashType {
   return value === 'entries' || value === 'media' || value === 'babies';
 }
@@ -48,21 +55,24 @@ function relativeTime(ts: number) {
   return `${Math.round(hours / 24)} 天前`;
 }
 
-export default function TrashClient() {
+export default function TrashClient({
+  role,
+  initialRows = [],
+  initialCounts = { entries: 0, media: 0, babies: 0 }
+}: TrashClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const typeParam = searchParams.get('type');
   const activeType: TrashType = isTrashType(typeParam) ? typeParam : 'entries';
-  const [rows, setRows] = useState<TrashRow[]>([]);
-  const [counts, setCounts] = useState<Record<TrashType, number>>({
-    entries: 0,
-    media: 0,
-    babies: 0
-  });
+  const [rows, setRows] = useState<TrashRow[]>(initialRows);
+  const [counts, setCounts] = useState<Record<TrashType, number>>(initialCounts);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [pending, setPending] = useState<{ action: 'purge' | 'empty'; row?: TrashRow } | null>(null);
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [pending, setPending] = useState<{ action: 'purge' | 'batch'; row?: TrashRow } | null>(null);
+  const canPurge = role === 'owner';
 
   const activeLabel = useMemo(
     () => tabs.find((tab) => tab.type === activeType)?.label ?? '日志',
@@ -90,7 +100,23 @@ export default function TrashClient() {
   }, [activeType, load]);
 
   function switchTab(type: TrashType) {
+    setSelecting(false);
+    setSelectedIds(new Set());
     router.push(`/profile/trash?type=${type}`);
+  }
+
+  function canSelect(row: TrashRow) {
+    return row.type !== 'babies' || !row.childCount;
+  }
+
+  function toggleSelected(row: TrashRow) {
+    if (!canPurge || !canSelect(row)) return;
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      if (next.has(row.id)) next.delete(row.id);
+      else next.add(row.id);
+      return next;
+    });
   }
 
   async function restore(row: TrashRow) {
@@ -115,27 +141,33 @@ export default function TrashClient() {
     setMessage('已永久删除');
   }
 
-  async function emptyCurrentTab() {
-    const res = await fetch(`/api/trash/empty?type=${activeType}`, { method: 'POST' });
-    if (!res.ok) {
-      setMessage('清空失败');
+  async function purgeSelected() {
+    const selectedRows = rows.filter((row) => selectedIds.has(row.id) && canSelect(row));
+    if (selectedRows.length === 0) return;
+
+    const purgedIds = new Set<string>();
+    for (const row of selectedRows) {
+      const res = await fetch(`/api/${restorePath[row.type]}/${row.id}`, { method: 'DELETE' });
+      if (res.ok) purgedIds.add(row.id);
+    }
+
+    if (purgedIds.size === 0) {
+      setMessage('永久删除失败');
       return;
     }
-    const body = await res.json();
-    setRows([]);
-    await load();
-    setMessage(
-      body.skipped?.length
-        ? `已永久删除 ${body.purged} 项,${body.skipped.length} 项被跳过`
-        : `已永久删除 ${body.purged} 项`
-    );
+
+    setRows(rows.filter((row) => !purgedIds.has(row.id)));
+    setCounts({ ...counts, [activeType]: Math.max(0, counts[activeType] - purgedIds.size) });
+    setSelectedIds(new Set());
+    setSelecting(false);
+    setMessage(`已永久删除 ${purgedIds.size} 项`);
   }
 
   async function confirmPending() {
     const current = pending;
     setPending(null);
     if (!current) return;
-    if (current.action === 'empty') await emptyCurrentTab();
+    if (current.action === 'batch') await purgeSelected();
     if (current.action === 'purge' && current.row) await purge(current.row);
   }
 
@@ -148,17 +180,24 @@ export default function TrashClient() {
         </Link>
       }
       rightSlot={
-        <Button
-          type="button"
-          size="sm"
-          variant="error"
-          onClick={() => setPending({ action: 'empty' })}
-          disabled={counts[activeType] === 0}
-        >
-          清空
-        </Button>
+        canPurge && counts[activeType] > 0 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setSelecting(!selecting);
+              setSelectedIds(new Set());
+            }}
+          >
+            {selecting ? '取消' : '选择'}
+          </Button>
+        ) : null
       }
     >
+      <Card className="mb-[var(--space-4)] text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-muted)]">
+        删除的记录会留在这里,可随时恢复。
+      </Card>
 
       <div role="tablist" className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
         {tabs.map((tab) => (
@@ -190,38 +229,90 @@ export default function TrashClient() {
         <ul className="flex flex-col gap-[var(--space-3)]">
           {rows.map((row) => (
             <li key={row.id}>
-              <Card>
-                <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
-                  {row.babyName ? `${row.babyName} · ` : ''}
-                  {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
-                </p>
-                <p className="my-[var(--space-2)] whitespace-pre-wrap text-[var(--text-sm)]">{row.label || '无内容'}</p>
-                {row.type === 'babies' && row.childCount ? (
-                  <p className="mb-[var(--space-2)] text-[var(--text-xs)] text-[var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
-                ) : null}
-                <div className="flex gap-[var(--space-2)]">
-                  <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => restore(row)}
-                >
-                  还原
-                  </Button>
-                  <Button
-                  type="button"
-                  size="sm"
-                  variant="error"
-                  onClick={() => setPending({ action: 'purge', row })}
-                  disabled={row.type === 'babies' && Boolean(row.childCount)}
-                >
-                  永久删除
-                  </Button>
+              <Card
+                role={selecting && canSelect(row) ? 'button' : undefined}
+                tabIndex={selecting && canSelect(row) ? 0 : undefined}
+                onClick={selecting ? () => toggleSelected(row) : undefined}
+                onKeyDown={selecting ? (event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    toggleSelected(row);
+                  }
+                } : undefined}
+                className={selecting && canSelect(row) ? 'w-full text-left' : undefined}
+              >
+                <div className="flex gap-[var(--space-3)]">
+                  {selecting && (
+                    <span
+                      aria-hidden="true"
+                      className={[
+                        'mt-[var(--space-1)] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 text-[var(--text-sm)] font-bold',
+                        selectedIds.has(row.id)
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-fg-inverse)]'
+                          : 'border-[var(--color-border)] bg-[var(--color-surface-2)] text-transparent',
+                        !canSelect(row) && 'opacity-45'
+                      ].filter(Boolean).join(' ')}
+                    >
+                      ✓
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+                      {row.babyName ? `${row.babyName} · ` : ''}
+                      {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
+                    </p>
+                    <p className="my-[var(--space-2)] whitespace-pre-wrap text-[var(--text-sm)]">{row.label || '无内容'}</p>
+                    {row.type === 'babies' && row.childCount ? (
+                      <p className="mb-[var(--space-2)] text-[var(--text-xs)] text-[var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
+                    ) : null}
+                    {!selecting && (
+                      <div className="flex gap-[var(--space-2)]">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => restore(row)}
+                        >
+                          还原
+                        </Button>
+                        {canPurge && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="error"
+                            onClick={() => setPending({ action: 'purge', row })}
+                            disabled={row.type === 'babies' && Boolean(row.childCount)}
+                          >
+                            永久删除
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </Card>
             </li>
           ))}
         </ul>
+      )}
+
+      {selecting && (
+        <div className="fixed inset-x-0 bottom-0 z-[var(--z-sticky)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-4)] pb-[calc(var(--space-4)+env(safe-area-inset-bottom))] pt-[var(--space-3)]">
+          <div className="mx-auto flex max-w-screen-sm items-center gap-[var(--space-3)]">
+            <span className="min-w-0 flex-1 text-[var(--text-sm)] font-bold text-[var(--color-fg)]">
+              已选 {selectedIds.size} 条
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant="error"
+              onClick={() => setPending({ action: 'batch' })}
+              disabled={selectedIds.size === 0}
+            >
+              永久删除
+            </Button>
+          </div>
+        </div>
       )}
 
       {nextCursor && (
@@ -235,7 +326,8 @@ export default function TrashClient() {
         onOpenChange={(open) => {
           if (!open) setPending(null);
         }}
-        title="永久删除"
+        dismissible={false}
+        title={pending?.action === 'batch' ? `永久删除 ${selectedIds.size} 条记录?` : '永久删除'}
         footer={
           <>
             <Button type="button" variant="ghost" onClick={() => setPending(null)}>
@@ -247,9 +339,9 @@ export default function TrashClient() {
           </>
         }
       >
-        <p className="text-[var(--text-sm)] text-[var(--color-muted)]">
-          {pending?.action === 'empty'
-            ? `将永久删除当前 tab 下的 ${counts[activeType]} 项 ${activeLabel}。此操作不可撤销。`
+        <p className="text-[var(--text-base)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+          {pending?.action === 'batch'
+            ? '此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。'
             : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从垃圾桶中移除。`}
         </p>
       </Dialog>

@@ -13,6 +13,7 @@ export interface DialogProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  dismissible?: boolean;
 }
 
 export function Dialog(props: DialogProps) {

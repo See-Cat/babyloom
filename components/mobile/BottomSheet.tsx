@@ -11,12 +11,13 @@ export interface BottomSheetProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  dismissible?: boolean;
 }
 
-export function BottomSheet({ open, onOpenChange, title, description, children, footer }: BottomSheetProps) {
+export function BottomSheet({ open, onOpenChange, title, description, children, footer, dismissible = true }: BottomSheetProps) {
   const titleId = React.useId();
   const descriptionId = description ? `${titleId}-description` : undefined;
-  const { panelRef, panelProps } = useDialog({ open, onOpenChange, titleId, descriptionId });
+  const { panelRef, panelProps } = useDialog({ open, onOpenChange, titleId, descriptionId, dismissible });
   const dragRef = React.useRef({ y: 0, time: 0 });
   const [dragY, setDragY] = React.useState(0);
 
@@ -35,14 +36,16 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
   function onTouchEnd() {
     const elapsed = Math.max(1, Date.now() - dragRef.current.time);
     const velocity = dragY / elapsed;
-    if (dragY > 80 || velocity > 0.5) {
+    if (dismissible && (dragY > 80 || velocity > 0.5)) {
       onOpenChange(false);
     }
     setDragY(0);
   }
 
   return (
-    <div className="fixed inset-0 z-[var(--z-sheet)] flex items-end bg-[var(--color-scrim)]" onMouseDown={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[var(--z-sheet)] flex items-end bg-[var(--color-scrim)]" onMouseDown={() => {
+      if (dismissible) onOpenChange(false);
+    }}>
       <div
         ref={panelRef}
         className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-lg)] bg-[var(--color-surface-2)] px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-[18px] text-[var(--color-fg)] shadow-[var(--shadow-sheet)] transition-transform duration-[var(--duration-slow)] ease-[var(--ease)]"

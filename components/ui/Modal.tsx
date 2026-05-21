@@ -12,17 +12,20 @@ export interface ModalProps {
   description?: string;
   children: ReactNode;
   footer?: ReactNode;
+  dismissible?: boolean;
 }
 
-export function Modal({ open, onOpenChange, title, description, children, footer }: ModalProps) {
+export function Modal({ open, onOpenChange, title, description, children, footer, dismissible = true }: ModalProps) {
   const titleId = React.useId();
   const descriptionId = description ? `${titleId}-description` : undefined;
-  const { panelRef, panelProps } = useDialog({ open, onOpenChange, titleId, descriptionId });
+  const { panelRef, panelProps } = useDialog({ open, onOpenChange, titleId, descriptionId, dismissible });
 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--color-scrim)] p-[var(--space-4)]" onMouseDown={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--color-scrim)] p-[var(--space-4)]" onMouseDown={() => {
+      if (dismissible) onOpenChange(false);
+    }}>
       <div
         ref={panelRef}
         className={cn(

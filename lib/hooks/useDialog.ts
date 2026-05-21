@@ -7,9 +7,10 @@ interface UseDialogOptions {
   onOpenChange: (open: boolean) => void;
   titleId: string;
   descriptionId?: string;
+  dismissible?: boolean;
 }
 
-export function useDialog({ open, onOpenChange, titleId, descriptionId }: UseDialogOptions) {
+export function useDialog({ open, onOpenChange, titleId, descriptionId, dismissible = true }: UseDialogOptions) {
   const panelRef = React.useRef<HTMLDivElement>(null);
   const restoreRef = React.useRef<HTMLElement | null>(null);
 
@@ -32,7 +33,7 @@ export function useDialog({ open, onOpenChange, titleId, descriptionId }: UseDia
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {
       event.stopPropagation();
-      onOpenChange(false);
+      if (dismissible) onOpenChange(false);
       return;
     }
 
