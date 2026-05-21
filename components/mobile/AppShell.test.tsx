@@ -29,4 +29,13 @@ describe('AppShell', () => {
 
     expect(html).not.toContain('bl-tabbar');
   });
+
+  it('can render reading pages without a visible title', () => {
+    const html = renderToStaticMarkup(<AppShell leftSlot="返回" rightSlot="更多">内容</AppShell>);
+
+    expect(html).toContain('返回');
+    expect(html).toContain('更多');
+    expect(html).toContain('内容');
+    expect(html).not.toContain('<h1');
+  });
 });
