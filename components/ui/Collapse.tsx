@@ -12,7 +12,7 @@ export function Collapse({ open, children, className, ...rest }: CollapseProps) 
     <div
       aria-hidden={!open}
       className={cn(
-        'bl-collapse grid transition-[grid-template-rows] duration-[var(--duration-normal)] ease-[var(--ease-out-expo)] motion-reduce:transition-none',
+        'bl-collapse grid transition-[grid-template-rows] duration-[var(--duration-slow)] ease-[var(--ease)]',
         open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         className
       )}

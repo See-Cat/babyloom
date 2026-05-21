@@ -9,6 +9,7 @@ describe('Card', () => {
 
     expect(html).toContain('小记忆');
     expect(html).toContain('bl-card');
+    expect(html).not.toContain('shadow-[var(--shadow-card)]');
   });
 
   it('supports semantic element and interactive state', () => {
@@ -21,5 +22,7 @@ describe('Card', () => {
     expect(html).toContain('<article');
     expect(html).toContain('bl-card--interactive');
     expect(html).toContain('extra');
+    expect(html).not.toContain('hover:-translate-y-1');
+    expect(html).not.toContain('shadow-[var(--shadow-card-hover)]');
   });
 });

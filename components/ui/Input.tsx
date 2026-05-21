@@ -19,8 +19,8 @@ export function Input({ className, error, id, label, leadingSlot, trailingSlot, 
       {label}
       <span
         className={cn(
-          'flex items-center gap-2 rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)] focus-within:border-[var(--color-accent)]',
-          error && 'border-[var(--color-error)]'
+          'flex min-h-10 items-center gap-2 rounded-[var(--radius-sm)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] py-[var(--space-2)] shadow-[var(--shadow-soft-sm)] focus-within:border-[var(--color-focus)] focus-within:shadow-[var(--shadow-focus)]',
+          error && 'border-[var(--color-error)] focus-within:border-[var(--color-error)] focus-within:shadow-[var(--shadow-focus-error)]'
         )}
       >
         {leadingSlot}

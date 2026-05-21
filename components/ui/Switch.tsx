@@ -20,8 +20,8 @@ export function Switch({ checked, className, disabled, onCheckedChange, onClick,
       role="switch"
       aria-checked={checked}
       className={cn(
-        'bl-switch relative inline-flex h-8 w-14 items-center rounded-[var(--radius-pill)] border-2 border-[var(--color-border)] bg-[var(--color-surface)] p-1 transition-colors duration-[var(--duration-normal)] motion-reduce:transition-none',
-        checked && 'border-[var(--color-accent)] bg-[var(--color-accent)]',
+        'bl-switch relative inline-flex h-6 w-10 items-center rounded-[var(--radius-pill)] bg-[var(--color-border-light)] p-[3px] transition-colors duration-[var(--duration-base)]',
+        checked && 'bg-[var(--color-primary)]',
         disabled && 'cursor-not-allowed opacity-60',
         className
       )}
@@ -44,8 +44,8 @@ export function Switch({ checked, className, disabled, onCheckedChange, onClick,
       <span
         aria-hidden="true"
         className={cn(
-          'h-5 w-5 rounded-full bg-[var(--color-bg)] shadow-[var(--shadow-press-active)] transition-transform duration-[var(--duration-normal)] motion-reduce:transition-none',
-          checked && 'translate-x-6'
+          'h-[18px] w-[18px] rounded-full bg-[var(--color-fg-inverse)] shadow-[var(--shadow-press-sm)] transition-transform duration-[var(--duration-base)]',
+          checked && 'translate-x-4'
         )}
       />
     </button>

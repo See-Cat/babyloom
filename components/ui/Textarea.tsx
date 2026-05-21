@@ -30,8 +30,8 @@ export function Textarea({ className, error, id, label, onInput, ...rest }: Text
         ref={ref}
         id={textareaId}
         className={cn(
-          'min-h-28 resize-none rounded-[var(--radius-sm)] border-2 border-[var(--color-border)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)] text-[var(--text-base)] font-normal outline-none placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]',
-          error && 'border-[var(--color-error)]',
+          'min-h-[100px] max-h-[calc(6*1.55em+32px)] resize-none rounded-[var(--radius-card)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] py-[var(--space-3)] text-[var(--text-base)] font-normal leading-[var(--leading-base)] shadow-[var(--shadow-soft-sm)] outline-none placeholder:text-[var(--color-fg-soft)] focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]',
+          error && 'border-[var(--color-error)] focus:border-[var(--color-error)] focus:shadow-[var(--shadow-focus-error)]',
           className
         )}
         aria-describedby={errorId}

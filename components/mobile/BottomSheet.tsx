@@ -45,7 +45,7 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
     <div className="fixed inset-0 z-[var(--z-sheet)] flex items-end bg-[var(--color-scrim)]" onMouseDown={() => onOpenChange(false)}>
       <div
         ref={panelRef}
-        className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] text-[var(--color-fg)] shadow-[var(--shadow-card-hover)] transition-transform duration-[var(--duration-normal)] ease-[var(--ease-out-expo)] motion-reduce:transition-none"
+        className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-lg)] bg-[var(--color-surface-2)] px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-[18px] text-[var(--color-fg)] shadow-[var(--shadow-sheet)] transition-transform duration-[var(--duration-slow)] ease-[var(--ease)]"
         style={{ transform: `translateY(${dragY}px)`, touchAction: 'pan-y' }}
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -53,8 +53,8 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
         onTouchEnd={onTouchEnd}
         {...panelProps}
       >
-        <div className="bl-bottom-sheet__handle mx-auto mb-[var(--space-4)] h-1 w-6 rounded-[var(--radius-pill)] bg-[var(--color-border)]" />
-        <h2 id={titleId} className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">
+        <div className="bl-bottom-sheet__handle mx-auto mb-[14px] h-1 w-9 rounded-[var(--radius-pill)] bg-[var(--color-border-light)]" />
+        <h2 id={titleId} className="text-[var(--text-md)] font-bold text-[var(--color-fg-strong)]">
           {title}
         </h2>
         {description && (

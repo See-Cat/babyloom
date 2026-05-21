@@ -22,17 +22,16 @@ export function Modal({ open, onOpenChange, title, description, children, footer
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--color-scrim)] p-[var(--space-4)] backdrop-blur-sm" onMouseDown={() => onOpenChange(false)}>
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--color-scrim)] p-[var(--space-4)]" onMouseDown={() => onOpenChange(false)}>
       <div
         ref={panelRef}
         className={cn(
-          'relative w-full max-w-[min(90vw,480px)] overflow-hidden rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-6)] text-[var(--color-fg)] shadow-[var(--shadow-card-hover)]',
-          'animate-[dialog-in_var(--duration-normal)_var(--ease-out-expo)] motion-reduce:animate-none'
+          'relative w-full max-w-[min(calc(100vw-32px),480px)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-2)] px-[var(--space-6)] py-[22px] text-[var(--color-fg)] shadow-[var(--shadow-soft-lg)]',
+          'animate-[dialog-in_var(--duration-base)_var(--ease)_backwards]'
         )}
         onMouseDown={(event) => event.stopPropagation()}
         {...panelProps}
       >
-        <div className="absolute left-0 right-0 top-0 h-3 bg-[var(--color-accent)]" />
         <h2 id={titleId} className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">
           {title}
         </h2>

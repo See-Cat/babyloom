@@ -16,17 +16,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: 'bg-[var(--color-accent)] text-[color:var(--color-on-solid)] hover:bg-[var(--color-accent-hover)]',
-  secondary: 'bg-[var(--color-surface)] text-[var(--color-fg)]',
-  ghost: 'bg-transparent text-[var(--color-accent)] shadow-none hover:underline',
-  error: 'bg-[var(--color-error)] text-[color:var(--color-on-solid)] shadow-[var(--shadow-press-error)]',
-  success: 'bg-[var(--color-success)] text-[color:var(--color-on-solid)] shadow-[var(--shadow-press-success)]'
+  primary: 'bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)]',
+  secondary: 'bg-[var(--color-surface-2)] text-[var(--color-fg)]',
+  ghost: 'bg-transparent text-[var(--color-primary-active)] shadow-none active:opacity-70',
+  error: 'bg-[var(--color-error)] text-[color:var(--color-fg-inverse)]',
+  success: 'bg-[var(--color-success)] text-[color:var(--color-fg-inverse)]'
 };
 
 const sizeClass: Record<ButtonSize, string> = {
-  sm: 'min-h-8 px-[var(--space-3)] text-[var(--text-sm)]',
-  md: 'min-h-10 px-[var(--space-4)] text-[var(--text-base)]',
-  lg: 'min-h-12 px-[var(--space-6)] text-[var(--text-lg)]'
+  sm: 'min-h-8 px-[var(--space-5)] text-[var(--text-sm)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]',
+  md: 'min-h-10 px-[var(--space-6)] text-[var(--text-base)] shadow-[var(--shadow-press-md)] active:translate-y-[3px] active:shadow-[var(--shadow-press-md-active)]',
+  lg: 'min-h-12 px-[29px] text-[var(--text-lg)] shadow-[var(--shadow-press-lg)] active:translate-y-[4px] active:shadow-[var(--shadow-press-lg-active)]'
 };
 
 export function Button({
@@ -44,20 +44,29 @@ export function Button({
 }: ButtonProps) {
   const isDisabled = disabled || loading;
   const solidVariant = variant === 'primary' || variant === 'error' || variant === 'success';
+  const pressShadow =
+    variant === 'primary'
+      ? 'var(--color-press-shadow-primary)'
+      : variant === 'error'
+        ? 'var(--color-press-shadow-error)'
+        : variant === 'success'
+          ? 'var(--color-success-active)'
+          : 'var(--color-press-shadow)';
 
   return (
     <button
       className={cn(
-        'bl-button inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] font-bold shadow-[var(--shadow-press)] transition-[box-shadow,transform,background-color] duration-[var(--duration-fast)] ease-[var(--ease-press)] hover:-translate-y-px hover:shadow-[var(--shadow-press-hover)] active:translate-y-1 active:shadow-[var(--shadow-press-active)] disabled:cursor-not-allowed disabled:opacity-60 motion-reduce:transform-none motion-reduce:transition-none',
+        'bl-button inline-flex items-center justify-center gap-2 rounded-[var(--radius-pill)] font-bold transition-[box-shadow,transform,background-color,opacity] duration-[var(--duration-press)] ease-[var(--ease)] disabled:cursor-not-allowed disabled:opacity-50',
         variantClass[variant],
         sizeClass[size],
+        variant === 'ghost' && 'shadow-none active:translate-y-0 active:shadow-none',
         fullWidth && 'bl-button--full w-full',
-        loading && 'pointer-events-none',
+        loading && 'pointer-events-none shadow-none active:translate-y-0',
         className
       )}
       data-size={size}
       data-variant={variant}
-      style={{ ...(solidVariant ? { color: 'var(--color-on-solid)' } : {}), ...style }}
+      style={{ '--color-press-shadow': pressShadow, ...(solidVariant ? { color: 'var(--color-fg-inverse)' } : {}), ...style } as React.CSSProperties}
       disabled={isDisabled}
       aria-busy={loading || undefined}
       aria-disabled={isDisabled || undefined}

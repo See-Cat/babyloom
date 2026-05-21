@@ -23,13 +23,13 @@ export function Tabbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bl-tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] border-t border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-3)] pb-[calc(var(--space-2)+env(safe-area-inset-bottom))] pt-[var(--space-2)] shadow-[var(--shadow-card)]" aria-label="主导航">
+    <nav className="bl-tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-3)] pb-[calc(var(--space-2)+env(safe-area-inset-bottom))] pt-[var(--space-2)]" aria-label="主导航">
       <ul className="mx-auto grid max-w-lg grid-cols-4 gap-[var(--space-2)]">
         {items.map((item) => {
           const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const className = cn(
-            'flex min-h-12 flex-col items-center justify-center gap-1 rounded-[var(--radius-pill)] text-[var(--text-xs)] font-bold transition-[background-color,transform,color] duration-[var(--duration-normal)] text-[var(--color-muted)] motion-reduce:transition-none',
-            active && 'translate-y-[-6px] bg-[var(--color-accent)] text-[color:var(--color-on-solid)] motion-reduce:translate-y-0',
+            'flex min-h-12 flex-col items-center justify-center gap-1 rounded-[var(--radius-pill)] text-[var(--text-xs)] font-bold text-[var(--color-fg-soft)] transition-[background-color,box-shadow,transform,color] duration-[var(--duration-slow)] ease-[var(--ease-out-back)]',
+            active && 'translate-y-[-6px] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-press-md)]',
             item.disabled && 'cursor-not-allowed opacity-45'
           );
 

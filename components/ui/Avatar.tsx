@@ -29,11 +29,11 @@ export function Avatar({ src, alt, name, size = 'md', className, style, ...rest 
     <span
       aria-label={alt ?? name}
       className={cn(
-        'bl-avatar inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-accent)] font-bold text-[color:var(--color-on-solid)] shadow-[var(--shadow-press-active)]',
+        'bl-avatar inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--color-avatar-mint)] font-bold text-[color:var(--color-fg-inverse)]',
         sizeClass[size],
         className
       )}
-      style={{ color: 'var(--color-on-solid)', ...style }}
+      style={{ color: 'var(--color-fg-inverse)', ...style }}
       {...rest}
     >
       {src ? <img src={src} alt={alt ?? name} className="h-full w-full object-cover" /> : fallback}

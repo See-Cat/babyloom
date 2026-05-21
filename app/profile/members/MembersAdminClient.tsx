@@ -102,7 +102,7 @@ export default function MembersAdminPage() {
 
       <Link
         href="/profile/members/permissions"
-        className="mb-[var(--space-4)] block rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] font-semibold text-[var(--color-fg-strong)] shadow-[var(--shadow-card)]"
+        className="mb-[var(--space-4)] block rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] font-semibold text-[var(--color-fg-strong)]"
       >
         宝宝权限
       </Link>
