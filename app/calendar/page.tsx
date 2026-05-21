@@ -1,5 +1,4 @@
 import { eq } from 'drizzle-orm';
-import Link from 'next/link';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
@@ -9,9 +8,9 @@ import { getDb } from '@/lib/db/client';
 import { buildMonthGrid, formatDateInTimezone, listEntryDays } from '@/lib/db/queries/calendar';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { familyMembers } from '@/lib/db/schema';
+import { CalendarMonthNav } from '@/components/features/CalendarMonthNav';
 import { MonthCalendar } from '@/components/features/MonthCalendar';
 import { AppShell } from '@/components/mobile/AppShell';
-import { Button } from '@/components/ui/Button';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -58,15 +57,7 @@ export default async function CalendarPage({
 
   return (
     <AppShell title="日历" subtitle={selectedBaby.name}>
-      <div className="mb-[var(--space-4)] flex items-center justify-between gap-[var(--space-3)]">
-        <Link href={`/calendar?babyId=${selectedBabyId}&ym=${shiftMonth(ym, -1)}`}>
-          <Button variant="ghost" size="sm">上一月</Button>
-        </Link>
-        <h2 className="text-[var(--text-lg)] font-bold text-[var(--color-fg-strong)]">{monthLabel(ym)}</h2>
-        <Link href={`/calendar?babyId=${selectedBabyId}&ym=${shiftMonth(ym, 1)}`}>
-          <Button variant="ghost" size="sm">下一月</Button>
-        </Link>
-      </div>
+      <CalendarMonthNav babyId={selectedBabyId} ym={ym} />
       <MonthCalendar babyId={selectedBabyId} grid={grid} daySet={daySet} todayIso={todayIso} />
     </AppShell>
   );
@@ -74,15 +65,4 @@ export default async function CalendarPage({
 
 function isYm(value: string | undefined): value is string {
   return Boolean(value?.match(/^\d{4}-(0[1-9]|1[0-2])$/));
-}
-
-function shiftMonth(ym: string, delta: number) {
-  const [year, month] = ym.split('-').map(Number);
-  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-}
-
-function monthLabel(ym: string) {
-  const [year, month] = ym.split('-').map(Number);
-  return `${year} 年 ${month} 月`;
 }

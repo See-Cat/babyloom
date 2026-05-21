@@ -47,9 +47,10 @@ export default async function GalleryPage({
       : familyBabies[0].id;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId }));
+  const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);
 
   return (
-    <AppShell title="画廊" subtitle={selectedBaby.name}>
+    <AppShell title="画廊" subtitle={`${selectedBaby.name} · ${mediaCount > 0 ? `共 ${mediaCount} 张` : '还没有照片'}`}>
       <GalleryGrid groups={groups} />
     </AppShell>
   );
