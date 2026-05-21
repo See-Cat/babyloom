@@ -5,8 +5,8 @@ build/
 *.tsbuildinfo
 .env
 .env.local
-data/
-test-data/
+/data/
+/test-data/
 coverage/
 playwright-report/
 test-results/
