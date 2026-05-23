@@ -1,6 +1,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/api/auth', '/api/health', '/api/log/client', '/_next', '/favicon.ico', '/manifest.webmanifest', '/icons'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/api/auth',
+  '/api/health',
+  '/api/log/client',
+  '/_next',
+  '/favicon.ico',
+  '/manifest.webmanifest',
+  '/icons',
+  '/fonts',
+  '/sw.js'
+];
 const CSP = [
   "default-src 'self'",
   "img-src 'self' data: blob:",

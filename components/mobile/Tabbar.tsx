@@ -28,8 +28,8 @@ export function Tabbar() {
         {items.map((item) => {
           const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const className = cn(
-            'flex min-w-14 flex-col items-center justify-center gap-1 text-[var(--text-xs)] font-semibold text-[var(--color-fg-soft)]',
-            active && 'text-[var(--color-primary-active)]',
+            'flex min-w-14 flex-col items-center justify-center gap-1 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]',
+            active && 'text-[color:var(--color-primary-active)]',
             item.disabled && 'cursor-not-allowed opacity-45'
           );
           const dotClassName = cn(

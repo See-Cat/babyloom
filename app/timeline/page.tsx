@@ -124,7 +124,7 @@ export default async function TimelinePage({
           ))}
         </ul>
       )}
-      <p className="py-[var(--space-6)] text-center text-[var(--text-sm)] text-[var(--color-fg-soft)]">到这里啦</p>
+      <p className="py-[var(--space-6)] text-center text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">到这里啦</p>
       <Link href={`/entry/new?babyId=${selectedBabyId}`} className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-[var(--space-5)] z-[calc(var(--z-tabbar)-1)]">
         <Button type="button" size="lg" aria-label="新记录">+</Button>
       </Link>

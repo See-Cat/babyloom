@@ -12,7 +12,7 @@ export function Spinner({ className, label = '加载中', ...rest }: SpinnerProp
       <svg
         aria-hidden="true"
         viewBox="0 0 24 24"
-        className="h-5 w-5 animate-spin text-[var(--color-accent)] motion-reduce:hidden"
+        className="h-5 w-5 animate-spin text-[color:var(--color-accent)] motion-reduce:hidden"
       >
         <circle
           cx="12"
@@ -25,7 +25,7 @@ export function Spinner({ className, label = '加载中', ...rest }: SpinnerProp
           strokeWidth="3"
         />
       </svg>
-      <span aria-hidden="true" className="hidden text-[var(--color-accent)] motion-reduce:inline">
+      <span aria-hidden="true" className="hidden text-[color:var(--color-accent)] motion-reduce:inline">
         …
       </span>
     </span>

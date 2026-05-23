@@ -26,7 +26,7 @@ export class ClientErrorBoundary extends React.Component<{ children: React.React
 
   render() {
     if (this.state.hasError) {
-      return <main className="p-[var(--space-6)] text-center text-[var(--color-text)]">页面暂时无法显示</main>;
+      return <main className="p-[var(--space-6)] text-center text-[color:var(--color-fg)]">页面暂时无法显示</main>;
     }
     return this.props.children;
   }

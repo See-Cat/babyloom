@@ -90,7 +90,7 @@ function NewEntryForm() {
     <AppShell
       title="新记录"
       leftSlot={
-        <button type="button" className="text-[var(--text-sm)] font-bold text-[var(--color-fg)]" onClick={() => router.back()}>
+        <button type="button" className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)]" onClick={() => router.back()}>
           返回
         </button>
       }

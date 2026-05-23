@@ -52,14 +52,14 @@ export function PermissionsMatrix({ babies, members, overrides }: PermissionsMat
   }
 
   if (members.length === 0 || babies.length === 0) {
-    return <p className="text-[var(--text-sm)] text-[var(--color-muted)]">暂无可配置成员或宝宝</p>;
+    return <p className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">暂无可配置成员或宝宝</p>;
   }
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[720px] border-separate border-spacing-0">
         <thead>
-          <tr className="text-left text-[var(--text-sm)] text-[var(--color-muted)]">
+          <tr className="text-left text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
             <th className="sticky left-0 z-10 bg-[var(--color-surface)] p-[var(--space-2)]">
               成员
             </th>
@@ -76,8 +76,8 @@ export function PermissionsMatrix({ babies, members, overrides }: PermissionsMat
               <th className="sticky left-0 z-10 w-52 bg-[var(--color-surface)] p-[var(--space-2)] text-left">
                 <div className="flex flex-col gap-[var(--space-2)]">
                   <div>
-                    <p className="font-bold text-[var(--color-fg-strong)]">{member.nickname}</p>
-                    <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+                    <p className="font-bold text-[color:var(--color-fg-strong)]">{member.nickname}</p>
+                    <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
                       @{member.username}
                     </p>
                   </div>
@@ -91,8 +91,8 @@ export function PermissionsMatrix({ babies, members, overrides }: PermissionsMat
                   >
                     重置为默认
                   </Button>
-                  <details className="text-[var(--text-xs)] text-[var(--color-muted)]">
-                    <summary className="cursor-pointer font-semibold text-[var(--color-fg)]">
+                  <details className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
+                    <summary className="cursor-pointer font-semibold text-[color:var(--color-fg)]">
                       实际访问
                     </summary>
                     <ul className="mt-[var(--space-2)] flex flex-col gap-1">

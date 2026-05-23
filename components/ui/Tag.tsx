@@ -12,16 +12,16 @@ export interface TagProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClass: Record<TagVariant, string> = {
-  neutral: 'bg-[var(--color-bg-disabled)] text-[var(--color-fg-soft)]',
-  accent: 'bg-[var(--color-primary-bg)] text-[var(--color-primary-active)]',
-  error: 'bg-[var(--color-error-bg)] text-[var(--color-error-active)]'
+  neutral: 'bg-[var(--color-bg-disabled)] text-[color:var(--color-fg-soft)]',
+  accent: 'bg-[var(--color-primary-bg)] text-[color:var(--color-primary-active)]',
+  error: 'bg-[var(--color-error-bg)] text-[color:var(--color-error-active)]'
 };
 
 export function Tag({ children, className, variant = 'neutral', removable = false, onRemove, style, ...rest }: TagProps) {
   return (
     <span
       className={cn(
-        'bl-tag inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-[10px] py-[var(--space-1)] text-[var(--text-sm)] font-semibold',
+        'bl-tag inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-[10px] py-[var(--space-1)] text-[length:var(--text-sm)] font-semibold',
         variantClass[variant],
         className
       )}

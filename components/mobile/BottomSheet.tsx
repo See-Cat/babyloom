@@ -48,7 +48,7 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
     }}>
       <div
         ref={panelRef}
-        className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-lg)] bg-[var(--color-surface-2)] px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-[18px] text-[var(--color-fg)] shadow-[var(--shadow-sheet)] transition-transform duration-[var(--duration-slow)] ease-[var(--ease)]"
+        className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-lg)] bg-[var(--color-surface-2)] px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-[18px] text-[color:var(--color-fg)] shadow-[var(--shadow-sheet)] transition-transform duration-[var(--duration-slow)] ease-[var(--ease)]"
         style={{ transform: `translateY(${dragY}px)`, touchAction: 'pan-y' }}
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -57,11 +57,11 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
         {...panelProps}
       >
         <div className="bl-bottom-sheet__handle mx-auto mb-[14px] h-1 w-9 rounded-[var(--radius-pill)] bg-[var(--color-border-light)]" />
-        <h2 id={titleId} className="text-[var(--text-md)] font-bold text-[var(--color-fg-strong)]">
+        <h2 id={titleId} className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
           {title}
         </h2>
         {description && (
-          <p id={descriptionId} className="mt-[var(--space-2)] text-[var(--text-sm)] text-[var(--color-muted)]">
+          <p id={descriptionId} className="mt-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
             {description}
           </p>
         )}

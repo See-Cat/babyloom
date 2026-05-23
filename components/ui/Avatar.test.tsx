@@ -32,4 +32,17 @@ describe('Avatar', () => {
 
     expect(html).toContain('+1');
   });
+
+  it('supports all reference sizes and stable palette colors', () => {
+    const html = renderToStaticMarkup(
+      <>
+        <Avatar name="小米" size="xs" colorKey="baby-1" />
+        <Avatar name="小米" size="xl" colorKey="baby-1" />
+      </>
+    );
+
+    expect(html).toContain('data-size="xs"');
+    expect(html).toContain('data-size="xl"');
+    expect(html).toContain('--avatar-bg:var(--color-avatar-');
+  });
 });

@@ -74,7 +74,7 @@ export function EditMeForm({ initial, updateMyName, changeMyPassword }: EditMeFo
     <div className="grid gap-[var(--space-4)]">
       <Card as="section">
         <form aria-label="基本资料" className="grid gap-[var(--space-3)]" onSubmit={onNameSubmit}>
-          <h2 className="text-[var(--text-lg)] font-bold text-[var(--color-fg-strong)]">基本资料</h2>
+          <h2 className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">基本资料</h2>
           <Input name="name" label="昵称" defaultValue={initial.name} error={nameError ?? undefined} />
           <Input name="username" label="用户名" defaultValue={initial.username} readOnly />
           <Button type="submit" disabled={pending === 'name'}>
@@ -85,7 +85,7 @@ export function EditMeForm({ initial, updateMyName, changeMyPassword }: EditMeFo
 
       <Card as="section">
         <form aria-label="修改密码" className="grid gap-[var(--space-3)]" onSubmit={onPasswordSubmit}>
-          <h2 className="text-[var(--text-lg)] font-bold text-[var(--color-fg-strong)]">修改密码</h2>
+          <h2 className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">修改密码</h2>
           <Input name="currentPassword" label="当前密码" type="password" autoComplete="current-password" />
           <Input name="newPassword" label="新密码" type="password" autoComplete="new-password" />
           <Input name="confirmNewPassword" label="确认新密码" type="password" autoComplete="new-password" error={passwordError ?? undefined} />

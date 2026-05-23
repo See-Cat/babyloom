@@ -73,21 +73,21 @@ export default async function PermissionsPage() {
     <AppShell
       title="宝宝权限"
       leftSlot={
-        <Link href="/profile/members" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+        <Link href="/profile/members" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
           返回
         </Link>
       }
       className="max-w-6xl"
     >
       <Card className="mb-[var(--space-4)] border-l-4 border-l-[var(--color-warning)]">
-        <div className="flex flex-col gap-[var(--space-2)] text-[var(--text-sm)] leading-6">
-          <p className="font-semibold text-[var(--color-fg-strong)]">
+        <div className="flex flex-col gap-[var(--space-2)] text-[length:var(--text-sm)] leading-6">
+          <p className="font-semibold text-[color:var(--color-fg-strong)]">
             此处的勾选只能收窄家庭成员的宝宝访问范围,不能授予超出其角色的权限。
           </p>
-          <p className="text-[var(--color-muted)]">
+          <p className="text-[color:var(--color-muted)]">
             永久删除任何资源、管理宝宝、管理成员、管理家庭、管理里程碑、系统备份/日志始终只允许 owner。
           </p>
-          <p className="text-[var(--color-muted)]">
+          <p className="text-[color:var(--color-muted)]">
             没有覆盖行时使用角色默认权限；勾选不会让 viewer 获得写入或删除能力。
           </p>
         </div>

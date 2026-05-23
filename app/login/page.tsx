@@ -23,8 +23,8 @@ export default function LoginPage() {
       <form action={onSubmit} className="mx-auto flex min-h-[calc(100vh-6px)] w-full max-w-sm flex-col justify-center px-[var(--space-6)]">
         <div className="mb-[var(--space-7)] text-center">
           <div aria-hidden="true" className="mb-[var(--space-2)] text-[48px] leading-none">🌱</div>
-          <h1 className="text-[var(--text-hero)] font-bold text-[var(--color-fg-strong)]">Babyloom</h1>
-          <p className="text-[var(--text-base)] text-[var(--color-fg-soft)]">登录到家庭记录本</p>
+          <h1 className="text-[length:var(--text-hero)] font-bold text-[color:var(--color-fg-strong)]">Babyloom</h1>
+          <p className="text-[length:var(--text-base)] text-[color:var(--color-fg-soft)]">登录到家庭记录本</p>
         </div>
         <div className="flex flex-col gap-[var(--space-4)]">
           <Input name="username" type="text" required placeholder="例如 mama" label="用户名" autoComplete="username" />

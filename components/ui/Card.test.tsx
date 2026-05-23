@@ -25,4 +25,18 @@ describe('Card', () => {
     expect(html).not.toContain('hover:-translate-y-1');
     expect(html).not.toContain('shadow-[var(--shadow-card-hover)]');
   });
+
+  it('supports dashed and tinted variants from the component reference', () => {
+    const html = renderToStaticMarkup(
+      <>
+        <Card variant="dashed">添加记录</Card>
+        <Card variant="tinted" tint="pink">里程碑</Card>
+      </>
+    );
+
+    expect(html).toContain('border-dashed');
+    expect(html).toContain('bg-[var(--color-surface-2)]');
+    expect(html).toContain('data-variant="tinted"');
+    expect(html).toContain('--card-tint:var(--color-avatar-pink)');
+  });
 });

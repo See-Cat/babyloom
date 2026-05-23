@@ -50,8 +50,8 @@ export default async function ProfilePage() {
         <div className="flex items-center gap-[var(--space-3)]">
           <Avatar src={me?.image ?? undefined} name={me?.name ?? '我'} size="lg" />
           <div>
-            <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me?.name}</h2>
-            <p className="text-[var(--text-sm)] text-[var(--color-muted)]">
+            <h2 className="text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{me?.name}</h2>
+            <p className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
               @{me?.username} · {member.role}
             </p>
           </div>
@@ -73,15 +73,15 @@ type ProfileLink = { href: string; label: string; icon: ProfileIcon };
 function ProfileSection({ title, links }: { title?: string; links: ProfileLink[] }) {
   return (
     <section aria-label={title}>
-      {title && <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[var(--text-xs)] font-bold text-[var(--color-fg-soft)]">{title}</h2>}
+      {title && <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-soft)]">{title}</h2>}
       <Card className="px-0 py-0">
         <ul>
           {links.map((link) => (
             <li key={link.href} className="border-b border-[var(--color-border-light)] last:border-b-0">
-              <Link href={link.href} className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] text-[var(--text-md)] font-semibold text-[var(--color-fg)] active:bg-[var(--color-press-tint)]">
+              <Link href={link.href} className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]">
                 <ProfileRowIcon name={link.icon} />
                 <span>{link.label}</span>
-                <span aria-hidden="true" className="ml-auto text-[var(--color-fg-soft)]">›</span>
+                <span aria-hidden="true" className="ml-auto text-[color:var(--color-fg-soft)]">›</span>
               </Link>
             </li>
           ))}
@@ -93,7 +93,7 @@ function ProfileSection({ title, links }: { title?: string; links: ProfileLink[]
 
 function ProfileRowIcon({ name }: { name: ProfileIcon }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-none stroke-current text-[var(--color-fg-soft)] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-none stroke-current text-[color:var(--color-fg-soft)] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]">
       {iconPaths[name]}
     </svg>
   );

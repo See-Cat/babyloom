@@ -29,17 +29,17 @@ export function Modal({ open, onOpenChange, title, description, children, footer
       <div
         ref={panelRef}
         className={cn(
-          'relative w-full max-w-[min(calc(100vw-32px),480px)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-2)] px-[var(--space-6)] py-[22px] text-[var(--color-fg)] shadow-[var(--shadow-soft-lg)]',
+          'relative w-full max-w-[min(calc(100vw-32px),480px)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-2)] px-[var(--space-6)] py-[22px] text-[color:var(--color-fg)] shadow-[var(--shadow-soft-lg)]',
           'animate-[dialog-in_var(--duration-base)_var(--ease)_backwards]'
         )}
         onMouseDown={(event) => event.stopPropagation()}
         {...panelProps}
       >
-        <h2 id={titleId} className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">
+        <h2 id={titleId} className="text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">
           {title}
         </h2>
         {description && (
-          <p id={descriptionId} className="mt-[var(--space-2)] text-[var(--text-sm)] text-[var(--color-muted)]">
+          <p id={descriptionId} className="mt-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
             {description}
           </p>
         )}

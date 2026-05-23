@@ -24,8 +24,8 @@ export function SegmentedControl({ ariaLabel, className, onChange, options, valu
           key={option.value}
           type="button"
           className={cn(
-            'rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)] text-[var(--text-sm)] font-bold text-[var(--color-fg-soft)]',
-            value === option.value && 'bg-[var(--color-surface-2)] text-[var(--color-primary-active)]'
+            'rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-soft)]',
+            value === option.value && 'bg-[var(--color-surface-2)] text-[color:var(--color-primary-active)]'
           )}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}

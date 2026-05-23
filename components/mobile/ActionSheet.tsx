@@ -31,8 +31,8 @@ export function ActionSheet({ open, onOpenChange, title, options, cancelLabel = 
               disabled={option.disabled}
               data-destructive={option.destructive ? true : undefined}
               className={cn(
-                'block w-full border-b border-[var(--color-border-light)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[var(--text-md)] font-semibold text-[var(--color-fg)] last:border-b-0 active:bg-[var(--color-press-tint)] disabled:cursor-not-allowed disabled:opacity-50',
-                option.destructive && 'text-[var(--color-error)]'
+                'block w-full border-b border-[var(--color-border-light)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] last:border-b-0 active:bg-[var(--color-press-tint)] disabled:cursor-not-allowed disabled:opacity-50',
+                option.destructive && 'text-[color:var(--color-error)]'
               )}
               onClick={() => {
                 option.onSelect();
@@ -45,7 +45,7 @@ export function ActionSheet({ open, onOpenChange, title, options, cancelLabel = 
         </div>
         <button
           type="button"
-          className="rounded-[var(--radius-base)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[var(--text-md)] font-bold text-[var(--color-fg)] shadow-[var(--shadow-soft-lg)] active:bg-[var(--color-press-tint)]"
+          className="rounded-[var(--radius-base)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[length:var(--text-md)] font-bold text-[color:var(--color-fg)] shadow-[var(--shadow-soft-lg)] active:bg-[var(--color-press-tint)]"
           onClick={() => onOpenChange(false)}
         >
           {cancelLabel}

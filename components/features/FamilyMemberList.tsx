@@ -35,17 +35,17 @@ export function FamilyMemberList({ members, onSelect, resetSlot }: FamilyMemberL
               <Avatar name={member.nickname} size="lg" className={avatarClass(member.role)} />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-[var(--space-2)]">
-                  <p className="truncate font-bold text-[var(--color-fg-strong)]">{member.nickname}</p>
+                  <p className="truncate font-bold text-[color:var(--color-fg-strong)]">{member.nickname}</p>
                   <span className={cn('rounded-[var(--radius-pill)] px-[var(--space-2)] py-[2px] text-[10px] font-bold', roleBadgeClass(member.role))}>
                     {roleLabel(member.role)}
                   </span>
                 </div>
-                <p className="truncate text-[var(--text-xs)] text-[var(--color-muted)]">
+                <p className="truncate text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
                   @{member.username} · {member.role === 'owner' ? '你自己' : '家庭成员'}
                 </p>
               </div>
               {member.role !== 'owner' && (
-                <span aria-hidden="true" className="text-[var(--color-fg-soft)]">›</span>
+                <span aria-hidden="true" className="text-[color:var(--color-fg-soft)]">›</span>
               )}
             </button>
             {resetSlot?.(member)}
@@ -63,9 +63,9 @@ function roleLabel(role: FamilyMemberListItem['role']) {
 }
 
 function roleBadgeClass(role: FamilyMemberListItem['role']) {
-  if (role === 'owner') return 'bg-[var(--color-primary-bg)] text-[var(--color-primary-active)]';
-  if (role === 'editor') return 'bg-[var(--color-surface-2)] text-[var(--color-fg-strong)]';
-  return 'bg-[var(--color-bg-disabled)] text-[var(--color-fg-soft)]';
+  if (role === 'owner') return 'bg-[var(--color-primary-bg)] text-[color:var(--color-primary-active)]';
+  if (role === 'editor') return 'bg-[var(--color-surface-2)] text-[color:var(--color-fg-strong)]';
+  return 'bg-[var(--color-bg-disabled)] text-[color:var(--color-fg-soft)]';
 }
 
 function avatarClass(role: FamilyMemberListItem['role']) {

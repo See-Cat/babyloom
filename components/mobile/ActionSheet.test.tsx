@@ -29,6 +29,6 @@ describe('ActionSheet', () => {
     expect(html).toContain('编辑');
     expect(html).toContain('移到回收站');
     expect(html).not.toContain('bl-button');
-    expect(html).toContain('text-[var(--color-error)]');
+    expect(html).toContain('text-[color:var(--color-error)]');
   });
 });

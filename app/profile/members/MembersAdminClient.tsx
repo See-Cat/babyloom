@@ -97,17 +97,17 @@ export default function MembersAdminPage() {
     <AppShell
       title="成员管理"
       leftSlot={
-        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
           返回
         </Link>
       }
     >
 
-      {error && <p role="alert" className="mb-[var(--space-2)] text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
+      {error && <p role="alert" className="mb-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-error)]">{error}</p>}
 
       <Link
         href="/profile/members/permissions"
-        className="mb-[var(--space-4)] block rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] font-semibold text-[var(--color-fg-strong)]"
+        className="mb-[var(--space-4)] block rounded-[var(--radius-card)] bg-[var(--color-surface)] p-[var(--space-4)] font-semibold text-[color:var(--color-fg-strong)]"
       >
         宝宝权限
       </Link>
@@ -211,7 +211,7 @@ export default function MembersAdminPage() {
           </>
         }
       >
-        <p className="text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+        <p className="text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           确认移除 {removeFor?.nickname ?? '该成员'}? 该成员将无法登录,但他们已记录的内容会保留。
         </p>
       </Dialog>

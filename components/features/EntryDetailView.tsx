@@ -39,7 +39,7 @@ export function EntryDetailView({
         <Link
           href={`/timeline?babyId=${entry.babyId}`}
           aria-label="返回时间线"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
         >
           <ChevronLeftIcon />
         </Link>
@@ -49,7 +49,7 @@ export function EntryDetailView({
           <Link
             href={`/entry/${entry.id}/edit`}
             aria-label="更多操作"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
           >
             <DotsIcon />
           </Link>
@@ -64,11 +64,11 @@ export function EntryDetailView({
       )}
 
       <Card as="article" className="bl-entry-detail">
-        <p className="mb-[var(--space-3)] text-[var(--text-xs)] font-semibold text-[var(--color-fg-soft)]">
+        <p className="mb-[var(--space-3)] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
           {babyName ? `${babyName} · ` : ''}
           {formatDate(entry.occurredAt)} 记录
         </p>
-        <p className="whitespace-pre-wrap text-[var(--text-lg)] font-medium leading-[var(--leading-relax)] text-[var(--color-fg)]">
+        <p className="whitespace-pre-wrap text-[length:var(--text-lg)] font-medium leading-[var(--leading-relax)] text-[color:var(--color-fg)]">
           {entry.content}
         </p>
 
@@ -90,8 +90,8 @@ export function EntryDetailView({
             size="sm"
           />
           <div>
-            <p className="text-[var(--text-sm)] font-bold text-[var(--color-fg-strong)]">{authorName ?? '未知'}</p>
-            <p className="text-[var(--text-xs)] font-semibold text-[var(--color-fg-soft)]">{formatDate(recordedAt)}</p>
+            <p className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">{authorName ?? '未知'}</p>
+            <p className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">{formatDate(recordedAt)}</p>
           </div>
         </div>
       </Card>

@@ -16,7 +16,7 @@ export interface MediaUploaderProps {
 export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploadedMedia }: MediaUploaderProps) {
   return (
     <div>
-      <p className="mb-[var(--space-2)] text-[var(--text-sm)] font-bold text-[var(--color-fg-strong)]">照片 / 视频</p>
+      <p className="mb-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">照片 / 视频</p>
       <UploadButton babyId={babyId} onUploaded={onUploaded} disabled={disabled} className="flex flex-col gap-[var(--space-2)]" />
       {uploadedMedia.length > 0 && (
         <ul className="mt-[var(--space-3)] flex flex-wrap gap-[var(--space-2)]">
@@ -26,7 +26,7 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
                 {media.status === 'ready' ? (
                   <MediaImage mediaId={media.mediaId} size="thumb" alt={media.filename} width={64} height={64} className="h-16 w-16 rounded-[var(--radius-sm)] object-cover" />
                 ) : (
-                  <span className="text-[var(--text-sm)]">上传中… {media.filename}</span>
+                  <span className="text-[length:var(--text-sm)]">上传中… {media.filename}</span>
                 )}
                 <Button type="button" size="sm" variant="ghost" onClick={() => onRemove(media.mediaId)}>
                   移除

@@ -49,18 +49,18 @@ export function DatePicker({ label, name, onChange, placeholder = '选择生日'
   }
 
   return (
-    <div className="flex flex-col gap-1 text-[var(--text-sm)] font-semibold text-[var(--color-fg)]">
+    <div className="flex flex-col gap-1 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
       <input type="hidden" name={name} value={value} required={required} />
       <span>{label}</span>
       <button
         type="button"
-        className="flex min-h-10 w-full items-center justify-between rounded-[var(--radius-sm)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] py-[var(--space-2)] text-left text-[var(--text-base)] font-normal text-[var(--color-fg)] shadow-[var(--shadow-soft-sm)] outline-none focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]"
+        className="bl-date-row flex h-10 w-full items-center justify-between rounded-[var(--radius-sm)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] text-left text-[length:var(--text-md)] font-normal text-[color:var(--color-fg)] shadow-[var(--shadow-soft-sm)] outline-none focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <span className={cn(!value && 'text-[var(--color-fg-disabled)]')}>{value ? formatLabel(value) : placeholder}</span>
-        <span aria-hidden="true" className="text-[var(--text-sm)] text-[var(--color-fg-soft)]">›</span>
+        <span className={cn(!value && 'text-[color:var(--color-fg-disabled)]')}>{value ? formatLabel(value) : placeholder}</span>
+        <span aria-hidden="true" className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">›</span>
       </button>
       <BottomSheet open={open} onOpenChange={setOpen} title="选择生日">
         <div className="grid h-[200px] grid-cols-[1.2fr_1fr_1fr] gap-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)] p-[var(--space-2)]">
@@ -101,8 +101,8 @@ function DateColumn({
           role="option"
           aria-selected={item === value}
           className={cn(
-            'flex min-h-10 w-full items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-base)] font-semibold text-[var(--color-fg-soft)]',
-            item === value && 'bg-[var(--color-surface-2)] text-[var(--text-lg)] font-bold text-[var(--color-fg-strong)] shadow-[var(--shadow-soft-sm)]'
+            'flex min-h-10 w-full items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-base)] font-semibold text-[color:var(--color-fg-soft)]',
+            item === value && 'bg-[var(--color-surface-2)] text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)] shadow-[var(--shadow-soft-sm)]'
           )}
           onClick={() => onChange(item)}
         >

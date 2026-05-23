@@ -10,7 +10,7 @@ export function ThumbnailStrip({ mediaIds }: { mediaIds: string[] }) {
         </li>
       ))}
       {mediaIds.length > 4 && (
-        <li className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[var(--text-sm)]">
+        <li className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[length:var(--text-sm)]">
           +{mediaIds.length - 4}
         </li>
       )}

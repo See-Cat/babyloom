@@ -7,18 +7,18 @@ export function CalendarMonthNav({ babyId, ym }: { babyId: string; ym: string })
       <Link
         href={`/calendar?babyId=${babyId}&ym=${shiftMonth(ym, -1)}`}
         aria-label="上个月"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[var(--text-xl)] font-bold text-[var(--color-fg)] shadow-[var(--shadow-press-sm)] transition-[box-shadow,transform] duration-[var(--duration-press)] ease-[var(--ease)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] transition-[box-shadow,transform] duration-[var(--duration-press)] ease-[var(--ease)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
       >
         <ChevronLeftIcon />
       </Link>
-      <span className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] px-[var(--space-4)] py-[var(--space-2)] text-[var(--text-md)] font-bold text-[var(--color-fg-strong)] shadow-[var(--shadow-press-sm)]">
+      <span className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)] shadow-[var(--shadow-press-sm)]">
         {monthLabel(ym)}
         <ChevronDownIcon />
       </span>
       <Link
         href={`/calendar?babyId=${babyId}&ym=${shiftMonth(ym, 1)}`}
         aria-label="下个月"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[var(--text-xl)] font-bold text-[var(--color-fg)] shadow-[var(--shadow-press-sm)] transition-[box-shadow,transform] duration-[var(--duration-press)] ease-[var(--ease)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] transition-[box-shadow,transform] duration-[var(--duration-press)] ease-[var(--ease)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
       >
         <ChevronRightIcon />
       </Link>
@@ -55,7 +55,7 @@ function ChevronRightIcon() {
 
 function ChevronDownIcon() {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[var(--color-fg-soft)]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
+    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 text-[color:var(--color-fg-soft)]" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
       <path d="m6 9 6 6 6-6" />
     </svg>
   );

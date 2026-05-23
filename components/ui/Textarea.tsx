@@ -24,13 +24,13 @@ export function Textarea({ className, error, id, label, onInput, ...rest }: Text
   React.useEffect(resize, []);
 
   return (
-    <label className="bl-textarea flex flex-col gap-1 text-[var(--text-sm)] font-semibold text-[var(--color-fg)]" htmlFor={textareaId}>
+    <label className="bl-textarea flex flex-col gap-1 text-[length:var(--text-sm)] font-semibold text-[color:var(--color-fg)]" htmlFor={textareaId}>
       {label}
       <textarea
         ref={ref}
         id={textareaId}
         className={cn(
-          'min-h-[100px] max-h-[calc(6*1.55em+32px)] resize-none rounded-[var(--radius-card)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] py-[var(--space-3)] text-[var(--text-base)] font-normal leading-[var(--leading-base)] shadow-[var(--shadow-soft-sm)] outline-none placeholder:text-[var(--color-fg-soft)] focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]',
+          'min-h-[100px] max-h-[calc(6*1.55em+32px)] resize-none rounded-[var(--radius-card)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] py-[var(--space-3)] text-[length:var(--text-base)] font-normal leading-[var(--leading-base)] shadow-[var(--shadow-soft-sm)] outline-none placeholder:text-[color:var(--color-fg-soft)] focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]',
           error && 'border-[var(--color-error)] focus:border-[var(--color-error)] focus:shadow-[var(--shadow-focus-error)]',
           className
         )}
@@ -43,7 +43,7 @@ export function Textarea({ className, error, id, label, onInput, ...rest }: Text
         {...rest}
       />
       {error && (
-        <p id={errorId} aria-live="polite" className="text-[var(--text-sm)] font-normal text-[var(--color-error)]">
+        <p id={errorId} aria-live="polite" className="text-[length:var(--text-sm)] font-normal text-[color:var(--color-error)]">
           {error}
         </p>
       )}

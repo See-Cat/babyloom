@@ -21,7 +21,7 @@ describe('babyloom/no-raw-color', () => {
       valid: [
         {
           filename: '/repo/app/login/page.tsx',
-          code: `export function Login(){ return <div className="bg-[var(--color-bg)] text-[var(--color-fg)]" />; }`
+          code: `export function Login(){ return <div className="bg-[var(--color-bg)] text-[color:var(--color-fg)]" />; }`
         },
         {
           filename: '/repo/components/ui/Button.tsx',

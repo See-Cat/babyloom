@@ -46,8 +46,8 @@ export function LogViewer({ rows }: { rows: LogRow[] }) {
         />
       </div>
       <div className="overflow-auto rounded-[var(--radius-card)] border border-[var(--color-border)]">
-        <table className="w-full min-w-[720px] border-collapse text-left text-[var(--text-sm)]">
-          <thead className="sticky top-0 bg-[var(--color-surface)] text-[var(--color-muted)]">
+        <table className="w-full min-w-[720px] border-collapse text-left text-[length:var(--text-sm)]">
+          <thead className="sticky top-0 bg-[var(--color-surface)] text-[color:var(--color-muted)]">
             <tr>
               <th className="p-[var(--space-2)]">时间</th>
               <th className="p-[var(--space-2)]">级别</th>
@@ -66,7 +66,7 @@ export function LogViewer({ rows }: { rows: LogRow[] }) {
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={4} className="p-[var(--space-4)] text-center text-[var(--color-muted)]">
+                <td colSpan={4} className="p-[var(--space-4)] text-center text-[color:var(--color-muted)]">
                   暂无日志
                 </td>
               </tr>
@@ -94,7 +94,7 @@ function rowClass(level: LogRow['level']) {
   if (label === 'error' || label === 'fatal') {
     return 'bg-[color-mix(in_srgb,var(--color-error)_16%,transparent)]';
   }
-  if (label === 'debug' || label === 'trace') return 'text-[var(--color-muted)]';
+  if (label === 'debug' || label === 'trace') return 'text-[color:var(--color-muted)]';
   return '';
 }
 

@@ -20,7 +20,7 @@ export function MilestonePicker({ milestones, onToggle, selectedIds }: Milestone
 
   return (
     <div>
-      <p className="mb-[var(--space-2)] text-[var(--text-xs)] font-bold uppercase tracking-[0.5px] text-[var(--color-fg-soft)]">
+      <p className="mb-[var(--space-2)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.5px] text-[color:var(--color-fg-soft)]">
         里程碑(可多选)
       </p>
       <div className="flex flex-wrap gap-[var(--space-2)]">

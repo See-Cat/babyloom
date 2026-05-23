@@ -5,12 +5,21 @@ html, body {
   background: var(--color-bg);
   color: var(--color-fg);
   font-family: var(--font-display);
+}
+
+body {
   font-size: var(--text-base);
 }
 
 *:focus-visible {
   outline: 3px solid var(--color-focus);
   outline-offset: 2px;
+}
+
+.bl-input input:focus-visible,
+.bl-textarea:focus-visible,
+.bl-date-row:focus-visible {
+  outline: none;
 }
 
 @keyframes dialog-in {
@@ -37,6 +46,24 @@ html, body {
   }
 }
 
+.bl-button--loading {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-primary-active),
+    var(--color-primary-active) 10px,
+    var(--color-primary) 10px,
+    var(--color-primary) 20px
+  );
+  background-size: 28.28px 28.28px;
+  animation: button-loading-stripe 1s linear infinite;
+}
+
+@keyframes button-loading-stripe {
+  to {
+    background-position: -28.28px 0;
+  }
+}
+
 @keyframes hero-drift {
   from {
     transform: scale(1) translate(0, 0);
@@ -44,5 +71,11 @@ html, body {
 
   to {
     transform: scale(1.05) translate(-2%, -1%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bl-button--loading {
+    animation: none;
   }
 }

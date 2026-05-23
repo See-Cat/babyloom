@@ -73,7 +73,7 @@ export function EntryComposer({
       {babyId && onUploaded && onRemoveMedia && (
         <MediaUploader babyId={babyId} uploadedMedia={uploadedMedia} disabled={submitting} onUploaded={onUploaded} onRemove={onRemoveMedia} />
       )}
-      {error && <p role="alert" className="text-[var(--text-sm)] text-[var(--color-error)]">{error}</p>}
+      {error && <p role="alert" className="text-[length:var(--text-sm)] text-[color:var(--color-error)]">{error}</p>}
     </form>
   );
 }

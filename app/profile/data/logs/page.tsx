@@ -47,7 +47,7 @@ export default async function ProfileDataLogsPage({ searchParams }: LogsPageProp
     <AppShell
       title="系统日志"
       leftSlot={
-        <Link href="/profile/data" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+        <Link href="/profile/data" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
           返回
         </Link>
       }

@@ -19,7 +19,7 @@ export function MonthCalendar({
     <div role="grid" aria-label="月份日历" className="grid gap-[var(--space-1)]">
       <div role="row" className="grid grid-cols-7 gap-[var(--space-1)]">
         {weekdays.map((day) => (
-          <div key={day} role="columnheader" className="py-[var(--space-1)] text-center text-[var(--text-xs)] font-bold text-[var(--color-muted)]">
+          <div key={day} role="columnheader" className="py-[var(--space-1)] text-center text-[length:var(--text-xs)] font-bold text-[color:var(--color-muted)]">
             {day}
           </div>
         ))}
@@ -47,8 +47,8 @@ function CalendarCell({
   isToday: boolean;
 }) {
   const className = cn(
-    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[var(--text-sm)] font-bold',
-    cell.inMonth ? 'text-[var(--color-fg)]' : 'text-[var(--color-muted)] opacity-45',
+    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] bg-[var(--color-surface)] text-[length:var(--text-sm)] font-bold',
+    cell.inMonth ? 'text-[color:var(--color-fg)]' : 'text-[color:var(--color-muted)] opacity-45',
     isToday && 'ring-2 ring-[var(--color-primary)]'
   );
   const day = cell.date.getUTCDate();

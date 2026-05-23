@@ -77,7 +77,7 @@ export function PermissionCell({ baby, member, override }: PermissionCellProps) 
           : 'border-dotted border-[var(--color-muted)] bg-[var(--color-surface)]'
       )}
     >
-      <p className="mb-[var(--space-2)] text-[var(--text-xs)] font-semibold text-[var(--color-muted)]">
+      <p className="mb-[var(--space-2)] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-muted)]">
         {hasOverride ? '已覆盖' : '默认(按角色)'}
       </p>
       <div className="grid grid-cols-3 gap-[var(--space-2)]">
@@ -86,7 +86,7 @@ export function PermissionCell({ baby, member, override }: PermissionCellProps) 
           return (
             <label
               key={field.key}
-              className="flex min-w-0 flex-col items-center gap-[var(--space-1)] text-[var(--text-xs)] text-[var(--color-muted)]"
+              className="flex min-w-0 flex-col items-center gap-[var(--space-1)] text-[length:var(--text-xs)] text-[color:var(--color-muted)]"
               title={disabled ? 'viewer 角色无写/删权限,即使勾选也无效' : undefined}
             >
               <span>{field.label}</span>

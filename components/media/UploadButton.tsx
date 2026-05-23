@@ -78,7 +78,7 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         {busy ? '上传中…' : '添加照片 / 视频'}
       </Button>
       {error && (
-        <p role="alert" className="text-[var(--text-sm)] text-[var(--color-error)]">
+        <p role="alert" className="text-[length:var(--text-sm)] text-[color:var(--color-error)]">
           {error}
         </p>
       )}

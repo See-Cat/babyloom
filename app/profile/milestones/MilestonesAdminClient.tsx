@@ -69,7 +69,7 @@ export default function MilestonesAdminPage() {
     <AppShell
       title="里程碑设置"
       leftSlot={
-        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
           返回
         </Link>
       }
@@ -129,7 +129,7 @@ export default function MilestonesAdminPage() {
           </>
         }
       >
-        <p className="text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+        <p className="text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           确认删除 {removeFor?.name ?? '该里程碑'}? 已挂在记录上的会断开关联,不会删除记录。
         </p>
       </Dialog>

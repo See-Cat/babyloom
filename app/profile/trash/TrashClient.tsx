@@ -175,7 +175,7 @@ export default function TrashClient({
     <AppShell
       title="垃圾桶"
       leftSlot={
-        <Link href="/profile" className="text-[var(--text-sm)] text-[var(--color-muted)]">
+        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
           返回
         </Link>
       }
@@ -195,7 +195,7 @@ export default function TrashClient({
         ) : null
       }
     >
-      <Card className="mb-[var(--space-4)] text-[var(--text-sm)] leading-[var(--leading-base)] text-[var(--color-muted)]">
+      <Card className="mb-[var(--space-4)] text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-muted)]">
         删除的记录会留在这里,可随时恢复。
       </Card>
 
@@ -216,13 +216,13 @@ export default function TrashClient({
       </div>
 
       {message && (
-        <Card className="mb-[var(--space-3)] text-[var(--text-sm)]" aria-live="polite">
+        <Card className="mb-[var(--space-3)] text-[length:var(--text-sm)]" aria-live="polite">
           {message}
         </Card>
       )}
 
       {rows.length === 0 && !loading ? (
-        <div className="mt-[var(--space-12)] text-center text-[var(--color-muted)]">
+        <div className="mt-[var(--space-12)] text-center text-[color:var(--color-muted)]">
           <p>当前没有已删除的 {activeLabel}</p>
         </div>
       ) : (
@@ -246,9 +246,9 @@ export default function TrashClient({
                     <span
                       aria-hidden="true"
                       className={[
-                        'mt-[var(--space-1)] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 text-[var(--text-sm)] font-bold',
+                        'mt-[var(--space-1)] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 text-[length:var(--text-sm)] font-bold',
                         selectedIds.has(row.id)
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[var(--color-fg-inverse)]'
+                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)]'
                           : 'border-[var(--color-border)] bg-[var(--color-surface-2)] text-transparent',
                         !canSelect(row) && 'opacity-45'
                       ].filter(Boolean).join(' ')}
@@ -257,13 +257,13 @@ export default function TrashClient({
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+                    <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
                       {row.babyName ? `${row.babyName} · ` : ''}
                       {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
                     </p>
-                    <p className="my-[var(--space-2)] whitespace-pre-wrap text-[var(--text-sm)]">{row.label || '无内容'}</p>
+                    <p className="my-[var(--space-2)] whitespace-pre-wrap text-[length:var(--text-sm)]">{row.label || '无内容'}</p>
                     {row.type === 'babies' && row.childCount ? (
-                      <p className="mb-[var(--space-2)] text-[var(--text-xs)] text-[var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
+                      <p className="mb-[var(--space-2)] text-[length:var(--text-xs)] text-[color:var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
                     ) : null}
                     {!selecting && (
                       <div className="flex gap-[var(--space-2)]">
@@ -299,7 +299,7 @@ export default function TrashClient({
       {selecting && (
         <div className="fixed inset-x-0 bottom-0 z-[var(--z-sticky)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-4)] pb-[calc(var(--space-4)+env(safe-area-inset-bottom))] pt-[var(--space-3)]">
           <div className="mx-auto flex max-w-screen-sm items-center gap-[var(--space-3)]">
-            <span className="min-w-0 flex-1 text-[var(--text-sm)] font-bold text-[var(--color-fg)]">
+            <span className="min-w-0 flex-1 text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)]">
               已选 {selectedIds.size} 条
             </span>
             <Button
@@ -339,7 +339,7 @@ export default function TrashClient({
           </>
         }
       >
-        <p className="text-[var(--text-base)] leading-[var(--leading-base)] text-[var(--color-fg)]">
+        <p className="text-[length:var(--text-base)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           {pending?.action === 'batch'
             ? '此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。'
             : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从垃圾桶中移除。`}

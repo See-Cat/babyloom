@@ -26,8 +26,8 @@ export function TimelineCard({ entry, authorName = '未知', authorImage, mediaI
             size="sm"
           />
           <div>
-            <p className="text-[var(--text-sm)] font-bold text-[var(--color-fg-strong)]">{authorName}</p>
-            <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+            <p className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">{authorName}</p>
+            <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
               {new Date(entry.occurredAt).toLocaleString('zh-CN')}
             </p>
           </div>

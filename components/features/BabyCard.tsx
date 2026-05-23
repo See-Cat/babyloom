@@ -45,8 +45,8 @@ export function BabyCard({ baby, editing, editName, onCancelEdit, onEdit, onEdit
               fallbackName={baby.name}
               target={`baby:${baby.id}`}
             />
-            <p className="font-bold text-[var(--color-fg-strong)]">{baby.name}</p>
-            <p className="text-[var(--text-xs)] text-[var(--color-muted)]">
+            <p className="font-bold text-[color:var(--color-fg-strong)]">{baby.name}</p>
+            <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
               {baby.birthday} · {baby.gender}
             </p>
           </div>

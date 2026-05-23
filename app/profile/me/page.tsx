@@ -39,8 +39,8 @@ export default async function MePage() {
           <div className="min-w-0">
             <AvatarUploader currentUrl={me.image} fallbackName={me.name} target="me" />
             <div className="mt-[var(--space-2)]">
-              <h2 className="text-[var(--text-xl)] font-bold text-[var(--color-fg-strong)]">{me.name}</h2>
-              <p className="text-[var(--text-sm)] text-[var(--color-muted)]">@{me.username}</p>
+              <h2 className="text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{me.name}</h2>
+              <p className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">@{me.username}</p>
             </div>
           </div>
           <Tag variant="neutral">{member.role}</Tag>
