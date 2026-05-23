@@ -1,5 +1,5 @@
 import type { PrecacheEntry, SerwistGlobalConfig } from 'serwist';
-import { CacheFirst, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from 'serwist';
+import { CacheFirst, disableNavigationPreload, ExpirationPlugin, NetworkFirst, NetworkOnly, Serwist } from 'serwist';
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -57,4 +57,5 @@ const serwist = new Serwist({
   }
 });
 
+disableNavigationPreload();
 serwist.addEventListeners();
