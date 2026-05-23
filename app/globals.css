@@ -17,8 +17,8 @@ body {
   outline-offset: 2px;
 }
 
-.bl-input input:focus-visible,
-.bl-textarea:focus-visible,
+.input:focus-visible,
+.textarea:focus-visible,
 .date-row:focus-visible {
   outline: none;
 }
