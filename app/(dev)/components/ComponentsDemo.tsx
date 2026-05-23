@@ -58,11 +58,13 @@ export function ComponentsDemo() {
               <Button variant="text">文字</Button>
               <Button variant="link">链接</Button>
               <Button loading>保存中</Button>
-              <Button className="h-14 w-14 px-0" aria-label="FAB">
-                <PlusIcon />
-              </Button>
-              <span className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-soft)]">FAB</span>
             </div>
+          </DemoSection>
+
+          <DemoSection title="FAB">
+            <button className="fab" aria-label="新建">
+              +
+            </button>
           </DemoSection>
 
           <DemoSection title="Input">
@@ -252,14 +254,6 @@ function DemoSection({ title, children }: { title: string; children: React.React
       <h2 className="mb-[var(--space-3)] text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{title}</h2>
       {children}
     </Card>
-  );
-}
-
-function PlusIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
   );
 }
 
