@@ -19,6 +19,8 @@ describe('SegmentedControl', () => {
 
     expect(html).toContain('role="group"');
     expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('segmented');
+    expect(html).toContain('seg active');
     expect(html).not.toContain('<select');
   });
 });

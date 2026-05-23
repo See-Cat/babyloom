@@ -4,7 +4,6 @@ import * as React from 'react';
 import type { ButtonHTMLAttributes } from 'react';
 import { ActionSheet, type ActionSheetOption } from '@/components/mobile/ActionSheet';
 import { cn } from '@/lib/cn';
-import { Avatar } from './Avatar';
 
 export interface AvatarPickerProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   name: string;
@@ -29,6 +28,8 @@ export function AvatarPicker({
   ...rest
 }: AvatarPickerProps) {
   const [open, setOpen] = React.useState(false);
+  const fallback = initialFor(name);
+  const avatarColor = avatarColorFor(colorKey ?? name);
   const options: ActionSheetOption[] = [
     { label: '拍照', onSelect: onCameraSelect ?? (() => undefined) },
     { label: '从相册选择', onSelect: onLibrarySelect ?? (() => undefined) },
@@ -36,19 +37,21 @@ export function AvatarPicker({
   ];
 
   return (
-    <div className={cn('bl-avatar-picker inline-flex flex-col items-center gap-[10px]', className)}>
+    <div className={cn('inline-flex flex-col items-center gap-[10px]', className)}>
       <button
         type="button"
         aria-label="设置头像"
-        className="relative rounded-[var(--radius-pill)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease)] active:scale-[.96]"
+        className="avatar-pick"
         onClick={(event) => {
           onClick?.(event);
           if (!event.defaultPrevented) setOpen(true);
         }}
         {...rest}
       >
-        <Avatar src={src} name={name} alt={name || '头像'} size="xl" colorKey={colorKey ?? name} />
-        <span className="bl-avatar-picker__camera absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-[var(--radius-pill)] border-[3px] border-[var(--color-bg)] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)]">
+        <span className={cn('ava-big', !name && 'empty')} style={{ '--avatar-picker-bg': `var(--color-avatar-${avatarColor})` } as React.CSSProperties}>
+          {src ? <img src={src} alt={name || '头像'} className="h-full w-full rounded-full object-cover" /> : fallback}
+        </span>
+        <span className="cam">
           <CameraIcon />
         </span>
       </button>
@@ -56,6 +59,21 @@ export function AvatarPicker({
       <ActionSheet open={open} onOpenChange={setOpen} title="设置头像" options={options} />
     </div>
   );
+}
+
+function initialFor(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return '?';
+  return /^[a-z]/i.test(trimmed) ? trimmed[0].toUpperCase() : trimmed[0];
+}
+
+function avatarColorFor(value: string): string {
+  const colors = ['pink', 'blue', 'yellow', 'mint', 'peach', 'teal', 'purple', 'green'];
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return colors[hash % colors.length];
 }
 
 function CameraIcon() {

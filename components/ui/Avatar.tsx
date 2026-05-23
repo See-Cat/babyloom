@@ -18,39 +18,40 @@ export interface AvatarGroupProps extends HTMLAttributes<HTMLDivElement> {
 }
 
 const sizeClass: Record<AvatarSize, string> = {
-  xs: 'h-6 w-6 text-[length:var(--text-xs)]',
-  sm: 'h-8 w-8 text-[length:var(--text-xs)]',
-  md: 'h-10 w-10 text-[length:var(--text-sm)]',
-  lg: 'h-14 w-14 text-[length:var(--text-lg)]',
-  xl: 'h-[88px] w-[88px] text-[34px]'
+  xs: 'ava-xs',
+  sm: 'ava-sm',
+  md: 'ava-md',
+  lg: 'ava-lg',
+  xl: 'ava-xl'
 };
 
 const palette = [
-  'var(--color-avatar-pink)',
-  'var(--color-avatar-blue)',
-  'var(--color-avatar-yellow)',
-  'var(--color-avatar-mint)',
-  'var(--color-avatar-peach)',
-  'var(--color-avatar-teal)',
-  'var(--color-avatar-purple)',
-  'var(--color-avatar-green)'
+  'pink',
+  'blue',
+  'yellow',
+  'mint',
+  'peach',
+  'teal',
+  'purple',
+  'green'
 ];
 
 export function Avatar({ src, alt, name, size = 'md', colorKey, className, style, ...rest }: AvatarProps) {
   const fallback = initialFor(name);
-  const avatarBg = palette[hashString(colorKey ?? name) % palette.length];
-  const fallbackColor = avatarBg === 'var(--color-avatar-yellow)' ? 'var(--color-avatar-yellow-fg)' : 'var(--color-fg-inverse)';
+  const avatarColor = palette[hashString(colorKey ?? name) % palette.length];
 
   return (
     <span
       aria-label={alt ?? name}
       className={cn(
-        'bl-avatar inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--avatar-bg)] font-bold text-[color:var(--avatar-fg)]',
+        'ava',
         sizeClass[size],
+        `ava-${avatarColor}`,
         className
       )}
       data-size={size}
-      style={{ '--avatar-bg': avatarBg, '--avatar-fg': fallbackColor, color: 'var(--avatar-fg)', ...style } as React.CSSProperties}
+      data-color={avatarColor}
+      style={style}
       {...rest}
     >
       {src ? <img src={src} alt={alt ?? name} className="h-full w-full object-cover" /> : fallback}
@@ -63,7 +64,7 @@ export function AvatarGroup({ avatars, max = 3, className, ...rest }: AvatarGrou
   const overflow = avatars.length - visible.length;
 
   return (
-    <div className={cn('bl-avatar-group flex items-center', className)} {...rest}>
+    <div className={cn('ava-group', className)} {...rest}>
       {visible.map((avatar, index) => (
         <Avatar
           key={`${avatar.name}-${index}`}
@@ -72,7 +73,7 @@ export function AvatarGroup({ avatars, max = 3, className, ...rest }: AvatarGrou
         />
       ))}
       {overflow > 0 && (
-        <span className="-ml-2 inline-flex h-10 w-10 items-center justify-center rounded-full bg-[var(--color-surface)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)] ring-2 ring-[var(--color-bg)]">
+        <span className="ava ava-md">
           +{overflow}
         </span>
       )}

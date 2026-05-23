@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/cn';
 import { useDialog } from '@/lib/hooks/useDialog';
 
 export interface ModalProps {
@@ -23,28 +22,25 @@ export function Modal({ open, onOpenChange, title, description, children, footer
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--color-scrim)] p-[var(--space-4)]" onMouseDown={() => {
+    <div className="scrim" onMouseDown={() => {
       if (dismissible) onOpenChange(false);
     }}>
       <div
         ref={panelRef}
-        className={cn(
-          'relative w-full max-w-[min(calc(100vw-32px),480px)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--color-surface-2)] px-[var(--space-6)] py-[22px] text-[color:var(--color-fg)] shadow-[var(--shadow-soft-lg)]',
-          'animate-[dialog-in_var(--duration-base)_var(--ease)_backwards]'
-        )}
+        className="modal show"
         onMouseDown={(event) => event.stopPropagation()}
         {...panelProps}
       >
-        <h2 id={titleId} className="text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">
+        <h3 id={titleId}>
           {title}
-        </h2>
+        </h3>
         {description && (
-          <p id={descriptionId} className="mt-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
+          <p id={descriptionId}>
             {description}
           </p>
         )}
-        <div className="mt-[var(--space-4)]">{children}</div>
-        {footer && <div className="mt-[var(--space-6)] flex justify-end gap-[var(--space-2)]">{footer}</div>}
+        <div>{children}</div>
+        {footer && <div className="row">{footer}</div>}
       </div>
     </div>
   );

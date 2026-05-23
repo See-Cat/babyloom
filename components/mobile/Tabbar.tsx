@@ -23,18 +23,17 @@ export function Tabbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="bl-tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-3)] pb-[calc(var(--space-2)+env(safe-area-inset-bottom))] pt-[var(--space-2)]" aria-label="主导航">
-      <ul className="mx-auto flex h-16 max-w-lg items-center justify-around">
+    <nav className="tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] pb-[calc(6px+env(safe-area-inset-bottom))]" aria-label="主导航">
+      <ul className="mx-auto flex w-full max-w-lg items-center justify-around">
         {items.map((item) => {
           const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const className = cn(
-            'flex min-w-14 flex-col items-center justify-center gap-1 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]',
-            active && 'text-[color:var(--color-primary-active)]',
+            'tab',
+            active && 'active',
             item.disabled && 'cursor-not-allowed opacity-45'
           );
           const dotClassName = cn(
-            'bl-tabbar__dot flex h-[34px] w-[34px] items-center justify-center rounded-[var(--radius-pill)] text-current transition-[background-color,box-shadow,transform,color] duration-[var(--duration-slow)] ease-[var(--ease-out-back)]',
-            active && 'translate-y-[-6px] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-press-md)]'
+            'dot'
           );
 
           return (

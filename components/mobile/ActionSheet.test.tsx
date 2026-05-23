@@ -25,10 +25,12 @@ describe('ActionSheet', () => {
       />
     );
 
-    expect(html).toContain('bl-action-sheet');
+    expect(html).toContain('action show');
+    expect(html).toContain('class="group"');
+    expect(html).toContain('class="item');
     expect(html).toContain('编辑');
     expect(html).toContain('移到回收站');
     expect(html).not.toContain('bl-button');
-    expect(html).toContain('text-[color:var(--color-error)]');
+    expect(html).toContain('destructive');
   });
 });

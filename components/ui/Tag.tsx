@@ -12,16 +12,16 @@ export interface TagProps extends HTMLAttributes<HTMLSpanElement> {
 }
 
 const variantClass: Record<TagVariant, string> = {
-  neutral: 'bg-[var(--color-bg-disabled)] text-[color:var(--color-fg-soft)]',
-  accent: 'bg-[var(--color-primary-bg)] text-[color:var(--color-primary-active)]',
-  error: 'bg-[var(--color-error-bg)] text-[color:var(--color-error-active)]'
+  neutral: '',
+  accent: 'accent',
+  error: 'error'
 };
 
 export function Tag({ children, className, variant = 'neutral', removable = false, onRemove, style, ...rest }: TagProps) {
   return (
     <span
       className={cn(
-        'bl-tag inline-flex items-center gap-1 rounded-[var(--radius-sm)] px-[10px] py-[var(--space-1)] text-[length:var(--text-sm)] font-semibold',
+        'tag',
         variantClass[variant],
         className
       )}
@@ -34,7 +34,7 @@ export function Tag({ children, className, variant = 'neutral', removable = fals
         <button
           type="button"
           aria-label="移除"
-          className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded-[var(--radius-pill)] text-current"
+          className="x"
           onClick={onRemove}
         >
           ×

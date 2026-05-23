@@ -1,5 +1,6 @@
 @import "../styles/tokens.css";
 @import "../styles/typography.css";
+@import "../styles/reference-components.css";
 
 html, body {
   background: var(--color-bg);
@@ -18,7 +19,7 @@ body {
 
 .bl-input input:focus-visible,
 .bl-textarea:focus-visible,
-.bl-date-row:focus-visible {
+.date-row:focus-visible {
   outline: none;
 }
 
@@ -46,24 +47,6 @@ body {
   }
 }
 
-.bl-button--loading {
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--color-primary-active),
-    var(--color-primary-active) 10px,
-    var(--color-primary) 10px,
-    var(--color-primary) 20px
-  );
-  background-size: 28.28px 28.28px;
-  animation: button-loading-stripe 1s linear infinite;
-}
-
-@keyframes button-loading-stripe {
-  to {
-    background-position: -28.28px 0;
-  }
-}
-
 @keyframes hero-drift {
   from {
     transform: scale(1) translate(0, 0);
@@ -71,11 +54,5 @@ body {
 
   to {
     transform: scale(1.05) translate(-2%, -1%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bl-button--loading {
-    animation: none;
   }
 }

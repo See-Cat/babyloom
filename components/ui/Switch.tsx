@@ -19,12 +19,7 @@ export function Switch({ checked, className, disabled, onCheckedChange, onClick,
       type="button"
       role="switch"
       aria-checked={checked}
-      className={cn(
-        'bl-switch relative inline-flex h-6 w-10 items-center rounded-[var(--radius-pill)] bg-[var(--color-border-light)] p-[3px] transition-colors duration-[var(--duration-base)]',
-        checked && 'bg-[var(--color-primary)]',
-        disabled && 'cursor-not-allowed opacity-60',
-        className
-      )}
+      className={cn('switch', className)}
       data-state={checked ? 'checked' : 'unchecked'}
       disabled={disabled}
       onClick={(event) => {
@@ -41,13 +36,6 @@ export function Switch({ checked, className, disabled, onCheckedChange, onClick,
       }}
       {...rest}
     >
-      <span
-        aria-hidden="true"
-        className={cn(
-          'h-[18px] w-[18px] rounded-full bg-[var(--color-fg-inverse)] shadow-[var(--shadow-press-sm)] transition-transform duration-[var(--duration-base)]',
-          checked && 'translate-x-4'
-        )}
-      />
     </button>
   );
 }

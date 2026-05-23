@@ -43,6 +43,8 @@ describe('Avatar', () => {
 
     expect(html).toContain('data-size="xs"');
     expect(html).toContain('data-size="xl"');
-    expect(html).toContain('--avatar-bg:var(--color-avatar-');
+    expect(html).toContain('ava-xs');
+    expect(html).toContain('ava-xl');
+    expect(html).toContain('ava-');
   });
 });

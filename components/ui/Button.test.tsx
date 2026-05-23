@@ -14,7 +14,8 @@ describe('Button', () => {
     expect(html).toContain('保存');
     expect(html).toContain('data-variant="default"');
     expect(html).toContain('data-size="lg"');
-    expect(html).toContain('bl-button--full');
+    expect(html).toContain('btn btn-lg btn-default');
+    expect(html).toContain('w-full');
   });
 
   it('supports the design-language variants without press shadows on lightweight buttons', () => {
@@ -31,18 +32,16 @@ describe('Button', () => {
     expect(html).toContain('data-variant="text"');
     expect(html).toContain('data-variant="link"');
     expect(html).toContain('data-variant="danger"');
-    expect(html).toContain('underline');
-    expect(html).toContain('--button-shadow:0 5px 0 0 var(--color-press-shadow-error)');
-    expect(html).toContain('data-press-shadow="false"');
+    expect(html).toContain('btn-ghost');
+    expect(html).toContain('btn-text');
+    expect(html).toContain('btn-link');
+    expect(html).toContain('btn-danger');
   });
 
   it('uses full press compensation without mobile hover lift', () => {
     const html = renderToStaticMarkup(<Button size="lg">发布</Button>);
 
-    expect(html).toContain('shadow-[var(--button-shadow)]');
-    expect(html).toContain('active:translate-y-[4px]');
-    expect(html).toContain('active:shadow-[var(--button-shadow-active)]');
-    expect(html).toContain('--button-shadow:0 5px 0 0 var(--color-press-shadow-primary)');
+    expect(html).toContain('btn btn-lg btn-primary');
     expect(html).not.toContain('hover:-translate-y');
     expect(html).not.toContain('shadow-[var(--shadow-press-hover)]');
   });
@@ -52,7 +51,7 @@ describe('Button', () => {
 
     expect(html).toContain('disabled=""');
     expect(html).toContain('aria-busy="true"');
-    expect(html).toContain('bl-spinner');
-    expect(html).toContain('shadow-none');
+    expect(html).toContain('spinner');
+    expect(html).toContain('btn-loading');
   });
 });

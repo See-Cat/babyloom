@@ -2,7 +2,6 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/cn';
-import { BottomSheet } from './BottomSheet';
 
 export interface ActionSheetOption {
   label: string;
@@ -20,10 +19,12 @@ export interface ActionSheetProps {
 }
 
 export function ActionSheet({ open, onOpenChange, title, options, cancelLabel = '取消' }: ActionSheetProps) {
+  if (!open) return null;
+
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} title={title}>
-      <div className="bl-action-sheet flex flex-col gap-[var(--space-2)] text-center">
-        <div className="overflow-hidden rounded-[var(--radius-base)] bg-[var(--color-surface-2)] shadow-[var(--shadow-soft-lg)]">
+    <div className="scrim" role="presentation" onMouseDown={() => onOpenChange(false)}>
+      <div className="action show" role="dialog" aria-modal="true" aria-label={title} onMouseDown={(event) => event.stopPropagation()}>
+        <div className="group">
           {options.map((option) => (
             <button
               key={option.label}
@@ -31,8 +32,8 @@ export function ActionSheet({ open, onOpenChange, title, options, cancelLabel = 
               disabled={option.disabled}
               data-destructive={option.destructive ? true : undefined}
               className={cn(
-                'block w-full border-b border-[var(--color-border-light)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] last:border-b-0 active:bg-[var(--color-press-tint)] disabled:cursor-not-allowed disabled:opacity-50',
-                option.destructive && 'text-[color:var(--color-error)]'
+                'item',
+                option.destructive && 'destructive'
               )}
               onClick={() => {
                 option.onSelect();
@@ -45,12 +46,12 @@ export function ActionSheet({ open, onOpenChange, title, options, cancelLabel = 
         </div>
         <button
           type="button"
-          className="rounded-[var(--radius-base)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-4)] text-center text-[length:var(--text-md)] font-bold text-[color:var(--color-fg)] shadow-[var(--shadow-soft-lg)] active:bg-[var(--color-press-tint)]"
+          className="cancel"
           onClick={() => onOpenChange(false)}
         >
           {cancelLabel}
         </button>
       </div>
-    </BottomSheet>
+    </div>
   );
 }

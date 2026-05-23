@@ -18,14 +18,14 @@ export interface SegmentedControlProps {
 
 export function SegmentedControl({ ariaLabel, className, onChange, options, value }: SegmentedControlProps) {
   return (
-    <div className={cn('grid rounded-[var(--radius-sm)] bg-[var(--color-bg-disabled)] p-[var(--space-1)]', className)} role="group" aria-label={ariaLabel}>
+    <div className={cn('segmented', className)} role="group" aria-label={ariaLabel}>
       {options.map((option) => (
         <button
           key={option.value}
           type="button"
           className={cn(
-            'rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-soft)]',
-            value === option.value && 'bg-[var(--color-surface-2)] text-[color:var(--color-primary-active)]'
+            'seg',
+            value === option.value && 'active'
           )}
           aria-pressed={value === option.value}
           onClick={() => onChange(option.value)}

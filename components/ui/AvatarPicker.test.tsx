@@ -11,8 +11,9 @@ describe('AvatarPicker', () => {
 
     expect(html).toContain('type="button"');
     expect(html).toContain('aria-label="设置头像"');
-    expect(html).toContain('data-size="xl"');
-    expect(html).toContain('bl-avatar-picker__camera');
+    expect(html).toContain('avatar-pick');
+    expect(html).toContain('ava-big');
+    expect(html).toContain('class="cam"');
     expect(html).toContain('头像可选');
   });
 });

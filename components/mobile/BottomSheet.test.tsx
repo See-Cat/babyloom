@@ -13,7 +13,8 @@ describe('BottomSheet', () => {
 
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
-    expect(html).toContain('bl-bottom-sheet__handle');
+    expect(html).toContain('class="handle"');
+    expect(html).toContain('sheet show');
     expect(html).toContain('选择里程碑');
   });
 });

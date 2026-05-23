@@ -11,6 +11,7 @@ describe('DatePicker', () => {
 
     expect(html).toContain('type="button"');
     expect(html).toContain('2024 年 8 月 1 日');
+    expect(html).toContain('date-row');
     expect(html).not.toContain('type="date"');
   });
 });

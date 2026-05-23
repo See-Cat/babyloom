@@ -9,6 +9,6 @@ describe('Spinner', () => {
 
     expect(html).toContain('role="status"');
     expect(html).toContain('aria-label="加载中"');
-    expect(html).toContain('bl-spinner');
+    expect(html).toContain('spinner spinner-md');
   });
 });

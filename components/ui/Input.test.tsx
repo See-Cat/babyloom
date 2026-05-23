@@ -9,6 +9,8 @@ describe('Input', () => {
 
     expect(html).toContain('for="baby-name"');
     expect(html).toContain('id="baby-name"');
+    expect(html).toContain('class="field');
+    expect(html).toContain('class="input');
   });
 
   it('renders error message as a live alert', () => {
@@ -16,6 +18,8 @@ describe('Input', () => {
 
     expect(html).toContain('aria-invalid="true"');
     expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('input error');
+    expect(html).toContain('input-error-msg');
     expect(html).toContain('必填');
   });
 });

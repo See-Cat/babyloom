@@ -1,9 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { cn } from '@/lib/cn';
-import { Button } from './Button';
 
 export interface DatePickerProps {
   name: string;
@@ -54,29 +52,31 @@ export function DatePicker({ label, name, onChange, placeholder = '选择生日'
       <span>{label}</span>
       <button
         type="button"
-        className="bl-date-row flex h-10 w-full items-center justify-between rounded-[var(--radius-sm)] border-2 border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[14px] text-left text-[length:var(--text-md)] font-normal text-[color:var(--color-fg)] shadow-[var(--shadow-soft-sm)] outline-none focus:border-[var(--color-focus)] focus:shadow-[var(--shadow-focus)]"
+        className="date-row"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <span className={cn(!value && 'text-[color:var(--color-fg-disabled)]')}>{value ? formatLabel(value) : placeholder}</span>
-        <span aria-hidden="true" className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">›</span>
+        <span className={cn(!value && 'placeholder')}>{value ? formatLabel(value) : placeholder}</span>
+        <span aria-hidden="true" className="chev">›</span>
       </button>
-      <BottomSheet open={open} onOpenChange={setOpen} title="选择生日">
-        <div className="grid h-[200px] grid-cols-[1.2fr_1fr_1fr] gap-0 overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)] p-[var(--space-2)]">
-          <DateColumn label="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
-          <DateColumn label="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
-          <DateColumn label="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
+      {open && (
+        <div className="scrim" onMouseDown={() => setOpen(false)}>
+          <div className="date-sheet" role="dialog" aria-modal="true" aria-label="选择生日" onMouseDown={(event) => event.stopPropagation()}>
+            <div className="handle" />
+            <div className="header">
+              <button type="button" className="cancel" onClick={() => setOpen(false)}>取消</button>
+              <h3>选择生日</h3>
+              <button type="button" className="confirm" onClick={confirm} disabled={isFutureDate(formatValue(draft))}>确定</button>
+            </div>
+            <div className="wheels">
+              <DateColumn label="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
+              <DateColumn label="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
+              <DateColumn label="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
+            </div>
+          </div>
         </div>
-        <div className="mt-[var(--space-4)] flex gap-[var(--space-2)]">
-          <Button type="button" variant="ghost" fullWidth onClick={() => setOpen(false)}>
-            取消
-          </Button>
-          <Button type="button" fullWidth onClick={confirm} disabled={isFutureDate(formatValue(draft))}>
-            确定
-          </Button>
-        </div>
-      </BottomSheet>
+      )}
     </div>
   );
 }
@@ -93,7 +93,8 @@ function DateColumn({
   onChange: (value: number) => void;
 }) {
   return (
-    <div role="listbox" aria-label={label} className="overflow-y-auto px-[var(--space-1)]">
+    <div role="listbox" aria-label={label} className="wheel">
+      <div className="wheel-track">
       {values.map((item) => (
         <button
           key={item}
@@ -101,14 +102,16 @@ function DateColumn({
           role="option"
           aria-selected={item === value}
           className={cn(
-            'flex min-h-10 w-full items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-base)] font-semibold text-[color:var(--color-fg-soft)]',
-            item === value && 'bg-[var(--color-surface-2)] text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)] shadow-[var(--shadow-soft-sm)]'
+            'wheel-item',
+            Math.abs(values.indexOf(item) - values.indexOf(value)) === 1 && 'near',
+            item === value && 'selected'
           )}
           onClick={() => onChange(item)}
         >
           {item}
         </button>
       ))}
+      </div>
     </div>
   );
 }

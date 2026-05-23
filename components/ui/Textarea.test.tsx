@@ -10,6 +10,8 @@ describe('Textarea', () => {
     expect(html).toContain('for="content"');
     expect(html).toContain('id="content"');
     expect(html).toContain('记录内容');
+    expect(html).toContain('class="field');
+    expect(html).toContain('class="textarea');
   });
 
   it('renders error message as a live alert', () => {
@@ -17,5 +19,6 @@ describe('Textarea', () => {
 
     expect(html).toContain('aria-invalid="true"');
     expect(html).toContain('aria-live="polite"');
+    expect(html).toContain('input-error-msg');
   });
 });

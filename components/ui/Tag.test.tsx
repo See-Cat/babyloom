@@ -9,9 +9,8 @@ describe('Tag', () => {
 
     expect(html).toContain('第一次翻身');
     expect(html).toContain('data-variant="accent"');
-    expect(html).toContain('rounded-[var(--radius-sm)]');
-    expect(html).toContain('bg-[var(--color-primary-bg)]');
-    expect(html).not.toContain('rounded-[var(--radius-pill)]');
+    expect(html).toContain('tag accent');
+    expect(html).not.toContain('radius-pill');
   });
 
   it('renders an accessible remove button when removable', () => {
@@ -22,6 +21,7 @@ describe('Tag', () => {
     );
 
     expect(html).toContain('button');
+    expect(html).toContain('class="x"');
     expect(html).toContain('aria-label="移除"');
   });
 });

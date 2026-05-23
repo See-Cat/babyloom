@@ -8,7 +8,7 @@ describe('Card', () => {
     const html = renderToStaticMarkup(<Card>小记忆</Card>);
 
     expect(html).toContain('小记忆');
-    expect(html).toContain('bl-card');
+    expect(html).toContain('card');
     expect(html).not.toContain('shadow-[var(--shadow-card)]');
   });
 
@@ -20,7 +20,7 @@ describe('Card', () => {
     );
 
     expect(html).toContain('<article');
-    expect(html).toContain('bl-card--interactive');
+    expect(html).toContain('data-interactive="true"');
     expect(html).toContain('extra');
     expect(html).not.toContain('hover:-translate-y-1');
     expect(html).not.toContain('shadow-[var(--shadow-card-hover)]');
@@ -34,9 +34,8 @@ describe('Card', () => {
       </>
     );
 
-    expect(html).toContain('border-dashed');
-    expect(html).toContain('bg-[var(--color-surface-2)]');
+    expect(html).toContain('card-dashed');
     expect(html).toContain('data-variant="tinted"');
-    expect(html).toContain('--card-tint:var(--color-avatar-pink)');
+    expect(html).toContain('pink');
   });
 });

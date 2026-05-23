@@ -43,12 +43,12 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
   }
 
   return (
-    <div className="fixed inset-0 z-[var(--z-sheet)] flex items-end bg-[var(--color-scrim)]" onMouseDown={() => {
+    <div className="scrim" onMouseDown={() => {
       if (dismissible) onOpenChange(false);
     }}>
       <div
         ref={panelRef}
-        className="w-full max-h-[90vh] overflow-auto rounded-t-[var(--radius-lg)] bg-[var(--color-surface-2)] px-5 pb-[calc(28px+env(safe-area-inset-bottom))] pt-[18px] text-[color:var(--color-fg)] shadow-[var(--shadow-sheet)] transition-transform duration-[var(--duration-slow)] ease-[var(--ease)]"
+        className="sheet show"
         style={{ transform: `translateY(${dragY}px)`, touchAction: 'pan-y' }}
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -56,16 +56,16 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
         onTouchEnd={onTouchEnd}
         {...panelProps}
       >
-        <div className="bl-bottom-sheet__handle mx-auto mb-[14px] h-1 w-9 rounded-[var(--radius-pill)] bg-[var(--color-border-light)]" />
-        <h2 id={titleId} className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+        <div className="handle" />
+        <h3 id={titleId}>
           {title}
-        </h2>
+        </h3>
         {description && (
-          <p id={descriptionId} className="mt-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
+          <p id={descriptionId} className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">
             {description}
           </p>
         )}
-        <div className="mt-[var(--space-4)]">{children}</div>
+        <div>{children}</div>
         {footer && <div className="mt-[var(--space-6)] flex flex-col gap-[var(--space-2)]">{footer}</div>}
       </div>
     </div>

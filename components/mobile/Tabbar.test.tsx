@@ -19,8 +19,8 @@ describe('Tabbar', () => {
 
     expect(html).toContain('aria-current="page"');
     expect(html).toContain('时光');
-    expect(html).toContain('bl-tabbar__dot');
-    expect(html).toContain('shadow-[var(--shadow-press-md)]');
+    expect(html).toContain('class="dot"');
+    expect(html).toContain('tab active');
   });
 
   it('renders gallery and calendar as live links', () => {
@@ -30,6 +30,6 @@ describe('Tabbar', () => {
     expect(html).toContain('href="/gallery"');
     expect(html).toContain('href="/calendar"');
     expect(html).not.toContain('shadow-[var(--shadow-card)]');
-    expect(html).toContain('border-[var(--color-border-light)]');
+    expect(html).toContain('tabbar');
   });
 });

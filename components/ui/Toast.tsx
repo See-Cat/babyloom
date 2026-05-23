@@ -12,8 +12,8 @@ export interface ToastProps {
 
 const variantClass: Record<ToastVariant, string> = {
   neutral: '',
-  success: '',
-  error: ''
+  success: 'success',
+  error: 'error'
 };
 
 export function Toast({ message, variant = 'neutral', action }: ToastProps) {
@@ -22,9 +22,9 @@ export function Toast({ message, variant = 'neutral', action }: ToastProps) {
       role="status"
       data-variant={variant}
       className={cn(
-        'bl-toast pointer-events-auto flex w-full max-w-sm items-center justify-between gap-[var(--space-3)] rounded-[var(--radius-pill)] bg-[var(--color-fg)] px-[18px] py-[10px] text-[length:var(--text-sm)] text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-soft-md)]',
-        'animate-[toast-in_var(--duration-slow)_var(--ease)_backwards]',
-        variantClass[variant]
+        'toast',
+        variantClass[variant],
+        'pointer-events-auto w-full max-w-sm justify-between animate-[toast-in_var(--duration-slow)_var(--ease)_backwards]'
       )}
     >
       <span>{message}</span>

@@ -11,6 +11,7 @@ describe('Toast', () => {
 
     expect(html).toContain('已删除');
     expect(html).toContain('data-variant="error"');
+    expect(html).toContain('toast error');
     expect(html).toContain('撤销');
   });
 

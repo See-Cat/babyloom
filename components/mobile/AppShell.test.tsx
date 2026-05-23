@@ -20,14 +20,14 @@ describe('AppShell', () => {
     expect(html).toContain('小乐的成长');
     expect(html).toContain('1岁3月 · 第 456 天');
     expect(html).toContain('内容');
-    expect(html).toContain('bl-tabbar');
+    expect(html).toContain('tabbar');
   });
 
   it('hides tabbar on login and onboarding pages', () => {
     usePathname.mockReturnValue('/login');
     const html = renderToStaticMarkup(<AppShell title="登录">内容</AppShell>);
 
-    expect(html).not.toContain('bl-tabbar');
+    expect(html).not.toContain('tabbar');
   });
 
   it('can render reading pages without a visible title', () => {
