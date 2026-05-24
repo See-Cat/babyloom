@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/cn';
+import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
 
 export type DatePickerMode = 'date' | 'datetime';
 
@@ -39,6 +40,7 @@ export function DatePicker({
   disableFuture = true
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
+  const { mounted, visible } = usePopupAnimation(open, 300);
   const initial = React.useMemo(() => parseValue(value, mode) ?? defaultDraft(mode), [value, mode]);
   const [draft, setDraft] = React.useState<DraftValue>(initial);
 
@@ -90,10 +92,10 @@ export function DatePicker({
         <span aria-hidden="true" className="chev">›</span>
       </button>
 
-      {open && (
-        <div className="scrim" onMouseDown={() => setOpen(false)}>
+      {mounted && (
+        <div className={cn('scrim', visible && 'show')} onMouseDown={() => setOpen(false)}>
           <div
-            className="date-sheet"
+            className={cn('date-sheet', visible && 'show')}
             role="dialog"
             aria-modal="true"
             aria-label={sheetTitle}

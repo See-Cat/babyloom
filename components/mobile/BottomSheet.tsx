@@ -2,7 +2,9 @@
 
 import * as React from 'react';
 import type { ReactNode, TouchEvent } from 'react';
+import { cn } from '@/lib/cn';
 import { useDialog } from '@/lib/hooks/useDialog';
+import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
 
 export interface BottomSheetProps {
   open: boolean;
@@ -18,10 +20,11 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
   const titleId = React.useId();
   const descriptionId = description ? `${titleId}-description` : undefined;
   const { panelRef, panelProps } = useDialog({ open, onOpenChange, titleId, descriptionId, dismissible });
+  const { mounted, visible } = usePopupAnimation(open, 300);
   const dragRef = React.useRef({ y: 0, time: 0 });
   const [dragY, setDragY] = React.useState(0);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   function onTouchStart(event: TouchEvent<HTMLDivElement>) {
     dragRef.current = { y: event.touches[0].clientY, time: Date.now() };
@@ -42,14 +45,22 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
     setDragY(0);
   }
 
+  const sheetStyle: React.CSSProperties = {
+    touchAction: 'pan-y',
+    ...(dragY > 0 ? { transform: `translateY(${dragY}px)`, transition: 'none' } : {})
+  };
+
   return (
-    <div className="scrim" onMouseDown={() => {
-      if (dismissible) onOpenChange(false);
-    }}>
+    <div
+      className={cn('scrim', visible && 'show')}
+      onMouseDown={() => {
+        if (dismissible) onOpenChange(false);
+      }}
+    >
       <div
         ref={panelRef}
-        className="sheet show"
-        style={{ transform: `translateY(${dragY}px)`, touchAction: 'pan-y' }}
+        className={cn('sheet', visible && 'show')}
+        style={sheetStyle}
         onMouseDown={(event) => event.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -57,9 +68,7 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
         {...panelProps}
       >
         <div className="handle" />
-        <h3 id={titleId}>
-          {title}
-        </h3>
+        <h3 id={titleId}>{title}</h3>
         {description && (
           <p id={descriptionId} className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">
             {description}

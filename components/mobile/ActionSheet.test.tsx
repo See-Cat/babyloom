@@ -25,7 +25,7 @@ describe('ActionSheet', () => {
       />
     );
 
-    expect(html).toContain('action show');
+    expect(html).toMatch(/class="action\b/);
     expect(html).toContain('class="group"');
     expect(html).toContain('class="item');
     expect(html).toContain('编辑');

@@ -649,6 +649,14 @@ label.field {
   inset: 0;
   background: var(--color-scrim);
   z-index: var(--z-sheet);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-base) var(--ease);
+}
+
+.scrim.show {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .modal {
@@ -846,6 +854,12 @@ label.field {
   padding: 18px 0 22px;
   box-shadow: var(--shadow-sheet);
   z-index: var(--z-sheet);
+  transform: translateY(100%);
+  transition: transform 300ms var(--ease);
+}
+
+.date-sheet.show {
+  transform: translateY(0);
 }
 
 .date-sheet .header {

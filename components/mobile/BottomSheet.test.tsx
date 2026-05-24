@@ -14,7 +14,7 @@ describe('BottomSheet', () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain('class="handle"');
-    expect(html).toContain('sheet show');
+    expect(html).toMatch(/class="sheet\b/);
     expect(html).toContain('选择里程碑');
   });
 });
