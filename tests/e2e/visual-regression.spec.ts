@@ -34,9 +34,9 @@ test.describe('P5 visual regression', () => {
       await expect(page.getByRole('heading', { name: 'Button' })).toBeVisible();
       await expect(page).toHaveScreenshot(`components-${viewport.name}.png`, { fullPage: true });
 
-      await page.getByRole('button', { name: '打开 Dialog' }).click();
-      await expect(page.getByRole('dialog', { name: '确认操作' })).toBeVisible();
-      await expect(page).toHaveScreenshot(`components-dialog-${viewport.name}.png`, { fullPage: true });
+      await page.getByRole('button', { name: '打开 Modal' }).first().click();
+      await expect(page.getByRole('dialog', { name: '确认删除这条记录？' })).toBeVisible();
+      await expect(page).toHaveScreenshot(`components-modal-${viewport.name}.png`, { fullPage: true });
     });
 
     test(`signed-in screens @ ${viewport.name}`, async ({ page }) => {

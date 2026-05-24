@@ -12,6 +12,11 @@ interface TabItem {
   disabled?: boolean;
 }
 
+interface TabbarProps {
+  activeHref?: string;
+  fixed?: boolean;
+}
+
 const items: TabItem[] = [
   { label: '时光', href: '/timeline', icon: <PathIcon path="M4 6h16M7 12h10M9 18h6" /> },
   { label: '画廊', href: '/gallery', icon: <PathIcon path="M5 6h14v12H5zM8 15l3-3 2 2 2-3 3 4" /> },
@@ -19,16 +24,20 @@ const items: TabItem[] = [
   { label: '我的', href: '/profile', icon: <PathIcon path="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /> }
 ];
 
-export function Tabbar() {
+export function Tabbar({ activeHref, fixed = true }: TabbarProps = {}) {
   const pathname = usePathname();
+  const currentPath = activeHref ?? pathname;
 
   return (
     <nav
-      className="tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] pb-[calc(6px+env(safe-area-inset-bottom))]"
+      className={cn(
+        'tabbar',
+        fixed && 'fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] pb-[calc(6px+env(safe-area-inset-bottom))]'
+      )}
       aria-label="主导航"
     >
       {items.map((item) => {
-        const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
+        const active = !item.disabled && (currentPath === item.href || currentPath.startsWith(`${item.href}/`));
         const className = cn('tab', active && 'active', item.disabled && 'cursor-not-allowed opacity-45');
 
         if (item.disabled) {

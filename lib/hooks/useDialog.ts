@@ -24,11 +24,20 @@ export function useDialog({ open, onOpenChange, titleId, descriptionId, dismissi
     const firstFocusable = getFocusable(panelRef.current)[0];
     firstFocusable?.focus();
 
+    function onDocumentKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape' && dismissible) {
+        onOpenChange(false);
+      }
+    }
+
+    document.addEventListener('keydown', onDocumentKeyDown);
+
     return () => {
+      document.removeEventListener('keydown', onDocumentKeyDown);
       document.body.style.overflow = previousOverflow;
       restoreRef.current?.focus();
     };
-  }, [open]);
+  }, [dismissible, onOpenChange, open]);
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === 'Escape') {

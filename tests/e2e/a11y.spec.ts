@@ -78,10 +78,10 @@ test('P5 pages have no critical or serious axe violations', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'Button' })).toBeVisible();
   await runA11y(page, '/components', report);
 
-  await page.getByRole('button', { name: '打开 Dialog' }).click();
-  await expect(page.getByRole('dialog', { name: '确认操作' })).toBeVisible();
+  await page.getByRole('button', { name: '打开 Modal' }).first().click();
+  await expect(page.getByRole('dialog', { name: '确认删除这条记录？' })).toBeVisible();
   await page.waitForTimeout(300);
-  await runA11y(page, '/components dialog', report);
+  await runA11y(page, '/components modal', report);
 
   if (report.length === 2) {
     report.push('No moderate or minor violations.');

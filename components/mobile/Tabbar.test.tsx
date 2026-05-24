@@ -32,4 +32,15 @@ describe('Tabbar', () => {
     expect(html).not.toContain('shadow-[var(--shadow-card)]');
     expect(html).toContain('tabbar');
   });
+
+  it('can render as an inline acceptance demo with an explicit active item', () => {
+    usePathname.mockReturnValue('/components');
+
+    const html = renderToStaticMarkup(<Tabbar fixed={false} activeHref="/timeline" />);
+
+    expect(html).not.toContain('fixed bottom-0');
+    expect(html).toContain('href="/timeline"');
+    expect(html).toContain('aria-current="page"');
+    expect(html).toContain('tab active');
+  });
 });
