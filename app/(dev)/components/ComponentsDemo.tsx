@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Collapse } from '@/components/ui/Collapse';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { Dialog } from '@/components/ui/Dialog';
+import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { Spinner } from '@/components/ui/Spinner';
@@ -172,9 +172,9 @@ export function ComponentsDemo() {
 
           <DemoSection title="Modal">
             <Button variant="default" onClick={() => setDialogOpen(true)}>
-              打开 Dialog
+              打开 Modal
             </Button>
-            <Dialog
+            <Modal
               open={dialogOpen}
               onOpenChange={setDialogOpen}
               title="确认删除这条记录？"
