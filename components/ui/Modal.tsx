@@ -11,7 +11,7 @@ export interface ModalProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
 }
@@ -39,7 +39,7 @@ export function Modal({ open, onOpenChange, title, description, children, footer
       >
         <h3 id={titleId}>{title}</h3>
         {description && <p id={descriptionId}>{description}</p>}
-        <div>{children}</div>
+        {children && <div>{children}</div>}
         {footer && <div className="row">{footer}</div>}
       </div>
     </div>

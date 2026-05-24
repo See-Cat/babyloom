@@ -11,7 +11,7 @@ export interface DialogProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
 }

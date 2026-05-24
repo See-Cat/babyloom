@@ -11,7 +11,7 @@ export interface BottomSheetProps {
   onOpenChange: (open: boolean) => void;
   title: string;
   description?: string;
-  children: ReactNode;
+  children?: ReactNode;
   footer?: ReactNode;
   dismissible?: boolean;
 }
@@ -74,7 +74,7 @@ export function BottomSheet({ open, onOpenChange, title, description, children, 
             {description}
           </p>
         )}
-        <div>{children}</div>
+        {children && <div>{children}</div>}
         {footer && <div className="mt-[var(--space-6)] flex flex-col gap-[var(--space-2)]">{footer}</div>}
       </div>
     </div>

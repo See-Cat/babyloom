@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { cn } from '@/lib/cn';
 import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { PullToRefresh } from '@/components/mobile/PullToRefresh';
@@ -176,32 +177,54 @@ export function ComponentsDemo() {
             <Dialog
               open={dialogOpen}
               onOpenChange={setDialogOpen}
-              title="确认操作"
-              description="桌面端显示 Modal，移动端显示 BottomSheet。"
+              title="确认删除这条记录？"
+              description="删除后会进回收站，30 天内可以恢复。"
               footer={
                 <>
-                  <Button variant="text" onClick={() => setDialogOpen(false)}>
+                  <Button variant="default" onClick={() => setDialogOpen(false)}>
                     取消
                   </Button>
-                  <Button onClick={() => setDialogOpen(false)}>确认</Button>
+                  <Button variant="danger" onClick={() => setDialogOpen(false)}>
+                    删除
+                  </Button>
                 </>
               }
-            >
-              <p>这里是对话框内容。</p>
-            </Dialog>
+            />
+
           </DemoSection>
 
           <DemoSection title="BottomSheet">
             <Button variant="default" onClick={() => setSheetOpen(true)}>
               打开 BottomSheet
             </Button>
-            <BottomSheet open={sheetOpen} onOpenChange={setSheetOpen} title="选择宝宝">
-              <div className="grid gap-[var(--space-2)]">
-                {['小米', '小乐', '小雨'].map((name) => (
-                  <button key={name} type="button" className="rounded-[14px] px-[var(--space-2)] py-[10px] text-left font-semibold active:bg-[var(--color-press-tint)]">
-                    {name}
+            <BottomSheet open={sheetOpen} onOpenChange={setSheetOpen} title="切换宝宝">
+              <div className="flex flex-col">
+                {[
+                  { name: '小乐', avatar: '乐', age: '1岁3月', colorKey: 'le', active: true },
+                  { name: '小安', avatar: '安', age: '3岁8月', colorKey: 'an', active: false }
+                ].map((baby) => (
+                  <button
+                    key={baby.name}
+                    type="button"
+                    className={cn(
+                      'flex items-center gap-[var(--space-3)] rounded-[14px] px-[6px] py-[10px] text-left',
+                      baby.active && 'bg-[var(--color-surface)]'
+                    )}
+                    onClick={() => setSheetOpen(false)}
+                  >
+                    <Avatar name={baby.avatar} size="sm" colorKey={baby.colorKey} />
+                    <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">{baby.name}</span>
+                    <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">{baby.age}</span>
+                    {baby.active && <span className="text-[color:var(--color-primary-active)] font-bold">✓</span>}
                   </button>
                 ))}
+                <button
+                  type="button"
+                  className="mt-[6px] flex items-center gap-[10px] border-t border-[color:var(--color-border-light)] px-[6px] pt-[14px] text-[length:var(--text-base)] font-bold text-[color:var(--color-primary-active)]"
+                  onClick={() => setSheetOpen(false)}
+                >
+                  ＋ 添加新宝宝
+                </button>
               </div>
             </BottomSheet>
           </DemoSection>
@@ -215,7 +238,9 @@ export function ComponentsDemo() {
               onOpenChange={setActionOpen}
               title="记录操作"
               options={[
-                { label: '编辑', onSelect: () => undefined },
+                { label: '编辑', emphasized: true, onSelect: () => undefined },
+                { label: '复制内容', onSelect: () => undefined },
+                { label: '设为里程碑', onSelect: () => undefined },
                 { label: '移到回收站', destructive: true, onSelect: () => undefined }
               ]}
             />
