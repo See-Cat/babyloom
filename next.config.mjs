@@ -26,6 +26,18 @@ const nextConfig = {
   webpack: (config, { isServer, nextRuntime, webpack }) => {
     const isEdge = nextRuntime === 'edge';
 
+    config.watchOptions = {
+      ...(config.watchOptions || {}),
+      ignored: [
+        ...(Array.isArray(config.watchOptions?.ignored) ? config.watchOptions.ignored : []),
+        '**/node_modules/**',
+        '**/.next/**',
+        '**/.playwright-mcp/**',
+        '**/playwright-report/**',
+        '**/test-results/**'
+      ]
+    };
+
     // Native/Node-only deps must never enter the client or edge bundle.
     if (!isServer || isEdge) {
       config.resolve = config.resolve || {};

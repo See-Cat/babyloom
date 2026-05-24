@@ -1,22 +1,35 @@
 import * as React from 'react';
-import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-export type ToastVariant = 'neutral' | 'success' | 'error';
+export type ToastVariant = 'neutral' | 'success' | 'error' | 'warning';
+
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 
 export interface ToastProps {
   message: string;
   variant?: ToastVariant;
-  action?: ReactNode;
+  action?: ToastAction;
+  icon?: React.ReactNode;
 }
 
 const variantClass: Record<ToastVariant, string> = {
   neutral: '',
   success: 'success',
-  error: 'error'
+  error: 'error',
+  warning: 'warning'
 };
 
-export function Toast({ message, variant = 'neutral', action }: ToastProps) {
+const defaultIcon: Record<ToastVariant, string> = {
+  neutral: 'ℹ',
+  success: '✓',
+  error: '!',
+  warning: '⚠'
+};
+
+export function Toast({ message, variant = 'neutral', action, icon }: ToastProps) {
   return (
     <div
       role="status"
@@ -24,11 +37,18 @@ export function Toast({ message, variant = 'neutral', action }: ToastProps) {
       className={cn(
         'toast',
         variantClass[variant],
-        'pointer-events-auto w-full max-w-sm justify-between animate-[toast-in_var(--duration-slow)_var(--ease)_backwards]'
+        'pointer-events-auto animate-[toast-in_var(--duration-slow)_var(--ease)_backwards]'
       )}
     >
+      <span className="icon" aria-hidden="true">
+        {icon ?? defaultIcon[variant]}
+      </span>
       <span>{message}</span>
-      {action}
+      {action && (
+        <button type="button" className="action" onClick={action.onClick}>
+          {action.label}
+        </button>
+      )}
     </div>
   );
 }

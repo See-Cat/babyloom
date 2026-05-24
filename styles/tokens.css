@@ -15,7 +15,7 @@
   --color-border-hover: #827157;
   --color-primary: #19c8b9;
   --color-primary-hover: #3dd4c6;
-  --color-primary-active: #50b9ab;
+  --color-primary-active: #13a89b;
   --color-primary-bg: #e6f9f6;
   --color-success: #6fba2c;
   --color-success-hover: #85cc45;
@@ -44,6 +44,8 @@
   --color-press-tint: rgba(61, 52, 40, 0.05);
   --color-media-scrim: rgba(61, 52, 40, 0.72);
   --color-media-badge: rgba(61, 52, 40, 0.66);
+  --color-toast-action-bg: rgba(255, 255, 255, 0.18);
+  --color-toast-action-bg-warning: rgba(0, 0, 0, 0.12);
 
   --color-muted: var(--color-fg-soft);
   --color-accent: var(--color-primary);

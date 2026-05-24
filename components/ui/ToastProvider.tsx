@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { Button } from './Button';
 import { Toast, type ToastVariant } from './Toast';
 
 interface ToastAction {
@@ -60,18 +59,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             message={toast.message}
             variant={toast.variant}
             action={
-              toast.action && (
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => {
-                    toast.action?.onClick();
-                    dismiss();
-                  }}
-                >
-                  {toast.action.label}
-                </Button>
-              )
+              toast.action && {
+                label: toast.action.label,
+                onClick: () => {
+                  toast.action?.onClick();
+                  dismiss();
+                }
+              }
             }
           />
         )}

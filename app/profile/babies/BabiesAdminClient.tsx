@@ -139,22 +139,16 @@ export default function BabiesAdminPage() {
         <div className="fixed bottom-[calc(var(--space-4)+env(safe-area-inset-bottom))] left-[var(--space-4)] right-[var(--space-4)] z-[var(--z-toast)] mx-auto max-w-sm">
           <Toast
             message={`已删除 · ${trashAction.toast.label}`}
-            action={
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={async () => {
-                  const restored = await trashAction.undo();
-                  if (restored) {
-                    reload();
-                    router.refresh();
-                  }
-                }}
-              >
-                撤销
-              </Button>
-            }
+            action={{
+              label: '撤销',
+              onClick: async () => {
+                const restored = await trashAction.undo();
+                if (restored) {
+                  reload();
+                  router.refresh();
+                }
+              }
+            }}
           />
         </div>
       )}

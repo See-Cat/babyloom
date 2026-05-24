@@ -15,6 +15,7 @@ export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
 export interface AvatarGroupProps extends HTMLAttributes<HTMLDivElement> {
   avatars: AvatarProps[];
   max?: number;
+  size?: AvatarSize;
 }
 
 const sizeClass: Record<AvatarSize, string> = {
@@ -59,21 +60,20 @@ export function Avatar({ src, alt, name, size = 'md', colorKey, className, style
   );
 }
 
-export function AvatarGroup({ avatars, max = 3, className, ...rest }: AvatarGroupProps) {
+export function AvatarGroup({ avatars, max = 3, size = 'sm', className, ...rest }: AvatarGroupProps) {
   const visible = avatars.slice(0, max);
   const overflow = avatars.length - visible.length;
 
   return (
     <div className={cn('ava-group', className)} {...rest}>
       {visible.map((avatar, index) => (
-        <Avatar
-          key={`${avatar.name}-${index}`}
-          {...avatar}
-          className={cn(index > 0 && '-ml-2 ring-2 ring-[var(--color-bg)]', avatar.className)}
-        />
+        <Avatar key={`${avatar.name}-${index}`} size={size} {...avatar} />
       ))}
       {overflow > 0 && (
-        <span className="ava ava-md">
+        <span
+          className={cn('ava', sizeClass[size], 'ava-overflow')}
+          aria-label={`还有 ${overflow} 人`}
+        >
           +{overflow}
         </span>
       )}

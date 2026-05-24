@@ -3,48 +3,77 @@
 import * as React from 'react';
 import { cn } from '@/lib/cn';
 
+export type DatePickerMode = 'date' | 'datetime';
+
 export interface DatePickerProps {
   name: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
+  mode?: DatePickerMode;
   placeholder?: string;
   required?: boolean;
+  title?: string;
+  disableFuture?: boolean;
 }
 
-const today = new Date();
-const thisYear = today.getFullYear();
-const years = Array.from({ length: 11 }, (_, index) => thisYear - 10 + index);
-const months = Array.from({ length: 12 }, (_, index) => index + 1);
+interface DraftValue {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
 
-export function DatePicker({ label, name, onChange, placeholder = '选择生日', required, value }: DatePickerProps) {
+const ITEM_HEIGHT = 40;
+
+export function DatePicker({
+  label,
+  mode = 'date',
+  name,
+  onChange,
+  placeholder,
+  required,
+  title,
+  value,
+  disableFuture = true
+}: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
-  const parsed = parseDate(value);
-  const fallback = defaultDate();
-  const [draft, setDraft] = React.useState(parsed ?? fallback);
+  const initial = React.useMemo(() => parseValue(value, mode) ?? defaultDraft(mode), [value, mode]);
+  const [draft, setDraft] = React.useState<DraftValue>(initial);
 
   React.useEffect(() => {
-    setDraft(parsed ?? fallback);
-  }, [value]);
+    if (open) setDraft(initial);
+  }, [open, initial]);
 
+  const years = React.useMemo(() => buildYears(), []);
+  const months = React.useMemo(() => buildRange(1, 12), []);
   const days = React.useMemo(
-    () => Array.from({ length: daysInMonth(draft.year, draft.month) }, (_, index) => index + 1),
-    [draft.month, draft.year]
+    () => buildRange(1, daysInMonth(draft.year, draft.month)),
+    [draft.year, draft.month]
   );
+  const hours = React.useMemo(() => buildRange(0, 23), []);
+  const minutes = React.useMemo(() => buildRange(0, 59), []);
 
-  function updateDraft(next: Partial<typeof draft>) {
+  function updateDraft(patch: Partial<DraftValue>) {
     setDraft((current) => {
-      const merged = { ...current, ...next };
-      return { ...merged, day: Math.min(merged.day, daysInMonth(merged.year, merged.month)) };
+      const merged = { ...current, ...patch };
+      const clampedDay = Math.min(merged.day, daysInMonth(merged.year, merged.month));
+      return { ...merged, day: clampedDay };
     });
   }
 
+  const formatted = formatValue(draft, mode);
+  const isInvalid = disableFuture && isFuture(draft, mode);
+
   function confirm() {
-    const next = formatValue(draft);
-    if (isFutureDate(next)) return;
-    onChange(next);
+    if (isInvalid) return;
+    onChange(formatted);
     setOpen(false);
   }
+
+  const sheetTitle = title ?? (mode === 'datetime' ? '选择时间' : '选择日期');
+  const triggerLabel = value ? formatLabel(value, mode) : placeholder ?? (mode === 'datetime' ? '选择日期与时间' : '选择日期');
 
   return (
     <div className="flex flex-col gap-1 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
@@ -57,22 +86,39 @@ export function DatePicker({ label, name, onChange, placeholder = '选择生日'
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <span className={cn(!value && 'placeholder')}>{value ? formatLabel(value) : placeholder}</span>
+        <span className={cn(!value && 'placeholder')}>{triggerLabel}</span>
         <span aria-hidden="true" className="chev">›</span>
       </button>
+
       {open && (
         <div className="scrim" onMouseDown={() => setOpen(false)}>
-          <div className="date-sheet" role="dialog" aria-modal="true" aria-label="选择生日" onMouseDown={(event) => event.stopPropagation()}>
+          <div
+            className="date-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-label={sheetTitle}
+            onMouseDown={(event) => event.stopPropagation()}
+          >
             <div className="handle" />
             <div className="header">
-              <button type="button" className="cancel" onClick={() => setOpen(false)}>取消</button>
-              <h3>选择生日</h3>
-              <button type="button" className="confirm" onClick={confirm} disabled={isFutureDate(formatValue(draft))}>确定</button>
+              <button type="button" className="cancel" onClick={() => setOpen(false)}>
+                取消
+              </button>
+              <h3>{sheetTitle}</h3>
+              <button type="button" className="confirm" onClick={confirm} disabled={isInvalid}>
+                确定
+              </button>
             </div>
             <div className="wheels">
-              <DateColumn label="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
-              <DateColumn label="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
-              <DateColumn label="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
+              <Wheel title="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
+              <Wheel title="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
+              <Wheel title="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
+              {mode === 'datetime' && (
+                <>
+                  <Wheel title="时" values={hours} value={draft.hour} pad onChange={(hour) => updateDraft({ hour })} />
+                  <Wheel title="分" values={minutes} value={draft.minute} pad onChange={(minute) => updateDraft({ minute })} />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -81,69 +127,164 @@ export function DatePicker({ label, name, onChange, placeholder = '选择生日'
   );
 }
 
-function DateColumn({
-  label,
-  onChange,
-  value,
-  values
-}: {
-  label: string;
+interface WheelProps {
+  title: string;
   values: number[];
   value: number;
   onChange: (value: number) => void;
-}) {
+  pad?: boolean;
+}
+
+function Wheel({ title, values, value, onChange, pad: padded = false }: WheelProps) {
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const settleTimerRef = React.useRef<number | null>(null);
+
+  const selectedIndex = Math.max(0, values.indexOf(value));
+
+  React.useEffect(() => {
+    const node = scrollRef.current;
+    if (!node) return;
+    const target = selectedIndex * ITEM_HEIGHT;
+    if (Math.abs(node.scrollTop - target) > 1) {
+      node.scrollTop = target;
+    }
+  }, [selectedIndex, values.length]);
+
+  function handleScroll() {
+    if (settleTimerRef.current !== null) {
+      window.clearTimeout(settleTimerRef.current);
+    }
+    settleTimerRef.current = window.setTimeout(() => {
+      const node = scrollRef.current;
+      if (!node) return;
+      const index = Math.round(node.scrollTop / ITEM_HEIGHT);
+      const clamped = Math.max(0, Math.min(values.length - 1, index));
+      const next = values[clamped];
+      if (next !== value) onChange(next);
+    }, 80);
+  }
+
+  function handleItemClick(item: number) {
+    const node = scrollRef.current;
+    if (!node) return;
+    const target = values.indexOf(item) * ITEM_HEIGHT;
+    node.scrollTo({ top: target, behavior: 'smooth' });
+    if (item !== value) onChange(item);
+  }
+
   return (
-    <div role="listbox" aria-label={label} className="wheel">
-      <div className="wheel-track">
-      {values.map((item) => (
-        <button
-          key={item}
-          type="button"
-          role="option"
-          aria-selected={item === value}
-          className={cn(
-            'wheel-item',
-            Math.abs(values.indexOf(item) - values.indexOf(value)) === 1 && 'near',
-            item === value && 'selected'
-          )}
-          onClick={() => onChange(item)}
-        >
-          {item}
-        </button>
-      ))}
+    <div className="wheel-col" role="group" aria-label={title}>
+      <div className="wheel-col-label" aria-hidden="true">
+        {title}
+      </div>
+      <div
+        ref={scrollRef}
+        className="wheel-scroll"
+        role="listbox"
+        aria-label={title}
+        tabIndex={0}
+        onScroll={handleScroll}
+      >
+        <div className="wheel-scroll-track">
+          {values.map((item, index) => {
+            const distance = Math.abs(index - selectedIndex);
+            const selected = item === value;
+            return (
+              <button
+                key={item}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                className={cn(
+                  'wheel-item',
+                  selected && 'selected',
+                  !selected && distance === 1 && 'near'
+                )}
+                onClick={() => handleItemClick(item)}
+              >
+                {padded ? String(item).padStart(2, '0') : item}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
 }
 
-function parseDate(value: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  return { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+function buildYears() {
+  const now = new Date();
+  const max = now.getFullYear();
+  const min = max - 30;
+  return buildRange(min, max);
 }
 
-function defaultDate() {
-  const date = new Date(today);
-  date.setFullYear(today.getFullYear() - 1);
-  return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() };
+function buildRange(min: number, max: number) {
+  return Array.from({ length: max - min + 1 }, (_, index) => min + index);
 }
 
 function daysInMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate();
 }
 
-function formatValue(date: { year: number; month: number; day: number }) {
-  return `${date.year}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+function defaultDraft(mode: DatePickerMode): DraftValue {
+  const now = new Date();
+  return {
+    year: now.getFullYear(),
+    month: now.getMonth() + 1,
+    day: now.getDate(),
+    hour: mode === 'datetime' ? now.getHours() : 0,
+    minute: mode === 'datetime' ? now.getMinutes() : 0
+  };
 }
 
-function formatLabel(value: string) {
-  const parsed = parseDate(value);
+function parseValue(raw: string, mode: DatePickerMode): DraftValue | null {
+  if (!raw) return null;
+  const datetime = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(raw);
+  if (!datetime) return null;
+  const draft: DraftValue = {
+    year: Number(datetime[1]),
+    month: Number(datetime[2]),
+    day: Number(datetime[3]),
+    hour: datetime[4] ? Number(datetime[4]) : 0,
+    minute: datetime[5] ? Number(datetime[5]) : 0
+  };
+  if (mode === 'date') {
+    draft.hour = 0;
+    draft.minute = 0;
+  }
+  return draft;
+}
+
+function formatValue(draft: DraftValue, mode: DatePickerMode) {
+  const date = `${draft.year}-${pad(draft.month)}-${pad(draft.day)}`;
+  if (mode === 'datetime') {
+    return `${date} ${pad(draft.hour)}:${pad(draft.minute)}`;
+  }
+  return date;
+}
+
+function formatLabel(value: string, mode: DatePickerMode) {
+  const parsed = parseValue(value, mode);
   if (!parsed) return value;
-  return `${parsed.year} 年 ${parsed.month} 月 ${parsed.day} 日`;
+  const date = `${parsed.year} 年 ${parsed.month} 月 ${parsed.day} 日`;
+  if (mode === 'datetime') {
+    return `${date} ${pad(parsed.hour)}:${pad(parsed.minute)}`;
+  }
+  return date;
 }
 
-function isFutureDate(value: string) {
-  const parsed = parseDate(value);
-  if (!parsed) return false;
-  return new Date(parsed.year, parsed.month - 1, parsed.day).getTime() > today.getTime();
+function pad(value: number) {
+  return String(value).padStart(2, '0');
+}
+
+function isFuture(draft: DraftValue, mode: DatePickerMode) {
+  const target = new Date(
+    draft.year,
+    draft.month - 1,
+    draft.day,
+    mode === 'datetime' ? draft.hour : 0,
+    mode === 'datetime' ? draft.minute : 0
+  );
+  return target.getTime() > Date.now();
 }

@@ -23,40 +23,35 @@ export function Tabbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] pb-[calc(6px+env(safe-area-inset-bottom))]" aria-label="主导航">
-      <ul className="mx-auto flex w-full max-w-lg items-center justify-around">
-        {items.map((item) => {
-          const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
-          const className = cn(
-            'tab',
-            active && 'active',
-            item.disabled && 'cursor-not-allowed opacity-45'
-          );
-          const dotClassName = cn(
-            'dot'
-          );
+    <nav
+      className="tabbar fixed bottom-0 left-0 right-0 z-[var(--z-tabbar)] pb-[calc(6px+env(safe-area-inset-bottom))]"
+      aria-label="主导航"
+    >
+      {items.map((item) => {
+        const active = !item.disabled && (pathname === item.href || pathname.startsWith(`${item.href}/`));
+        const className = cn('tab', active && 'active', item.disabled && 'cursor-not-allowed opacity-45');
 
+        if (item.disabled) {
           return (
-            <li key={item.href}>
-              {item.disabled ? (
-                <span className={className} aria-disabled="true" style={active ? { color: 'var(--color-on-solid)' } : undefined}>
-                  <span className={dotClassName}>{item.icon}</span>
-                  {item.label}
-                </span>
-              ) : (
-                <Link
-                  href={item.href}
-                  className={className}
-                  aria-current={active ? 'page' : undefined}
-                >
-                  <span className={dotClassName}>{item.icon}</span>
-                  {item.label}
-                </Link>
-              )}
-            </li>
+            <span key={item.href} className={className} aria-disabled="true">
+              <span className="dot">{item.icon}</span>
+              {item.label}
+            </span>
           );
-        })}
-      </ul>
+        }
+
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={className}
+            aria-current={active ? 'page' : undefined}
+          >
+            <span className="dot">{item.icon}</span>
+            {item.label}
+          </Link>
+        );
+      })}
     </nav>
   );
 }

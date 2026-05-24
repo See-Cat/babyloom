@@ -32,8 +32,8 @@ export function ComponentsDemo() {
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [sheetOpen, setSheetOpen] = React.useState(false);
   const [actionOpen, setActionOpen] = React.useState(false);
-  const [collapseOpen, setCollapseOpen] = React.useState(true);
   const [date, setDate] = React.useState('2024-08-01');
+  const [datetime, setDatetime] = React.useState('2024-08-01 09:30');
   const [segment, setSegment] = React.useState('week');
   const toast = useToast();
 
@@ -157,16 +157,16 @@ export function ComponentsDemo() {
           </DemoSection>
 
           <DemoSection title="Collapse">
-            <Button variant="default" onClick={() => setCollapseOpen((value) => !value)}>
-              切换
-            </Button>
-            <Collapse open={collapseOpen} className="mt-[var(--space-3)]">
-              <Card variant="dashed">折叠内容</Card>
+            <Collapse title="关于本次记录" defaultOpen>
+              详细信息会在这里展示，展开收起带 350ms 缓动。
             </Collapse>
           </DemoSection>
 
           <DemoSection title="DatePicker">
-            <DatePicker name="birthday" label="生日" value={date} onChange={setDate} />
+            <div className="grid gap-[var(--space-3)]">
+              <DatePicker name="birthday" label="生日（日期）" value={date} onChange={setDate} />
+              <DatePicker name="event" label="事件时间（日期+时分）" mode="datetime" value={datetime} onChange={setDatetime} />
+            </div>
           </DemoSection>
 
           <DemoSection title="Modal">

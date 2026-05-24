@@ -7,11 +7,14 @@ import { useToast } from '@/lib/hooks/useToast';
 
 describe('Toast', () => {
   it('renders message, variant, and action slot', () => {
-    const html = renderToStaticMarkup(<Toast message="已删除" variant="error" action={<button type="button">撤销</button>} />);
+    const html = renderToStaticMarkup(
+      <Toast message="已删除" variant="error" action={{ label: '撤销', onClick: () => undefined }} />
+    );
 
     expect(html).toContain('已删除');
     expect(html).toContain('data-variant="error"');
     expect(html).toContain('toast error');
+    expect(html).toContain('class="action"');
     expect(html).toContain('撤销');
   });
 
