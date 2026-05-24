@@ -23,7 +23,7 @@ export function SegmentedControl({ ariaLabel, className, onChange, options, valu
   );
   const count = options.length;
   const pillStyle = {
-    width: `calc((100% - 8px) / ${count})`,
+    width: `calc((100% - 16px) / ${count})`,
     transform: `translateX(calc((100% + 4px) * ${activeIndex}))`
   } as React.CSSProperties;
 
