@@ -46,12 +46,24 @@ describe('Button', () => {
     expect(html).not.toContain('shadow-[var(--shadow-press-hover)]');
   });
 
-  it('marks loading buttons as disabled and busy', () => {
+  it('treats loading as a visual state only — does not force disabled', () => {
     const html = renderToStaticMarkup(<Button loading>发布</Button>);
+
+    expect(html).not.toContain('disabled=""');
+    expect(html).toContain('aria-busy="true"');
+    expect(html).toContain('spinner');
+    expect(html).toContain('btn-loading');
+  });
+
+  it('honors explicit disabled alongside loading', () => {
+    const html = renderToStaticMarkup(
+      <Button loading disabled>
+        发布
+      </Button>
+    );
 
     expect(html).toContain('disabled=""');
     expect(html).toContain('aria-busy="true"');
-    expect(html).toContain('spinner');
     expect(html).toContain('btn-loading');
   });
 });
