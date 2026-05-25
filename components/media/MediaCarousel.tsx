@@ -35,7 +35,7 @@ export function MediaCarousel({ mediaIds }: { mediaIds: string[] }) {
       </div>
       {mediaIds.length > 1 && (
         <>
-          <span className="pointer-events-none absolute right-[var(--space-3)] top-[var(--space-3)] rounded-[var(--radius-pill)] bg-[var(--color-media-badge)] px-[10px] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-inverse)] backdrop-blur-[6px]">
+          <span className="pointer-events-none absolute left-1/2 top-[calc(var(--space-5)+env(safe-area-inset-top))] z-20 -translate-x-1/2 rounded-[var(--radius-pill)] bg-[var(--color-media-badge)] px-[10px] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-inverse)] backdrop-blur-[6px]">
             {index + 1} / {mediaIds.length}
           </span>
           <div className="pointer-events-none absolute inset-x-0 bottom-[var(--space-3)] flex justify-center gap-[6px]">
