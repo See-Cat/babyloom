@@ -34,7 +34,7 @@ describe('EntryDetailView', () => {
       </ToastContext.Provider>
     );
 
-    expect(html).toContain('aria-label="返回时间线"');
+    expect(html).toContain('aria-label="返回"');
     expect(html).toContain('aria-label="更多操作"');
     expect(html).toContain('今天第一次自己扶着沙发站起来。');
     expect(html).toContain('第一次站立');

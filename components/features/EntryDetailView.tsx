@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MediaCarousel } from '@/components/media/MediaCarousel';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
@@ -57,6 +56,14 @@ export function EntryDetailView({
     router.refresh();
   }
 
+  function onBack() {
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(`/timeline?babyId=${entry.babyId}`);
+    }
+  }
+
   const baseBtn =
     'inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] backdrop-blur-[8px] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]';
   const overMedia = 'bg-white/80 text-[color:var(--color-fg-strong)]';
@@ -67,9 +74,9 @@ export function EntryDetailView({
       hideHeader={hasMedia}
       leftSlot={
         !hasMedia ? (
-          <Link href={`/timeline?babyId=${entry.babyId}`} aria-label="返回时间线" className={`${baseBtn} ${overBg}`}>
+          <button type="button" onClick={onBack} aria-label="返回" className={`${baseBtn} ${overBg}`}>
             <ChevronLeftIcon />
-          </Link>
+          </button>
         ) : undefined
       }
       rightSlot={
@@ -85,13 +92,14 @@ export function EntryDetailView({
         <div className="relative -mx-[var(--space-4)] mb-[var(--space-4)]">
           <MediaCarousel items={mediaItems} onOpenAt={(i) => setLightboxAt(i)} />
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))]">
-            <Link
-              href={`/timeline?babyId=${entry.babyId}`}
-              aria-label="返回时间线"
+            <button
+              type="button"
+              onClick={onBack}
+              aria-label="返回"
               className={`pointer-events-auto ${baseBtn} ${overMedia}`}
             >
               <ChevronLeftIcon />
-            </Link>
+            </button>
             {canEdit && (
               <button
                 type="button"

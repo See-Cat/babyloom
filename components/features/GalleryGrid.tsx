@@ -68,33 +68,22 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
 
 function GalleryTile({ item, onOpenViewer }: { item: GalleryMedia; onOpenViewer: (item: GalleryMedia) => void }) {
   const label = item.filename || '宝宝照片';
-  const tileContent = (
-    <span className="relative block aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)] active:scale-[.97] active:transition-transform active:duration-[var(--duration-press-up)]">
-      <MediaImage
-        mediaId={item.id}
-        alt={label}
-        width={item.width ?? 240}
-        height={item.height ?? 240}
-        className="h-full w-full object-cover"
-      />
-      {item.type === 'video' && (
-        <span className="absolute bottom-1 right-1 rounded-[var(--radius-pill)] bg-[var(--color-media-badge)] px-2 py-1 text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-inverse)] backdrop-blur-[4px]">
-          ▶ {formatDuration(item.durationSec)}
-        </span>
-      )}
-    </span>
-  );
-
-  if (item.entryId) {
-    return (
-      <Link href={`/entry/${item.entryId}`} aria-label={label}>
-        {tileContent}
-      </Link>
-    );
-  }
   return (
     <button type="button" aria-label={label} onClick={() => onOpenViewer(item)} className="block w-full">
-      {tileContent}
+      <span className="relative block aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)] active:scale-[.97] active:transition-transform active:duration-[var(--duration-press-up)]">
+        <MediaImage
+          mediaId={item.id}
+          alt={label}
+          width={item.width ?? 240}
+          height={item.height ?? 240}
+          className="h-full w-full object-cover"
+        />
+        {item.type === 'video' && (
+          <span className="absolute bottom-1 right-1 rounded-[var(--radius-pill)] bg-[var(--color-media-badge)] px-2 py-1 text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-inverse)] backdrop-blur-[4px]">
+            ▶ {formatDuration(item.durationSec)}
+          </span>
+        )}
+      </span>
     </button>
   );
 }
@@ -157,8 +146,8 @@ function Viewer({
       <div className="flex flex-1 items-center justify-center px-[var(--space-2)]">
         <MediaImage mediaId={current.id} size="large" alt={current.filename || ''} className="max-h-full max-w-full object-contain" />
       </div>
-      {current.entryId === null && (
-        <div className="px-[var(--space-4)] pb-[var(--space-2)]">
+      <div className="px-[var(--space-4)] pb-[var(--space-2)]">
+        {current.entryId === null ? (
           <Link
             href={buildComposerHref(babyId, current)}
             className="flex w-full items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
@@ -166,8 +155,15 @@ function Viewer({
             <PlusIcon className="h-4 w-4" />
             为这张照片写一则记录
           </Link>
-        </div>
-      )}
+        ) : (
+          <Link
+            href={`/entry/${current.entryId}`}
+            className="flex w-full items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
+          >
+            查看这条记录
+          </Link>
+        )}
+      </div>
       <div ref={stripRef} className="flex gap-[var(--space-1)] overflow-x-auto px-[var(--space-3)] py-[var(--space-3)]" style={{ scrollbarWidth: 'none' }}>
         {items.map((item, i) => (
           <button
