@@ -1,9 +1,12 @@
 'use client';
 
+import * as React from 'react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { AvatarUploader } from './AvatarUploader';
+import { Avatar } from '@/components/ui/Avatar';
+import { ChevronRightIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/cn';
 
 export interface BabyCardProps {
   baby: {
@@ -20,11 +23,14 @@ export interface BabyCardProps {
   onCancelEdit?: () => void;
   onSave?: () => void;
   onTrash?: () => void;
+  active?: boolean;
+  ageLabel?: string;
+  onSelect?: () => void;
 }
 
-export function BabyCard({ baby, editing, editName, onCancelEdit, onEdit, onEditNameChange, onSave, onTrash }: BabyCardProps) {
+export function BabyCard({ baby, editing, editName, onCancelEdit, onEditNameChange, onSave, active = false, ageLabel, onSelect }: BabyCardProps) {
   return (
-    <Card>
+    <Card className={cn(active && 'border border-[color-mix(in_srgb,var(--color-primary)_35%,transparent)] bg-[var(--color-primary-bg)]')}>
       {editing ? (
         <div className="flex flex-col gap-[var(--space-3)] sm:flex-row sm:items-end">
           <Input label="名字" value={editName} onChange={(event) => onEditNameChange?.(event.target.value)} />
@@ -38,27 +44,29 @@ export function BabyCard({ baby, editing, editName, onCancelEdit, onEdit, onEdit
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-between gap-[var(--space-3)]">
-          <div className="min-w-0">
-            <AvatarUploader
-              currentUrl={baby.avatarUrl}
-              fallbackName={baby.name}
-              target={`baby:${baby.id}`}
-            />
-            <p className="font-bold text-[color:var(--color-fg-strong)]">{baby.name}</p>
-            <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-              {baby.birthday} · {baby.gender}
+        <button
+          type="button"
+          className="flex w-full items-center gap-[var(--space-3)] text-left"
+          aria-current={active ? 'true' : undefined}
+          onClick={onSelect}
+          disabled={!onSelect}
+        >
+          <Avatar src={baby.avatarUrl ?? undefined} name={baby.name} size="lg" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-[var(--space-2)]">
+              <p className="truncate text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">{baby.name}</p>
+              {active && (
+                <span className="rounded-[var(--radius-pill)] bg-[var(--color-primary-bg)] px-[var(--space-2)] py-[2px] text-[10px] font-bold text-[color:var(--color-primary-active)]">
+                  记录中
+                </span>
+              )}
+            </div>
+            <p className="mt-[2px] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+              {ageLabel ?? baby.birthday}
             </p>
           </div>
-          <div className="flex gap-[var(--space-2)]">
-            <Button type="button" size="sm" variant="secondary" onClick={onEdit}>
-              编辑
-            </Button>
-            <Button type="button" size="sm" variant="error" onClick={onTrash}>
-              删除
-            </Button>
-          </div>
-        </div>
+          {onSelect && <ChevronRightIcon className="h-4 w-4 text-[color:var(--color-fg-soft)]" />}
+        </button>
       )}
     </Card>
   );

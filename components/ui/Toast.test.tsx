@@ -16,6 +16,10 @@ describe('Toast', () => {
     expect(html).toContain('toast error');
     expect(html).toContain('class="action"');
     expect(html).toContain('撤销');
+    expect(html).toContain('<svg');
+    expect(html).not.toContain('ℹ');
+    expect(html).not.toContain('✓');
+    expect(html).not.toContain('⚠');
   });
 
   it('provides toast context to descendants', () => {

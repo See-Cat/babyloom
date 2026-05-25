@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
+import { XIcon } from './icons';
 
 type TagVariant = 'neutral' | 'accent' | 'error';
 
@@ -37,7 +38,7 @@ export function Tag({ children, className, variant = 'neutral', removable = fals
           className="x"
           onClick={onRemove}
         >
-          ×
+          <XIcon className="h-3 w-3" />
         </button>
       )}
     </span>

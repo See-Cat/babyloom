@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/cn';
+import { CheckIcon, ErrorIcon, InfoIcon, WarningIcon } from './icons';
 
 export type ToastVariant = 'neutral' | 'success' | 'error' | 'warning';
 
@@ -22,11 +23,11 @@ const variantClass: Record<ToastVariant, string> = {
   warning: 'warning'
 };
 
-const defaultIcon: Record<ToastVariant, string> = {
-  neutral: 'ℹ',
-  success: '✓',
-  error: '!',
-  warning: '⚠'
+const defaultIcon: Record<ToastVariant, React.ReactNode> = {
+  neutral: <InfoIcon />,
+  success: <CheckIcon />,
+  error: <ErrorIcon />,
+  warning: <WarningIcon />
 };
 
 export function Toast({ message, variant = 'neutral', action, icon }: ToastProps) {

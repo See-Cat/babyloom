@@ -7,6 +7,7 @@ describe('GalleryGrid', () => {
   it('renders sticky month headings with per-month media counts', () => {
     const html = renderToStaticMarkup(
       <GalleryGrid
+        babyId="baby-1"
         groups={[
           {
             ym: '2026-05',
@@ -26,14 +27,16 @@ describe('GalleryGrid', () => {
     expect(html).toContain('/entry/entry-1');
   });
 
-  it('renders the V2 empty state with a primary entry CTA', () => {
-    const html = renderToStaticMarkup(<GalleryGrid groups={[]} />);
+  it('renders the V2 empty state with a baby-scoped primary entry CTA', () => {
+    const html = renderToStaticMarkup(<GalleryGrid babyId="baby-1" groups={[]} />);
 
     expect(html).toContain('还没有照片');
     expect(html).toContain('在记录里上传图片或视频,这里就会出现');
     expect(html).toContain('新建一条记录');
-    expect(html).toContain('/entry/new');
+    expect(html).toContain('/entry/new?babyId=baby-1');
     expect(html).not.toContain('bl-card');
+    expect(html).not.toContain('📸');
+    expect(html).not.toContain('＋');
   });
 });
 

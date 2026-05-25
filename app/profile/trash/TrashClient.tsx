@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Tag } from '@/components/ui/Tag';
+import { CheckIcon } from '@/components/ui/icons';
 
 type TrashType = 'entries' | 'media' | 'babies';
 type TrashRole = 'owner' | 'editor';
@@ -253,7 +254,7 @@ export default function TrashClient({
                         !canSelect(row) && 'opacity-45'
                       ].filter(Boolean).join(' ')}
                     >
-                      ✓
+                      <CheckIcon className="h-3.5 w-3.5" />
                     </span>
                   )}
                   <div className="min-w-0 flex-1">

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { cn } from '@/lib/cn';
 import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
+import { ChevronRightIcon } from './icons';
 
 export type DatePickerMode = 'date' | 'datetime';
 
@@ -89,7 +90,7 @@ export function DatePicker({
         onClick={() => setOpen(true)}
       >
         <span className={cn(!value && 'placeholder')}>{triggerLabel}</span>
-        <span aria-hidden="true" className="chev">›</span>
+        <ChevronRightIcon className="chev h-4 w-4" />
       </button>
 
       {mounted && (

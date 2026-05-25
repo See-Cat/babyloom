@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
 import { BabyCard } from '@/components/features/BabyCard';
 import { Button } from '@/components/ui/Button';
@@ -10,8 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { Toast } from '@/components/ui/Toast';
-import { useTrashAction } from '@/lib/hooks/useTrashAction';
+import { PlusIcon } from '@/components/ui/icons';
 
 interface Baby {
   id: string;
@@ -22,11 +20,7 @@ interface Baby {
 }
 
 export default function BabiesAdminPage() {
-  const router = useRouter();
-  const trashAction = useTrashAction('baby');
   const [babies, setBabies] = useState<Baby[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
   const [creating, setCreating] = useState(false);
   const [newBaby, setNewBaby] = useState({ name: '', birthday: '', gender: 'girl' });
 
@@ -40,24 +34,6 @@ export default function BabiesAdminPage() {
   useEffect(() => {
     reload();
   }, []);
-
-  async function rename(id: string) {
-    await fetch(`/api/babies/${id}`, {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: editName })
-    });
-    setEditingId(null);
-    reload();
-  }
-
-  async function trash(id: string) {
-    const baby = babies.find((item) => item.id === id);
-    await trashAction.softDelete(id, baby?.name ?? '宝宝', () => {
-      reload();
-      router.refresh();
-    });
-  }
 
   async function createBaby() {
     const res = await fetch('/api/babies', {
@@ -82,20 +58,12 @@ export default function BabiesAdminPage() {
       }
     >
       <ul className="mb-[var(--space-6)] flex flex-col gap-[var(--space-3)]">
-        {babies.map((b) => (
+        {babies.map((b, index) => (
           <li key={b.id}>
             <BabyCard
               baby={b}
-              editing={editingId === b.id}
-              editName={editName}
-              onEditNameChange={setEditName}
-              onSave={() => rename(b.id)}
-              onCancelEdit={() => setEditingId(null)}
-              onEdit={() => {
-                setEditingId(b.id);
-                setEditName(b.name);
-              }}
-              onTrash={() => trash(b.id)}
+              active={index === 0}
+              ageLabel={formatBabyAge(b.birthday)}
             />
           </li>
         ))}
@@ -131,27 +99,23 @@ export default function BabiesAdminPage() {
           </div>
         </Card>
       ) : (
-        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
-          + 添加宝宝
+        <Button type="button" variant="secondary" leadingIcon={<PlusIcon />} onClick={() => setCreating(true)} fullWidth>
+          添加宝宝
         </Button>
-      )}
-      {trashAction.toast && (
-        <div className="fixed bottom-[calc(var(--space-4)+env(safe-area-inset-bottom))] left-[var(--space-4)] right-[var(--space-4)] z-[var(--z-toast)] mx-auto max-w-sm">
-          <Toast
-            message={`已删除 · ${trashAction.toast.label}`}
-            action={{
-              label: '撤销',
-              onClick: async () => {
-                const restored = await trashAction.undo();
-                if (restored) {
-                  reload();
-                  router.refresh();
-                }
-              }
-            }}
-          />
-        </div>
       )}
     </AppShell>
   );
+}
+
+function formatBabyAge(birthday: string) {
+  const birth = new Date(`${birthday}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return birthday;
+  const now = new Date();
+  let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();
+  if (now.getUTCDate() < birth.getUTCDate()) months -= 1;
+  months = Math.max(0, months);
+  const years = Math.floor(months / 12);
+  const restMonths = months % 12;
+  if (years > 0) return `${years}岁${restMonths}月`;
+  return `${restMonths}个月`;
 }

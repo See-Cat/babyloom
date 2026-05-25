@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { BackupPanel } from '@/components/features/BackupPanel';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { babies, entries, familyMembers, media } from '@/lib/db/schema';
@@ -95,9 +96,7 @@ export default async function ProfileDataPage() {
             className="flex items-center px-[var(--space-5)] py-[var(--space-4)] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]"
           >
             <span>查看系统日志</span>
-            <span aria-hidden="true" className="ml-auto text-[color:var(--color-fg-soft)]">
-              ›
-            </span>
+            <ChevronRightIcon className="ml-auto h-4 w-4 text-[color:var(--color-fg-soft)]" />
           </Link>
         </Card>
       </div>

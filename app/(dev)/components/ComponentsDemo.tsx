@@ -19,6 +19,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Switch } from '@/components/ui/Switch';
 import { Tag } from '@/components/ui/Tag';
 import { Textarea } from '@/components/ui/Textarea';
+import { ArrowDownIcon, CheckIcon, ErrorIcon, InfoIcon, PlusIcon, WarningIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/hooks/useToast';
 
 const avatars = [
@@ -62,7 +63,7 @@ export function ComponentsDemo() {
               <StateCell label="sm"><Button size="sm">保存</Button></StateCell>
               <StateCell label="md"><Button>保存</Button></StateCell>
               <StateCell label="lg"><Button size="lg">保存</Button></StateCell>
-              <StateCell label="w/ icon"><Button leadingIcon={<span aria-hidden="true">＋</span>}>新建</Button></StateCell>
+              <StateCell label="w/ icon"><Button leadingIcon={<PlusIcon />}>新建</Button></StateCell>
             </StateGroup>
             <StateGroup title="Default / Danger / Ghost / Text / Link">
               <StateCell label="default"><Button variant="default">取消</Button></StateCell>
@@ -175,10 +176,10 @@ export function ComponentsDemo() {
 
           <DemoSection title="Toast">
             <StateGroup title="Toast 状态">
-              <StateCell label="info(默认)"><div className="toast"><span className="icon">ℹ</span>已保存</div></StateCell>
-              <StateCell label="success"><div className="toast success"><span className="icon">✓</span>记录已发布</div></StateCell>
-              <StateCell label="error"><div className="toast error"><span className="icon">!</span>网络错误，请重试</div></StateCell>
-              <StateCell label="warning"><div className="toast warning"><span className="icon">⚠</span>未保存的修改</div></StateCell>
+              <StateCell label="info(默认)"><div className="toast"><span className="icon"><InfoIcon /></span>已保存</div></StateCell>
+              <StateCell label="success"><div className="toast success"><span className="icon"><CheckIcon /></span>记录已发布</div></StateCell>
+              <StateCell label="error"><div className="toast error"><span className="icon"><ErrorIcon /></span>网络错误，请重试</div></StateCell>
+              <StateCell label="warning"><div className="toast warning"><span className="icon"><WarningIcon /></span>未保存的修改</div></StateCell>
               <StateCell label="info + action"><div className="toast">已移到回收站<button className="action">撤销</button></div></StateCell>
               <StateCell label="error + action"><div className="toast error">上传失败<button className="action">重试</button></div></StateCell>
             </StateGroup>
@@ -248,7 +249,7 @@ export function ComponentsDemo() {
                     <Avatar name={baby.avatar} size="sm" colorKey={baby.colorKey} />
                     <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">{baby.name}</span>
                     <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">{baby.age}</span>
-                    {baby.active && <span className="text-[color:var(--color-primary-active)] font-bold">✓</span>}
+                    {baby.active && <CheckIcon className="h-4 w-4 text-[color:var(--color-primary-active)]" />}
                   </button>
                 ))}
                 <button
@@ -256,7 +257,7 @@ export function ComponentsDemo() {
                   className="mt-[6px] flex items-center gap-[10px] border-t border-[color:var(--color-border-light)] px-[6px] pt-[14px] text-[length:var(--text-base)] font-bold text-[color:var(--color-primary-active)]"
                   onClick={() => setSheetOpen(false)}
                 >
-                  ＋ 添加新宝宝
+                  <PlusIcon className="h-4 w-4" /> 添加新宝宝
                 </button>
               </div>
             </BottomSheet>
@@ -281,8 +282,8 @@ export function ComponentsDemo() {
 
           <DemoSection title="PullToRefresh">
             <StateGroup>
-              <StateCell label="idle"><Card className="w-[220px] text-center"><span className="text-2xl">↓</span><div>下拉刷新</div></Card></StateCell>
-              <StateCell label="pulling"><Card className="w-[220px] text-center"><span className="inline-block rotate-180 text-2xl">↓</span><div>松开刷新</div></Card></StateCell>
+              <StateCell label="idle"><Card className="w-[220px] text-center"><ArrowDownIcon className="mx-auto h-6 w-6" /><div>下拉刷新</div></Card></StateCell>
+              <StateCell label="pulling"><Card className="w-[220px] text-center"><ArrowDownIcon className="mx-auto h-6 w-6 rotate-180" /><div>松开刷新</div></Card></StateCell>
               <StateCell label="refreshing"><Card className="w-[220px] text-center"><Spinner /><div>正在刷新…</div></Card></StateCell>
               <StateCell label="interactive"><PullToRefresh onRefresh={async () => undefined}><Card variant="dashed" className="w-[260px]">下拉刷新容器</Card></PullToRefresh></StateCell>
             </StateGroup>
@@ -306,9 +307,9 @@ export function ComponentsDemo() {
 
           <DemoSection title="FAB">
             <StateGroup>
-              <StateCell label="default"><button className="fab" aria-label="新建">+</button></StateCell>
-              <StateCell label=":active(模拟)"><button className="fab" style={{ transform: 'translateY(4px)', boxShadow: '0 1px 0 0 var(--color-press-shadow-primary)' }} aria-label="新建">+</button></StateCell>
-              <StateCell label=":focus"><button className="fab" style={{ outline: '3px solid var(--color-focus)', outlineOffset: 3 }} aria-label="新建">+</button></StateCell>
+              <StateCell label="default"><button className="fab" aria-label="新建"><PlusIcon /></button></StateCell>
+              <StateCell label=":active(模拟)"><button className="fab" style={{ transform: 'translateY(4px)', boxShadow: '0 1px 0 0 var(--color-press-shadow-primary)' }} aria-label="新建"><PlusIcon /></button></StateCell>
+              <StateCell label=":focus"><button className="fab" style={{ outline: '3px solid var(--color-focus)', outlineOffset: 3 }} aria-label="新建"><PlusIcon /></button></StateCell>
             </StateGroup>
           </DemoSection>
 

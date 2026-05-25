@@ -51,7 +51,7 @@ export default async function GalleryPage({
 
   return (
     <AppShell title="画廊" subtitle={`${selectedBaby.name} · ${mediaCount > 0 ? `共 ${mediaCount} 张` : '还没有照片'}`}>
-      <GalleryGrid groups={groups} />
+      <GalleryGrid babyId={selectedBabyId} groups={groups} />
     </AppShell>
   );
 }

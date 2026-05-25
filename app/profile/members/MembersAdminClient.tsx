@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { PlusIcon } from '@/components/ui/icons';
 
 interface Member {
   memberId: string;
@@ -130,8 +131,8 @@ export default function MembersAdminPage() {
             onChange={(value) => setNewMember({ ...newMember, role: value as 'editor' | 'viewer' })}
             className="grid-cols-2"
             options={[
-              { value: 'editor', label: 'editor' },
-              { value: 'viewer', label: 'viewer' }
+              { value: 'editor', label: '编辑成员' },
+              { value: 'viewer', label: '仅查看' }
             ]}
           />
           <div className="flex gap-[var(--space-2)]">
@@ -144,8 +145,8 @@ export default function MembersAdminPage() {
           </div>
         </Card>
       ) : (
-        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
-          + 添加成员
+        <Button type="button" variant="secondary" leadingIcon={<PlusIcon />} onClick={() => setCreating(true)} fullWidth>
+          添加成员
         </Button>
       )}
       {activeMember && (

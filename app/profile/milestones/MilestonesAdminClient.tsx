@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
+import { PlusIcon } from '@/components/ui/icons';
 
 interface Milestone {
   id: string;
@@ -107,8 +108,8 @@ export default function MilestonesAdminPage() {
           </div>
         </Card>
       ) : (
-        <Button type="button" variant="secondary" onClick={() => setCreating(true)} fullWidth>
-          + 添加里程碑
+        <Button type="button" variant="secondary" leadingIcon={<PlusIcon />} onClick={() => setCreating(true)} fullWidth>
+          添加里程碑
         </Button>
       )}
       <Dialog

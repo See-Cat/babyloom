@@ -4,6 +4,7 @@ import * as React from 'react';
 import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
+import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
 export interface FamilyMemberListItem {
@@ -45,7 +46,7 @@ export function FamilyMemberList({ members, onSelect, resetSlot }: FamilyMemberL
                 </p>
               </div>
               {member.role !== 'owner' && (
-                <span aria-hidden="true" className="text-[color:var(--color-fg-soft)]">›</span>
+                <ChevronRightIcon className="h-4 w-4 text-[color:var(--color-fg-soft)]" />
               )}
             </button>
             {resetSlot?.(member)}

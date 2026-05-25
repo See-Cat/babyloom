@@ -11,6 +11,7 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { InstallChip } from '@/components/features/InstallChip';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
+import { ChevronRightIcon } from '@/components/ui/icons';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -52,7 +53,7 @@ export default async function ProfilePage() {
           <div>
             <h2 className="text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{me?.name}</h2>
             <p className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-              @{me?.username} · {member.role}
+              @{me?.username} · {roleLabel(member.role)}
             </p>
           </div>
         </div>
@@ -81,7 +82,7 @@ function ProfileSection({ title, links }: { title?: string; links: ProfileLink[]
               <Link href={link.href} className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]">
                 <ProfileRowIcon name={link.icon} />
                 <span>{link.label}</span>
-                <span aria-hidden="true" className="ml-auto text-[color:var(--color-fg-soft)]">›</span>
+                <ChevronRightIcon className="ml-auto h-4 w-4 text-[color:var(--color-fg-soft)]" />
               </Link>
             </li>
           ))}
@@ -148,3 +149,9 @@ const iconPaths: Record<ProfileIcon, ReactNode> = {
     </>
   )
 };
+
+function roleLabel(role: string) {
+  if (role === 'owner') return '家庭主理人';
+  if (role === 'editor') return '编辑成员';
+  return '仅查看';
+}
