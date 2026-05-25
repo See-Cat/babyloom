@@ -17,6 +17,7 @@ function NewEntryForm() {
   const babyId = sp.get('babyId') ?? '';
   const [babyName, setBabyName] = useState<string>('');
   const [content, setContent] = useState('');
+  const [occurredAt, setOccurredAt] = useState<number>(() => Date.now());
   const [milestones, setMilestones] = useState<{ id: string; name: string; icon: string }[]>([]);
   const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
   const [uploadedMedia, setUploadedMedia] = useState<UploadedMedia[]>([]);
@@ -82,7 +83,8 @@ function NewEntryForm() {
       body: JSON.stringify({
         babyId,
         content: String(formData.get('content') ?? ''),
-        milestoneIds: Array.from(selectedMilestoneIds)
+        milestoneIds: Array.from(selectedMilestoneIds),
+        occurredAt
       })
     });
     if (!res.ok) {
@@ -111,12 +113,13 @@ function NewEntryForm() {
     <AppShell
       title="新记录"
       align="center"
+      hideTabbar
       leftSlot={
         <button
           type="button"
           aria-label="返回"
           onClick={onBack}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] text-2xl leading-none active:bg-black/5"
         >
           <ChevronLeftIcon />
         </button>
@@ -138,6 +141,8 @@ function NewEntryForm() {
         uploadedMedia={uploadedMedia}
         error={error}
         submitting={submitting}
+        occurredAt={occurredAt}
+        onOccurredAtChange={setOccurredAt}
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}

@@ -17,6 +17,8 @@ export interface DatePickerProps {
   required?: boolean;
   title?: string;
   disableFuture?: boolean;
+  renderTrigger?: (args: { open: () => void; label: string; placeholder: string; hasValue: boolean }) => React.ReactNode;
+  hideLabel?: boolean;
 }
 
 interface DraftValue {
@@ -38,7 +40,9 @@ export function DatePicker({
   required,
   title,
   value,
-  disableFuture = true
+  disableFuture = true,
+  renderTrigger,
+  hideLabel = false
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
   const { mounted, visible } = usePopupAnimation(open, 300);
@@ -76,22 +80,27 @@ export function DatePicker({
   }
 
   const sheetTitle = title ?? (mode === 'datetime' ? '选择时间' : '选择日期');
-  const triggerLabel = value ? formatLabel(value, mode) : placeholder ?? (mode === 'datetime' ? '选择日期与时间' : '选择日期');
+  const placeholderLabel = placeholder ?? (mode === 'datetime' ? '选择日期与时间' : '选择日期');
+  const triggerLabel = value ? formatLabel(value, mode) : placeholderLabel;
 
   return (
     <div className="flex flex-col gap-1 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
       <input type="hidden" name={name} value={value} required={required} />
-      <span>{label}</span>
-      <button
-        type="button"
-        className="date-row"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        onClick={() => setOpen(true)}
-      >
-        <span className={cn(!value && 'placeholder')}>{triggerLabel}</span>
-        <ChevronRightIcon className="chev h-4 w-4" />
-      </button>
+      {!hideLabel && <span>{label}</span>}
+      {renderTrigger ? (
+        renderTrigger({ open: () => setOpen(true), label: triggerLabel, placeholder: placeholderLabel, hasValue: Boolean(value) })
+      ) : (
+        <button
+          type="button"
+          className="date-row"
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+        >
+          <span className={cn(!value && 'placeholder')}>{triggerLabel}</span>
+          <ChevronRightIcon className="chev h-4 w-4" />
+        </button>
+      )}
 
       {mounted && (
         <div className={cn('scrim', visible && 'show')} onMouseDown={() => setOpen(false)}>

@@ -16,11 +16,12 @@ export interface AppShellProps {
   align?: 'left' | 'center';
   transparentHeader?: boolean;
   hideHeader?: boolean;
+  hideTabbar?: boolean;
 }
 
-export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className, align = 'left', transparentHeader = false, hideHeader = false }: AppShellProps) {
+export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className, align = 'left', transparentHeader = false, hideHeader = false, hideTabbar = false }: AppShellProps) {
   const pathname = usePathname();
-  const showTabbar = !(pathname.startsWith('/login') || pathname.startsWith('/onboarding'));
+  const showTabbar = !hideTabbar && !(pathname.startsWith('/login') || pathname.startsWith('/onboarding'));
   const titleBlockClass = align === 'center' ? 'min-w-0 flex-1 text-center' : 'min-w-0 flex-1 text-left';
 
   return (

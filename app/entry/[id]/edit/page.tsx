@@ -103,12 +103,13 @@ export default function EditEntryPage() {
     <AppShell
       title="编辑记录"
       align="center"
+      hideTabbar
       leftSlot={
         <button
           type="button"
           aria-label="返回"
           onClick={onBack}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] text-2xl leading-none active:bg-black/5"
         >
           <ChevronLeftIcon />
         </button>

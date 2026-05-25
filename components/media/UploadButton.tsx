@@ -17,9 +17,10 @@ export interface UploadButtonProps {
   disabled?: boolean;
   multiple?: boolean;
   className?: string;
+  renderTrigger?: (args: { click: () => void; busy: boolean }) => React.ReactNode;
 }
 
-export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className }: UploadButtonProps) {
+export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className, renderTrigger }: UploadButtonProps) {
   const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
@@ -56,6 +57,10 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
     }
   }
 
+  function click() {
+    if (requireOnline(toast)) inputRef.current?.click();
+  }
+
   return (
     <div className={className ?? 'flex flex-col gap-2'}>
       <input
@@ -66,17 +71,13 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         hidden
         onChange={(event) => event.target.files && handleFiles(event.target.files)}
       />
-      <Button
-        type="button"
-        size="sm"
-        variant="secondary"
-        disabled={disabled || busy}
-        onClick={() => {
-          if (requireOnline(toast)) inputRef.current?.click();
-        }}
-      >
-        {busy ? '上传中…' : '添加照片 / 视频'}
-      </Button>
+      {renderTrigger ? (
+        renderTrigger({ click, busy })
+      ) : (
+        <Button type="button" size="sm" variant="secondary" disabled={disabled || busy} onClick={click}>
+          {busy ? '上传中…' : '添加照片 / 视频'}
+        </Button>
+      )}
       {error && (
         <p role="alert" className="text-[length:var(--text-sm)] text-[color:var(--color-error)]">
           {error}

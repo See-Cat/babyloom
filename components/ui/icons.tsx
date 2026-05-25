@@ -148,6 +148,15 @@ export function PencilIcon({ className = 'h-4 w-4' }: IconProps) {
   );
 }
 
+export function ClockIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </SvgIcon>
+  );
+}
+
 export function ArrowDownIcon({ className = 'h-6 w-6' }: IconProps) {
   return (
     <SvgIcon className={className}>
