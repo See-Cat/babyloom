@@ -54,15 +54,6 @@ export function EntryDetailView({
     router.refresh();
   }
 
-  async function onCopy() {
-    try {
-      await navigator.clipboard.writeText(entry.content);
-      toast.show({ message: '已复制', variant: 'success' });
-    } catch {
-      toast.show({ message: '复制失败', variant: 'error' });
-    }
-  }
-
   const baseBtn =
     'inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] backdrop-blur-[8px] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]';
   const overMedia = 'bg-white/80 text-[color:var(--color-fg-strong)]';
@@ -161,7 +152,6 @@ export function EntryDetailView({
         title="记录操作"
         options={[
           { label: '编辑', emphasized: true, onSelect: () => router.push(`/entry/${entry.id}/edit`) },
-          { label: '复制内容', onSelect: () => void onCopy() },
           { label: '移到回收站', destructive: true, onSelect: () => void onTrash() }
         ]}
       />
