@@ -53,14 +53,34 @@ export function DatePicker({
     if (open) setDraft(initial);
   }, [open, initial]);
 
-  const years = React.useMemo(() => buildYears(), []);
-  const months = React.useMemo(() => buildRange(1, 12), []);
-  const days = React.useMemo(
-    () => buildRange(1, daysInMonth(draft.year, draft.month)),
-    [draft.year, draft.month]
-  );
-  const hours = React.useMemo(() => buildRange(0, 23), []);
-  const minutes = React.useMemo(() => buildRange(0, 59), []);
+  const nowSnapshot = React.useMemo(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), hour: d.getHours(), minute: d.getMinutes() };
+  }, [open]);
+  const years = React.useMemo(() => buildYears(disableFuture ? nowSnapshot.year : undefined), [disableFuture, nowSnapshot.year]);
+  const months = React.useMemo(() => {
+    const max = disableFuture && draft.year >= nowSnapshot.year ? nowSnapshot.month : 12;
+    return buildRange(1, max);
+  }, [disableFuture, draft.year, nowSnapshot.year, nowSnapshot.month]);
+  const days = React.useMemo(() => {
+    const monthMax = daysInMonth(draft.year, draft.month);
+    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month
+      ? Math.min(monthMax, nowSnapshot.day)
+      : monthMax;
+    return buildRange(1, max);
+  }, [disableFuture, draft.year, draft.month, nowSnapshot.year, nowSnapshot.month, nowSnapshot.day]);
+  const hours = React.useMemo(() => {
+    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month && draft.day >= nowSnapshot.day
+      ? nowSnapshot.hour
+      : 23;
+    return buildRange(0, max);
+  }, [disableFuture, draft.year, draft.month, draft.day, nowSnapshot]);
+  const minutes = React.useMemo(() => {
+    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month && draft.day >= nowSnapshot.day && draft.hour >= nowSnapshot.hour
+      ? nowSnapshot.minute
+      : 59;
+    return buildRange(0, max);
+  }, [disableFuture, draft.year, draft.month, draft.day, draft.hour, nowSnapshot]);
 
   function updateDraft(patch: Partial<DraftValue>) {
     setDraft((current) => {
@@ -71,10 +91,6 @@ export function DatePicker({
   }
 
   const formatted = formatValue(draft, mode);
-  const now = React.useMemo(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), hour: d.getHours(), minute: d.getMinutes() };
-  }, [open]);
   const isInvalid = disableFuture && isFuture(draft, mode);
 
   function confirm() {
@@ -126,13 +142,13 @@ export function DatePicker({
               </button>
             </div>
             <div className="wheels">
-              <Wheel title="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} isDisabled={disableFuture ? (y) => y > now.year : undefined} />
-              <Wheel title="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} isDisabled={disableFuture ? (m) => draft.year > now.year || (draft.year === now.year && m > now.month) : undefined} />
-              <Wheel title="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} isDisabled={disableFuture ? (d) => isFutureDraft({ ...draft, day: d, hour: 0, minute: 0 }, 'date', now) : undefined} />
+              <Wheel title="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
+              <Wheel title="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
+              <Wheel title="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
               {mode === 'datetime' && (
                 <>
-                  <Wheel title="时" values={hours} value={draft.hour} pad onChange={(hour) => updateDraft({ hour })} isDisabled={disableFuture ? (h) => isFutureDraft({ ...draft, hour: h, minute: 0 }, 'datetime', now) : undefined} />
-                  <Wheel title="分" values={minutes} value={draft.minute} pad onChange={(minute) => updateDraft({ minute })} isDisabled={disableFuture ? (mi) => isFutureDraft({ ...draft, minute: mi }, 'datetime', now) : undefined} />
+                  <Wheel title="时" values={hours} value={draft.hour} pad onChange={(hour) => updateDraft({ hour })} />
+                  <Wheel title="分" values={minutes} value={draft.minute} pad onChange={(minute) => updateDraft({ minute })} />
                 </>
               )}
             </div>
@@ -149,10 +165,9 @@ interface WheelProps {
   value: number;
   onChange: (value: number) => void;
   pad?: boolean;
-  isDisabled?: (item: number) => boolean;
 }
 
-function Wheel({ title, values, value, onChange, pad: padded = false, isDisabled }: WheelProps) {
+function Wheel({ title, values, value, onChange, pad: padded = false }: WheelProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const settleTimerRef = React.useRef<number | null>(null);
 
@@ -177,18 +192,11 @@ function Wheel({ title, values, value, onChange, pad: padded = false, isDisabled
       const index = Math.round(node.scrollTop / ITEM_HEIGHT);
       const clamped = Math.max(0, Math.min(values.length - 1, index));
       const next = values[clamped];
-      if (next === value) return;
-      if (isDisabled?.(next)) {
-        const targetIndex = Math.max(0, values.indexOf(value));
-        node.scrollTo({ top: targetIndex * ITEM_HEIGHT, behavior: 'smooth' });
-        return;
-      }
-      onChange(next);
+      if (next !== value) onChange(next);
     }, 80);
   }
 
   function handleItemClick(item: number) {
-    if (isDisabled?.(item)) return;
     const node = scrollRef.current;
     if (!node) return;
     const target = values.indexOf(item) * ITEM_HEIGHT;
@@ -213,19 +221,16 @@ function Wheel({ title, values, value, onChange, pad: padded = false, isDisabled
           {values.map((item, index) => {
             const distance = Math.abs(index - selectedIndex);
             const selected = item === value;
-            const disabled = isDisabled?.(item) ?? false;
             return (
               <button
                 key={item}
                 type="button"
                 role="option"
                 aria-selected={selected}
-                aria-disabled={disabled || undefined}
                 className={cn(
                   'wheel-item',
                   selected && 'selected',
-                  !selected && distance === 1 && 'near',
-                  disabled && 'disabled'
+                  !selected && distance === 1 && 'near'
                 )}
                 onClick={() => handleItemClick(item)}
               >
@@ -239,11 +244,9 @@ function Wheel({ title, values, value, onChange, pad: padded = false, isDisabled
   );
 }
 
-function buildYears() {
-  const now = new Date();
-  const max = now.getFullYear();
-  const min = max - 30;
-  return buildRange(min, max);
+function buildYears(maxYear?: number) {
+  const ceil = maxYear ?? new Date().getFullYear();
+  return buildRange(ceil - 30, ceil);
 }
 
 function buildRange(min: number, max: number) {
@@ -316,28 +319,3 @@ function isFuture(draft: DraftValue, mode: DatePickerMode) {
   return target.getTime() > Date.now();
 }
 
-interface NowSnapshot {
-  year: number;
-  month: number;
-  day: number;
-  hour: number;
-  minute: number;
-}
-
-function isFutureDraft(draft: DraftValue, mode: DatePickerMode, now: NowSnapshot) {
-  const target = new Date(
-    draft.year,
-    draft.month - 1,
-    draft.day,
-    mode === 'datetime' ? draft.hour : 0,
-    mode === 'datetime' ? draft.minute : 0
-  ).getTime();
-  const ref = new Date(
-    now.year,
-    now.month - 1,
-    now.day,
-    mode === 'datetime' ? now.hour : 0,
-    mode === 'datetime' ? now.minute : 0
-  ).getTime();
-  return target > ref;
-}

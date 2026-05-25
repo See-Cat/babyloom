@@ -1067,10 +1067,6 @@ label.field {
   color: var(--color-fg);
 }
 
-.wheel-item.disabled {
-  color: var(--color-fg-disabled);
-  cursor: not-allowed;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .btn-loading,
