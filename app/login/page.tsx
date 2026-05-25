@@ -27,8 +27,8 @@ export default function LoginPage() {
           <p className="text-[length:var(--text-base)] text-[color:var(--color-fg-soft)]">登录到家庭记录本</p>
         </div>
         <div className="flex flex-col gap-[var(--space-4)]">
-          <Input name="username" type="text" required placeholder="例如 mama" label="用户名" autoComplete="username" />
-          <Input name="password" type="password" required placeholder="密码" label="密码" autoComplete="current-password" />
+          <Input name="username" type="text" required placeholder="例如 mama" label="用户名" autoComplete="username" disabled={pending} />
+          <Input name="password" type="password" required placeholder="密码" label="密码" autoComplete="current-password" disabled={pending} />
           {error && (
             <p role="alert" className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-base)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">
               <span aria-hidden="true" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-error)] text-[length:var(--text-xs)] font-bold text-white">!</span>

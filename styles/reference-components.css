@@ -105,8 +105,8 @@
   padding: 0 4px;
 }
 
-.btn:disabled,
-.btn[disabled] {
+.btn:disabled:not(.btn-loading),
+.btn[disabled]:not(.btn-loading) {
   opacity: .5;
   cursor: not-allowed;
   box-shadow: none;
@@ -114,7 +114,7 @@
 }
 
 .btn-loading {
-  pointer-events: none;
+  cursor: progress;
   background: var(--color-primary-active);
   background-image: repeating-linear-gradient(
     -45deg,

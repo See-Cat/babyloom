@@ -57,7 +57,6 @@ export function Button({
   style,
   ...rest
 }: ButtonProps) {
-  const isDisabled = disabled || loading;
   const normalizedVariant =
     variant === 'secondary' ? 'default' : variant === 'ghost' ? 'ghost-primary' : variant === 'error' ? 'danger' : variant;
 
@@ -74,9 +73,9 @@ export function Button({
       data-size={size}
       data-variant={normalizedVariant}
       style={style}
-      disabled={isDisabled}
+      disabled={disabled}
       aria-busy={loading || undefined}
-      aria-disabled={isDisabled || undefined}
+      aria-disabled={disabled || undefined}
       {...rest}
     >
       {loading ? <Spinner className="text-current" /> : leadingIcon}
