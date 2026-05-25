@@ -70,6 +70,7 @@ export default async function EntryDetailPage({
     <EntryDetailView
       entry={entry}
       babyName={baby?.name}
+      babyBirthday={baby?.birthday}
       authorName={author?.name}
       authorImage={author?.image}
       milestoneNames={attached.map((m) => m.name)}

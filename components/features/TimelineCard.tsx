@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
+import { formatRelativeDateTime } from '@/lib/format-time';
 
 export interface TimelineCardProps {
   entry: {
@@ -12,11 +13,17 @@ export interface TimelineCardProps {
   authorName?: string | null;
   authorImage?: string | null;
   mediaIds?: string[];
+  animationDelayMs?: number;
 }
 
-export function TimelineCard({ entry, authorName = '未知', authorImage, mediaIds = [] }: TimelineCardProps) {
+export function TimelineCard({ entry, authorName = '未知', authorImage, mediaIds = [], animationDelayMs }: TimelineCardProps) {
   return (
-    <Card as="article" interactive>
+    <Card
+      as="article"
+      interactive
+      className="bl-rise-card"
+      style={typeof animationDelayMs === 'number' ? { animationDelay: `${animationDelayMs}ms` } : undefined}
+    >
       <Link href={`/entry/${entry.id}`} className="block">
         <div className="mb-[var(--space-3)] flex items-center gap-[var(--space-3)]">
           <Avatar
@@ -28,7 +35,7 @@ export function TimelineCard({ entry, authorName = '未知', authorImage, mediaI
           <div>
             <p className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">{authorName}</p>
             <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-              {new Date(entry.occurredAt).toLocaleString('zh-CN')}
+              {formatRelativeDateTime(entry.occurredAt)}
             </p>
           </div>
         </div>

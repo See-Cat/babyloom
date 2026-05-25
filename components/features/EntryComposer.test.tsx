@@ -28,7 +28,7 @@ describe('EntryComposer', () => {
   it('keeps compose actions out of the form body because save lives in the app header', () => {
     const html = renderComposer();
 
-    expect(html).toContain('记录内容');
+    expect(html).toContain('今天小乐做了什么呢…');
     expect(html).toContain('里程碑(可多选)');
     expect(html).not.toContain('取消');
     expect(html).not.toContain('保存');

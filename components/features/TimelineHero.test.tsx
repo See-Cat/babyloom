@@ -20,7 +20,7 @@ describe('TimelineHero', () => {
 
     expect(html).toContain('href="/entry/entry-1"');
     expect(html).toContain('今天第一次自己扶站');
-    expect(html).toContain('2 张');
+    expect(html).toMatch(/>\s*2\s*</);
     expect(html).toContain('bl-timeline-hero');
   });
 

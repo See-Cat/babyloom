@@ -1,17 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { DatePicker } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { CameraIcon } from '@/components/ui/icons';
 
 export default function OnboardingBabyPage() {
   const router = useRouter();
+  const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [baby, setBaby] = useState({ name: '', birthday: '', gender: 'girl' });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!avatarFile) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(avatarFile);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [avatarFile]);
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -25,11 +40,19 @@ export default function OnboardingBabyPage() {
         gender: String(formData.get('gender') ?? 'girl')
       })
     });
-    setPending(false);
     if (!res.ok) {
+      setPending(false);
       setError('创建失败,请检查输入');
       return;
     }
+    const data = await res.json();
+    if (avatarFile && data?.id) {
+      const form = new FormData();
+      form.set('target', `baby:${data.id}`);
+      form.set('file', avatarFile);
+      await fetch('/api/avatar', { method: 'POST', body: form }).catch(() => undefined);
+    }
+    setPending(false);
     router.push('/timeline');
     router.refresh();
   }
@@ -48,10 +71,33 @@ export default function OnboardingBabyPage() {
           <p className="text-[length:var(--text-base)] text-[color:var(--color-fg-soft)]">先添加一个宝宝,就可以开始记录啦</p>
         </div>
         <div className="mb-[var(--space-4)] flex flex-col items-center gap-[var(--space-2)]">
-          <span className="flex h-[88px] w-[88px] items-center justify-center rounded-full bg-[var(--color-avatar-pink)] text-[34px] font-bold text-[color:var(--color-fg-inverse)]">
-            {initialFor(baby.name)}
-          </span>
-          <p className="text-center text-[length:var(--text-xs)] font-medium text-[color:var(--color-fg-soft)]">头像可稍后在宝宝管理里设置</p>
+          <button
+            type="button"
+            aria-label="选择头像"
+            onClick={() => fileRef.current?.click()}
+            className="relative inline-flex h-[88px] w-[88px] items-center justify-center rounded-full focus-visible:outline-[3px] focus-visible:outline-[color:var(--color-focus)]"
+          >
+            <Avatar
+              src={previewUrl ?? undefined}
+              name={baby.name || '宝宝'}
+              colorKey={baby.name || 'baby-onboarding'}
+              size="xl"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-[2px] -right-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] ring-[3px] ring-[var(--color-bg)]"
+            >
+              <CameraIcon className="h-3.5 w-3.5" />
+            </span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(event) => setAvatarFile(event.currentTarget.files?.[0] ?? null)}
+          />
+          <p className="text-center text-[length:var(--text-xs)] font-medium text-[color:var(--color-fg-soft)]">头像可选 · 不上传时自动用名字首字</p>
         </div>
         <div className="flex flex-col gap-[var(--space-4)]">
           <Input
@@ -83,7 +129,12 @@ export default function OnboardingBabyPage() {
               ]}
             />
           </div>
-          {error && <p role="alert" className="rounded-[var(--radius-sm)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">{error}</p>}
+          {error && (
+            <p role="alert" className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-base)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-error)] text-[length:var(--text-xs)] font-bold text-white">!</span>
+              {error}
+            </p>
+          )}
           <Button type="submit" disabled={pending} loading={pending} fullWidth size="lg" className="mt-[var(--space-2)]">
             {pending ? '创建中…' : '开始记录'}
           </Button>
@@ -91,10 +142,4 @@ export default function OnboardingBabyPage() {
       </form>
     </main>
   );
-}
-
-function initialFor(name: string) {
-  const trimmed = name.trim();
-  if (!trimmed) return '?';
-  return /^[a-z]/i.test(trimmed) ? trimmed[0].toUpperCase() : trimmed[0];
 }

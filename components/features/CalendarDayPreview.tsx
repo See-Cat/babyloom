@@ -25,7 +25,7 @@ export function CalendarDayPreview({
 }) {
   return (
     <section className="mt-[var(--space-5)] grid gap-[var(--space-3)]" aria-label="当日预览">
-      <div className="flex items-center justify-between gap-[var(--space-3)]">
+      <div className="flex items-start justify-between gap-[var(--space-3)]">
         <div>
           <h2 className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">
             {formatSelectedDate(selectedIso)}
@@ -34,11 +34,9 @@ export function CalendarDayPreview({
             {babyAge}
           </p>
         </div>
-        <Link href={`/entry/new?babyId=${babyId}`}>
-          <Button size="sm" variant="default" leadingIcon={<PlusIcon />}>
-            补记
-          </Button>
-        </Link>
+        <span className="mt-[var(--space-1)] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+          {entries.length} 条记录
+        </span>
       </div>
 
       {entries.length > 0 ? (
@@ -50,9 +48,14 @@ export function CalendarDayPreview({
                   <div className="flex gap-[var(--space-3)]">
                     <Avatar name={entry.authorName ?? '家人'} size="sm" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
-                        {entry.authorName ?? '家人'} · {formatTime(entry.occurredAt)}
-                      </p>
+                      <div className="flex items-baseline justify-between gap-[var(--space-2)]">
+                        <p className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+                          {entry.authorName ?? '家人'}
+                        </p>
+                        <p className="shrink-0 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+                          {formatTime(entry.occurredAt)}
+                        </p>
+                      </div>
                       <p className="mt-[var(--space-1)] line-clamp-2 whitespace-pre-wrap text-[length:var(--text-sm)] font-semibold leading-[var(--leading-base)] text-[color:var(--color-fg)]">
                         {entry.content}
                       </p>
@@ -64,8 +67,12 @@ export function CalendarDayPreview({
           ))}
         </ul>
       ) : (
-        <Card className="text-center text-[length:var(--text-sm)] font-semibold text-[color:var(--color-fg-soft)]">
-          这一天还没有记录
+        <Card className="flex flex-col items-center gap-[var(--space-2)] py-[var(--space-6)] text-center">
+          <span aria-hidden="true" className="text-[36px] leading-none">🌱</span>
+          <p className="m-0 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">这一天还没有记录</p>
+          <Link href={`/entry/new?babyId=${babyId}&date=${selectedIso}`}>
+            <Button size="sm" leadingIcon={<PlusIcon />}>给这一天写一条</Button>
+          </Link>
         </Card>
       )}
     </section>

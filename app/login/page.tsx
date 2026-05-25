@@ -28,11 +28,20 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-col gap-[var(--space-4)]">
           <Input name="username" type="text" required placeholder="例如 mama" label="用户名" autoComplete="username" />
-          <Input name="password" type="password" required placeholder="密码" label="密码" autoComplete="current-password" error={error ?? undefined} />
+          <Input name="password" type="password" required placeholder="密码" label="密码" autoComplete="current-password" />
+          {error && (
+            <p role="alert" className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-base)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">
+              <span aria-hidden="true" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-error)] text-[length:var(--text-xs)] font-bold text-white">!</span>
+              {error}
+            </p>
+          )}
           <Button type="submit" disabled={pending} loading={pending} fullWidth size="lg">
             {pending ? '登录中…' : '登录'}
           </Button>
         </div>
+        <p className="mt-[var(--space-6)] text-center text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+          家里还没有账号? 联系管理员
+        </p>
       </form>
     </main>
   );

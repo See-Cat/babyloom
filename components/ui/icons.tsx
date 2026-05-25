@@ -102,6 +102,52 @@ export function ImageIcon({ className = 'h-8 w-8' }: IconProps) {
   );
 }
 
+export function CameraIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M4 8h3l2-2h6l2 2h3v11H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+    </SvgIcon>
+  );
+}
+
+export function ChevronLeftIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="m15 18-6-6 6-6" />
+    </SvgIcon>
+  );
+}
+
+export function DotsIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+      <circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    </SvgIcon>
+  );
+}
+
+export function LogoutIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+      <path d="M10 17l-5-5 5-5" />
+      <path d="M15 12H5" />
+    </SvgIcon>
+  );
+}
+
+export function PencilIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <SvgIcon className={className}>
+      <path d="M4 20h4l11-11-4-4L4 16z" />
+      <path d="m13 5 4 4" />
+    </SvgIcon>
+  );
+}
+
 export function ArrowDownIcon({ className = 'h-6 w-6' }: IconProps) {
   return (
     <SvgIcon className={className}>

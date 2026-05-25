@@ -24,6 +24,20 @@ describe('CalendarDayPreview', () => {
     expect(html).toContain('1岁3月 · 第 457 天');
     expect(html).toContain('今天会自己扶站了');
     expect(html).toContain('/entry/entry-1');
+  });
+
+  it('renders empty-day state with sprout emoji and add-record CTA', () => {
+    const html = renderToStaticMarkup(
+      <CalendarDayPreview
+        babyId="baby-1"
+        selectedIso="2026-05-24"
+        babyAge="1岁3月"
+        entries={[]}
+      />
+    );
+
+    expect(html).toContain('这一天还没有记录');
+    expect(html).toContain('🌱');
     expect(html).toContain('/entry/new?babyId=baby-1');
   });
 });

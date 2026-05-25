@@ -1,6 +1,6 @@
 import { and, desc, eq, gte, inArray, lt } from 'drizzle-orm';
 import Link from 'next/link';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
@@ -48,10 +48,13 @@ export default async function TimelinePage({
   if (familyBabies.length === 0) redirect('/onboarding/baby');
 
   const sp = await searchParams;
+  const cookieBabyId = (await cookies()).get('bl_baby')?.value;
+  const fallbackBabyId =
+    (cookieBabyId && familyBabies.some((baby) => baby.id === cookieBabyId) ? cookieBabyId : familyBabies[0].id);
   const selectedBabyId =
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
-      : familyBabies[0].id;
+      : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const timezone = loadConfig({ dataDir }).app.timezone;
   const dayRange = sp.date ? getDayUtcRange(sp.date, timezone) : null;
@@ -113,20 +116,21 @@ export default async function TimelinePage({
 
       {listRows.length > 0 && (
         <ul className="flex flex-col gap-[var(--space-3)]">
-          {listRows.map((row) => (
+          {listRows.map((row, index) => (
             <li key={row.entries.id}>
               <TimelineCard
                 entry={row.entries}
                 authorName={row.user.name}
                 authorImage={row.user.image}
                 mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []}
+                animationDelayMs={100 + index * 60}
               />
             </li>
           ))}
         </ul>
       )}
       <p className="py-[var(--space-6)] text-center text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">到这里啦</p>
-      <Link href={`/entry/new?babyId=${selectedBabyId}`} className="fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-[var(--space-5)] z-[calc(var(--z-tabbar)-1)]">
+      <Link href={`/entry/new?babyId=${selectedBabyId}`} className="bl-rise-fab fixed bottom-[calc(80px+env(safe-area-inset-bottom))] right-[var(--space-5)] z-[calc(var(--z-tabbar)-1)]">
         <Button type="button" size="lg" aria-label="新记录"><PlusIcon /></Button>
       </Link>
     </AppShell>

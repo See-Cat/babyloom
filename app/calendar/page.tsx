@@ -1,5 +1,5 @@
 import { and, eq, gte, lt } from 'drizzle-orm';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
@@ -47,10 +47,13 @@ export default async function CalendarPage({
   const timezone = config.app.timezone;
   const sp = await searchParams;
   const ym = isYm(sp.ym) ? sp.ym : formatDateInTimezone(Date.now(), timezone).slice(0, 7);
+  const cookieBabyId = (await cookies()).get('bl_baby')?.value;
+  const fallbackBabyId =
+    (cookieBabyId && familyBabies.some((baby) => baby.id === cookieBabyId) ? cookieBabyId : familyBabies[0].id);
   const selectedBabyId =
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
-      : familyBabies[0].id;
+      : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const grid = buildMonthGrid(ym, timezone);
   const daySet = listEntryDays({ db, babyId: selectedBabyId, ym, timezone });
@@ -81,7 +84,7 @@ export default async function CalendarPage({
 
   return (
     <AppShell title="日历" subtitle={`${selectedBaby.name} · ${formatBabyAge(selectedBaby.birthday, selectedIso)}`}>
-      <CalendarMonthNav babyId={selectedBabyId} ym={ym} />
+      <CalendarMonthNav babyId={selectedBabyId} ym={ym} birthdayYm={selectedBaby.birthday?.slice(0, 7)} />
       <MonthCalendar babyId={selectedBabyId} ym={ym} grid={grid} daySet={daySet} todayIso={todayIso} selectedIso={selectedIso} />
       <CalendarDayPreview
         babyId={selectedBabyId}

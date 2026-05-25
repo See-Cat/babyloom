@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { headers } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
@@ -41,10 +41,13 @@ export default async function GalleryPage({
   if (familyBabies.length === 0) redirect('/onboarding/baby');
 
   const sp = await searchParams;
+  const cookieBabyId = (await cookies()).get('bl_baby')?.value;
+  const fallbackBabyId =
+    (cookieBabyId && familyBabies.some((baby) => baby.id === cookieBabyId) ? cookieBabyId : familyBabies[0].id);
   const selectedBabyId =
     sp.babyId && familyBabies.some((baby) => baby.id === sp.babyId)
       ? sp.babyId
-      : familyBabies[0].id;
+      : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId }));
   const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);

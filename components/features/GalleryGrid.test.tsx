@@ -35,8 +35,7 @@ describe('GalleryGrid', () => {
     expect(html).toContain('新建一条记录');
     expect(html).toContain('/entry/new?babyId=baby-1');
     expect(html).not.toContain('bl-card');
-    expect(html).not.toContain('📸');
-    expect(html).not.toContain('＋');
+    expect(html).toContain('📸');
   });
 });
 

@@ -13,30 +13,41 @@ export interface AppShellProps {
   rightSlot?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  align?: 'left' | 'center';
+  transparentHeader?: boolean;
+  hideHeader?: boolean;
 }
 
-export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className }: AppShellProps) {
+export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className, align = 'left', transparentHeader = false, hideHeader = false }: AppShellProps) {
   const pathname = usePathname();
   const showTabbar = !(pathname.startsWith('/login') || pathname.startsWith('/onboarding'));
+  const titleBlockClass = align === 'center' ? 'min-w-0 flex-1 text-center' : 'min-w-0 flex-1 text-left';
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[color:var(--color-fg)]">
       <OfflineBanner />
-      <header className="sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] bg-[var(--color-bg)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))]">
-        <div className="min-w-10">{leftSlot}</div>
-        <div className="min-w-0 flex-1 text-center">
-          {title && (
-            <h1 className="truncate text-[length:var(--text-2xl)] font-bold leading-[var(--leading-tight)] text-[color:var(--color-fg-strong)]">{title}</h1>
+      {!hideHeader && (
+        <header
+          className={cn(
+            'sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))]',
+            transparentHeader ? 'bg-transparent' : 'bg-[var(--color-bg)]'
           )}
-          {subtitle && (
-            <p className="mt-1 truncate text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
-              {subtitle}
-            </p>
-          )}
-        </div>
-        <div className="min-w-10">{rightSlot}</div>
-      </header>
-      <main className={cn('mx-auto w-full max-w-3xl px-[var(--space-4)] py-[var(--space-4)]', showTabbar && 'pb-[calc(5rem+env(safe-area-inset-bottom))]', className)}>
+        >
+          <div className="min-w-10">{leftSlot}</div>
+          <div className={titleBlockClass}>
+            {title && (
+              <h1 className="truncate text-[length:var(--text-2xl)] font-bold leading-[var(--leading-tight)] text-[color:var(--color-fg-strong)]">{title}</h1>
+            )}
+            {subtitle && (
+              <p className="mt-1 truncate text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          <div className="min-w-10">{rightSlot}</div>
+        </header>
+      )}
+      <main className={cn('mx-auto w-full max-w-3xl px-[var(--space-4)] py-[var(--space-4)]', hideHeader && 'pt-0', showTabbar && 'pb-[calc(5rem+env(safe-area-inset-bottom))]', className)}>
         {children}
       </main>
       {showTabbar && <Tabbar />}

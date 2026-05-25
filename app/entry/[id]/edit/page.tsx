@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
+import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { EntryComposer } from '@/components/features/EntryComposer';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { ChevronLeftIcon } from '@/components/ui/icons';
 
 const formId = 'edit-entry-form';
 
@@ -31,6 +33,14 @@ export default function EditEntryPage() {
   const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const originalContent = entry?.content ?? '';
+  const dirty = content !== originalContent;
+
+  function onBack() {
+    if (dirty) setLeaveOpen(true);
+    else router.back();
+  }
 
   useEffect(() => {
     (async () => {
@@ -92,9 +102,15 @@ export default function EditEntryPage() {
   return (
     <AppShell
       title="编辑记录"
+      align="center"
       leftSlot={
-        <button type="button" className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)]" onClick={() => router.back()}>
-          返回
+        <button
+          type="button"
+          aria-label="返回"
+          onClick={onBack}
+          className="inline-flex h-10 w-10 items-center justify-center rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
+        >
+          <ChevronLeftIcon />
         </button>
       }
       rightSlot={
@@ -113,6 +129,15 @@ export default function EditEntryPage() {
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onSubmitClick={onSubmit}
+      />
+      <ActionSheet
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title="还有未保存的修改"
+        options={[
+          { label: '放弃修改', destructive: true, onSelect: () => router.back() },
+          { label: '继续编辑', onSelect: () => undefined }
+        ]}
       />
     </AppShell>
   );
