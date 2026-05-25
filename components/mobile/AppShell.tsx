@@ -33,7 +33,7 @@ export function AppShell({ title, subtitle, leftSlot, rightSlot, children, class
             transparentHeader ? 'bg-transparent' : 'bg-[var(--color-bg)]'
           )}
         >
-          <div className="min-w-10">{leftSlot}</div>
+          {leftSlot && <div className="min-w-10">{leftSlot}</div>}
           <div className={titleBlockClass}>
             {title && (
               <h1 className="truncate text-[length:var(--text-2xl)] font-bold leading-[var(--leading-tight)] text-[color:var(--color-fg-strong)]">{title}</h1>
@@ -44,7 +44,7 @@ export function AppShell({ title, subtitle, leftSlot, rightSlot, children, class
               </p>
             )}
           </div>
-          <div className="min-w-10">{rightSlot}</div>
+          {rightSlot && <div className="min-w-10">{rightSlot}</div>}
         </header>
       )}
       <main className={cn('mx-auto w-full max-w-3xl px-[var(--space-4)] py-[var(--space-4)]', hideHeader && 'pt-0', showTabbar && 'pb-[calc(5rem+env(safe-area-inset-bottom))]', className)}>

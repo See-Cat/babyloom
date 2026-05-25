@@ -82,6 +82,33 @@
   box-shadow: 0 1px 0 0 var(--color-success-active);
 }
 
+.fab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-primary);
+  color: var(--color-fg-inverse);
+  box-shadow: 0 5px 0 0 var(--color-press-shadow-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: transform var(--duration-press) var(--ease), box-shadow var(--duration-press) var(--ease);
+}
+
+.fab:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 0 var(--color-press-shadow-primary);
+}
+
+.fab:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--color-primary-active);
