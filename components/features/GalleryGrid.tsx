@@ -55,6 +55,7 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
       </div>
       {viewerIndex !== null && (
         <Viewer
+          babyId={babyId}
           items={flatItems}
           index={viewerIndex}
           onClose={() => setViewerIndex(null)}
@@ -99,11 +100,13 @@ function GalleryTile({ item, onOpenViewer }: { item: GalleryMedia; onOpenViewer:
 }
 
 function Viewer({
+  babyId,
   items,
   index,
   onClose,
   onIndexChange
 }: {
+  babyId: string;
   items: GalleryMedia[];
   index: number;
   onClose: () => void;
@@ -154,6 +157,17 @@ function Viewer({
       <div className="flex flex-1 items-center justify-center px-[var(--space-2)]">
         <MediaImage mediaId={current.id} size="large" alt={current.filename || ''} className="max-h-full max-w-full object-contain" />
       </div>
+      {current.entryId === null && (
+        <div className="px-[var(--space-4)] pb-[var(--space-2)]">
+          <Link
+            href={buildComposerHref(babyId, current)}
+            className="flex w-full items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
+          >
+            <PlusIcon className="h-4 w-4" />
+            为这张照片写一则记录
+          </Link>
+        </div>
+      )}
       <div ref={stripRef} className="flex gap-[var(--space-1)] overflow-x-auto px-[var(--space-3)] py-[var(--space-3)]" style={{ scrollbarWidth: 'none' }}>
         {items.map((item, i) => (
           <button
@@ -172,6 +186,17 @@ function Viewer({
       </div>
     </div>
   );
+}
+
+function buildComposerHref(babyId: string, m: GalleryMedia): string {
+  const params = new URLSearchParams({
+    babyId,
+    mediaId: m.id,
+    mediaType: m.type === 'video' ? 'video' : 'photo',
+    occurredAt: String(m.takenAt ?? m.createdAt)
+  });
+  if (m.filename) params.set('filename', m.filename);
+  return `/entry/new?${params.toString()}`;
 }
 
 function formatDuration(seconds: number | null) {

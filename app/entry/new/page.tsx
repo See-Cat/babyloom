@@ -16,13 +16,24 @@ function NewEntryForm() {
   const router = useRouter();
   const sp = useSearchParams();
   const babyId = sp.get('babyId') ?? '';
+  const prefillMediaId = sp.get('mediaId');
+  const prefillMediaType: 'photo' | 'video' = sp.get('mediaType') === 'video' ? 'video' : 'photo';
+  const prefillFilename = sp.get('filename') ?? '';
+  const prefillOccurredAtRaw = sp.get('occurredAt');
+  const prefillOccurredAt = prefillOccurredAtRaw ? Number(prefillOccurredAtRaw) : null;
   const [babyName, setBabyName] = useState<string>('');
   const [babyBirthMs, setBabyBirthMs] = useState<number | undefined>(undefined);
   const [content, setContent] = useState('');
-  const [occurredAt, setOccurredAt] = useState<number>(() => Date.now());
+  const [occurredAt, setOccurredAt] = useState<number>(() =>
+    prefillOccurredAt && Number.isFinite(prefillOccurredAt) ? prefillOccurredAt : Date.now()
+  );
   const [milestones, setMilestones] = useState<{ id: string; name: string; icon: string }[]>([]);
   const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
-  const [uploadedMedia, setUploadedMedia] = useState<UploadedMedia[]>([]);
+  const [uploadedMedia, setUploadedMedia] = useState<UploadedMedia[]>(() =>
+    prefillMediaId
+      ? [{ mediaId: prefillMediaId, filename: prefillFilename, status: 'ready', type: prefillMediaType }]
+      : []
+  );
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);

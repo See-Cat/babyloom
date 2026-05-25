@@ -35,6 +35,7 @@ export default async function ProfilePage() {
 
   const isOwner = member.role === 'owner';
   const canUseTrash = member.role === 'owner' || member.role === 'editor';
+  const canBulkUpload = member.role === 'owner' || member.role === 'editor';
 
   const familyBabies = listReadableBabies({
     db,
@@ -87,6 +88,7 @@ export default async function ProfilePage() {
     { href: '/profile/data', label: '数据导出 / 备份', icon: 'download' }
   ];
   const otherLinks: ProfileLink[] = [];
+  if (canBulkUpload) otherLinks.push({ href: '/profile/bulk-upload', label: '批量补传历史照片', icon: 'upload' });
   if (canUseTrash) otherLinks.push({ href: '/profile/trash', label: '回收站', icon: 'trash', meta: `${trashCount} 条` });
   otherLinks.push({ href: 'https://github.com/anthropics/babyloom#readme', label: '关于 Babyloom', icon: 'info', external: true });
 
@@ -149,7 +151,7 @@ export default async function ProfilePage() {
   );
 }
 
-type ProfileIcon = 'baby' | 'download' | 'info' | 'members' | 'shield' | 'sprout' | 'star' | 'trash' | 'user';
+type ProfileIcon = 'baby' | 'download' | 'info' | 'members' | 'shield' | 'sprout' | 'star' | 'trash' | 'upload' | 'user';
 type ProfileLink = { href: string; label: string; icon: ProfileIcon; meta?: string; external?: boolean };
 
 function ProfileSection({ title, links }: { title?: string; links: ProfileLink[] }) {
@@ -262,6 +264,13 @@ const iconPaths: Record<ProfileIcon, ReactNode> = {
     </>
   ),
   star: <path d="M12 2.5L14.5 9h7L16 13.5l2 7-6-4-6 4 2-7L2.5 9h7L12 2.5z" />,
+  upload: (
+    <>
+      <path d="M21 15v4c0 1-1 2-2 2H5c-1 0-2-1-2-2v-4" />
+      <path d="M7 9l5-5 5 5" />
+      <path d="M12 4v12" />
+    </>
+  ),
   trash: (
     <>
       <path d="M3 6h18" />
