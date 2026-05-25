@@ -104,6 +104,7 @@ function Viewer({
   const current = items[index];
   const total = items.length;
   const stripRef = React.useRef<HTMLDivElement>(null);
+  const pagerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -119,6 +120,26 @@ function Viewer({
     const node = stripRef.current?.querySelector<HTMLButtonElement>(`button[data-strip-index="${index}"]`);
     node?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   }, [index]);
+
+  // Sync pager scroll position when index changes via keyboard / thumbnail click.
+  // First mount jumps instantly to the opened index; later changes animate.
+  const didInitRef = React.useRef(false);
+  React.useLayoutEffect(() => {
+    const node = pagerRef.current;
+    if (!node) return;
+    const target = index * node.clientWidth;
+    if (Math.abs(node.scrollLeft - target) > 1) {
+      node.scrollTo({ left: target, behavior: didInitRef.current ? 'smooth' : 'auto' });
+    }
+    didInitRef.current = true;
+  }, [index]);
+
+  function onPagerScroll() {
+    const node = pagerRef.current;
+    if (!node || node.clientWidth === 0) return;
+    const next = Math.round(node.scrollLeft / node.clientWidth);
+    if (next !== index && next >= 0 && next < total) onIndexChange(next);
+  }
 
   if (!current) return null;
 
@@ -143,8 +164,25 @@ function Viewer({
           <XIcon />
         </button>
       </header>
-      <div className="flex flex-1 items-center justify-center px-[var(--space-2)]">
-        <MediaImage mediaId={current.id} size="large" alt={current.filename || ''} className="max-h-full max-w-full object-contain" />
+      <div
+        ref={pagerRef}
+        onScroll={onPagerScroll}
+        className="flex flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className="flex h-full w-full shrink-0 snap-center items-center justify-center px-[var(--space-2)]"
+          >
+            <MediaImage
+              mediaId={item.id}
+              size="large"
+              alt={item.filename || ''}
+              className="max-h-full max-w-full object-contain"
+            />
+          </div>
+        ))}
       </div>
       <div className="px-[var(--space-4)] pb-[var(--space-2)]">
         {current.entryId === null ? (
