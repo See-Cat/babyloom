@@ -121,10 +121,17 @@ function Viewer({
     node?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   }, [index]);
 
-  // Sync pager scroll position when index changes via keyboard / thumbnail click.
-  // First mount jumps instantly to the opened index; later changes animate.
+  // Sync pager scroll position only when index changed via keyboard / thumbnail.
+  // Swipe-driven index changes must NOT re-scroll, or the programmatic scrollTo
+  // interrupts the browser's native snap settle and the image visibly jitters.
   const didInitRef = React.useRef(false);
+  const fromScrollRef = React.useRef(false);
   React.useLayoutEffect(() => {
+    if (fromScrollRef.current) {
+      fromScrollRef.current = false;
+      didInitRef.current = true;
+      return;
+    }
     const node = pagerRef.current;
     if (!node) return;
     const target = index * node.clientWidth;
@@ -138,7 +145,10 @@ function Viewer({
     const node = pagerRef.current;
     if (!node || node.clientWidth === 0) return;
     const next = Math.round(node.scrollLeft / node.clientWidth);
-    if (next !== index && next >= 0 && next < total) onIndexChange(next);
+    if (next !== index && next >= 0 && next < total) {
+      fromScrollRef.current = true;
+      onIndexChange(next);
+    }
   }
 
   if (!current) return null;
