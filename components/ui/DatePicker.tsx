@@ -71,6 +71,10 @@ export function DatePicker({
   }
 
   const formatted = formatValue(draft, mode);
+  const now = React.useMemo(() => {
+    const d = new Date();
+    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), hour: d.getHours(), minute: d.getMinutes() };
+  }, [open]);
   const isInvalid = disableFuture && isFuture(draft, mode);
 
   function confirm() {
@@ -122,13 +126,13 @@ export function DatePicker({
               </button>
             </div>
             <div className="wheels">
-              <Wheel title="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} />
-              <Wheel title="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} />
-              <Wheel title="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} />
+              <Wheel title="年" values={years} value={draft.year} onChange={(year) => updateDraft({ year })} isDisabled={disableFuture ? (y) => y > now.year : undefined} />
+              <Wheel title="月" values={months} value={draft.month} onChange={(month) => updateDraft({ month })} isDisabled={disableFuture ? (m) => draft.year > now.year || (draft.year === now.year && m > now.month) : undefined} />
+              <Wheel title="日" values={days} value={draft.day} onChange={(day) => updateDraft({ day })} isDisabled={disableFuture ? (d) => isFutureDraft({ ...draft, day: d, hour: 0, minute: 0 }, 'date', now) : undefined} />
               {mode === 'datetime' && (
                 <>
-                  <Wheel title="时" values={hours} value={draft.hour} pad onChange={(hour) => updateDraft({ hour })} />
-                  <Wheel title="分" values={minutes} value={draft.minute} pad onChange={(minute) => updateDraft({ minute })} />
+                  <Wheel title="时" values={hours} value={draft.hour} pad onChange={(hour) => updateDraft({ hour })} isDisabled={disableFuture ? (h) => isFutureDraft({ ...draft, hour: h, minute: 0 }, 'datetime', now) : undefined} />
+                  <Wheel title="分" values={minutes} value={draft.minute} pad onChange={(minute) => updateDraft({ minute })} isDisabled={disableFuture ? (mi) => isFutureDraft({ ...draft, minute: mi }, 'datetime', now) : undefined} />
                 </>
               )}
             </div>
@@ -145,9 +149,10 @@ interface WheelProps {
   value: number;
   onChange: (value: number) => void;
   pad?: boolean;
+  isDisabled?: (item: number) => boolean;
 }
 
-function Wheel({ title, values, value, onChange, pad: padded = false }: WheelProps) {
+function Wheel({ title, values, value, onChange, pad: padded = false, isDisabled }: WheelProps) {
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const settleTimerRef = React.useRef<number | null>(null);
 
@@ -172,11 +177,18 @@ function Wheel({ title, values, value, onChange, pad: padded = false }: WheelPro
       const index = Math.round(node.scrollTop / ITEM_HEIGHT);
       const clamped = Math.max(0, Math.min(values.length - 1, index));
       const next = values[clamped];
-      if (next !== value) onChange(next);
+      if (next === value) return;
+      if (isDisabled?.(next)) {
+        const targetIndex = Math.max(0, values.indexOf(value));
+        node.scrollTo({ top: targetIndex * ITEM_HEIGHT, behavior: 'smooth' });
+        return;
+      }
+      onChange(next);
     }, 80);
   }
 
   function handleItemClick(item: number) {
+    if (isDisabled?.(item)) return;
     const node = scrollRef.current;
     if (!node) return;
     const target = values.indexOf(item) * ITEM_HEIGHT;
@@ -201,16 +213,19 @@ function Wheel({ title, values, value, onChange, pad: padded = false }: WheelPro
           {values.map((item, index) => {
             const distance = Math.abs(index - selectedIndex);
             const selected = item === value;
+            const disabled = isDisabled?.(item) ?? false;
             return (
               <button
                 key={item}
                 type="button"
                 role="option"
                 aria-selected={selected}
+                aria-disabled={disabled || undefined}
                 className={cn(
                   'wheel-item',
                   selected && 'selected',
-                  !selected && distance === 1 && 'near'
+                  !selected && distance === 1 && 'near',
+                  disabled && 'disabled'
                 )}
                 onClick={() => handleItemClick(item)}
               >
@@ -299,4 +314,30 @@ function isFuture(draft: DraftValue, mode: DatePickerMode) {
     mode === 'datetime' ? draft.minute : 0
   );
   return target.getTime() > Date.now();
+}
+
+interface NowSnapshot {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+}
+
+function isFutureDraft(draft: DraftValue, mode: DatePickerMode, now: NowSnapshot) {
+  const target = new Date(
+    draft.year,
+    draft.month - 1,
+    draft.day,
+    mode === 'datetime' ? draft.hour : 0,
+    mode === 'datetime' ? draft.minute : 0
+  ).getTime();
+  const ref = new Date(
+    now.year,
+    now.month - 1,
+    now.day,
+    mode === 'datetime' ? now.hour : 0,
+    mode === 'datetime' ? now.minute : 0
+  ).getTime();
+  return target > ref;
 }
