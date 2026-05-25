@@ -9,9 +9,11 @@ import {
   entryMedia,
   entryMilestones,
   familyMembers,
+  media,
   milestones,
   users
 } from '@/lib/db/schema';
+import type { MediaItem } from '@/lib/media/types';
 import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
 import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
 import { EntryDetailView } from '@/components/features/EntryDetailView';
@@ -61,10 +63,22 @@ export default async function EntryDetailPage({
     .where(eq(entryMilestones.entryId, entry.id))
     .all();
   const attachedMedia = db
-    .select({ mediaId: entryMedia.mediaId })
+    .select({
+      mediaId: entryMedia.mediaId,
+      type: media.type,
+      durationSec: media.durationSec,
+      filename: media.filename
+    })
     .from(entryMedia)
+    .innerJoin(media, eq(media.id, entryMedia.mediaId))
     .where(eq(entryMedia.entryId, entry.id))
     .all();
+  const mediaItems: MediaItem[] = attachedMedia.map((item) => ({
+    id: item.mediaId,
+    type: item.type === 'video' ? 'video' : 'photo',
+    durationSec: item.durationSec ?? null,
+    filename: item.filename
+  }));
 
   return (
     <EntryDetailView
@@ -74,7 +88,7 @@ export default async function EntryDetailPage({
       authorName={author?.name}
       authorImage={author?.image}
       milestoneNames={attached.map((m) => m.name)}
-      mediaIds={attachedMedia.map((media) => media.mediaId)}
+      mediaItems={mediaItems}
       canEdit={canEdit}
     />
   );

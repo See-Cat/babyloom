@@ -9,6 +9,7 @@ export interface UploadedMedia {
   mediaId: string;
   filename: string;
   status: 'ready' | 'pending';
+  type?: 'photo' | 'video';
 }
 
 export interface UploadButtonProps {
@@ -33,6 +34,7 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
     try {
       for (const file of Array.from(files)) {
         warnIfHevc(file, toast);
+        const type: 'photo' | 'video' = file.type.startsWith('video/') ? 'video' : 'photo';
         const form = new FormData();
         form.append('babyId', babyId);
         form.append('clientUploadId', crypto.randomUUID());
@@ -44,10 +46,10 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         }
         const body = await res.json();
         if (body.status === 'pending' || body.status === 'processing') {
-          onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'pending' });
+          onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'pending', type });
           await pollUntilReady(body.mediaId);
         }
-        onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'ready' });
+        onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'ready', type });
       }
     } catch (e: any) {
       setError(e.message || '上传失败');

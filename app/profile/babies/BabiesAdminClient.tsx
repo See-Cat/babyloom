@@ -6,7 +6,8 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { BabyCard } from '@/components/features/BabyCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
+import { birthdayDatePart } from '@/lib/format-time';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PlusIcon } from '@/components/ui/icons';
@@ -75,7 +76,9 @@ export default function BabiesAdminPage() {
           <DatePicker
             name="birthday"
             label="生日"
+            mode="datetime"
             value={newBaby.birthday}
+            maxValue={nowDatePickerValue('datetime')}
             onChange={(birthday) => setNewBaby({ ...newBaby, birthday })}
           />
           <SegmentedControl
@@ -108,7 +111,7 @@ export default function BabiesAdminPage() {
 }
 
 function formatBabyAge(birthday: string) {
-  const birth = new Date(`${birthday}T00:00:00Z`);
+  const birth = new Date(`${birthdayDatePart(birthday)}T00:00:00Z`);
   if (Number.isNaN(birth.getTime())) return birthday;
   const now = new Date();
   let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();

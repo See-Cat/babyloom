@@ -8,7 +8,8 @@ import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { getDayUtcRange } from '@/lib/db/queries/calendar';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, entries, entryMedia, familyMembers, users } from '@/lib/db/schema';
+import { babies, entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
+import type { MediaItem } from '@/lib/media/types';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
 import { TimelineHero } from '@/components/features/TimelineHero';
@@ -78,16 +79,30 @@ export default async function TimelinePage({
   const entryIds = rows.map((row) => row.entries.id);
   const bridges = entryIds.length
     ? db
-        .select({ entryId: entryMedia.entryId, mediaId: entryMedia.mediaId })
+        .select({
+          entryId: entryMedia.entryId,
+          mediaId: entryMedia.mediaId,
+          type: media.type,
+          durationSec: media.durationSec
+        })
         .from(entryMedia)
+        .innerJoin(media, eq(media.id, entryMedia.mediaId))
         .where(inArray(entryMedia.entryId, entryIds))
         .all()
     : [];
-  const mediaIdsByEntry = new Map<string, string[]>();
+  const mediaItemsByEntry = new Map<string, MediaItem[]>();
   for (const bridge of bridges) {
-    const list = mediaIdsByEntry.get(bridge.entryId) ?? [];
-    list.push(bridge.mediaId);
-    mediaIdsByEntry.set(bridge.entryId, list);
+    const list = mediaItemsByEntry.get(bridge.entryId) ?? [];
+    list.push({
+      id: bridge.mediaId,
+      type: bridge.type === 'video' ? 'video' : 'photo',
+      durationSec: bridge.durationSec ?? null
+    });
+    mediaItemsByEntry.set(bridge.entryId, list);
+  }
+  const mediaIdsByEntry = new Map<string, string[]>();
+  for (const [entryId, items] of mediaItemsByEntry) {
+    mediaIdsByEntry.set(entryId, items.map((item) => item.id));
   }
   const heroRow = rows.find((row) => (mediaIdsByEntry.get(row.entries.id)?.length ?? 0) > 0) ?? rows[0];
   const listRows = heroRow ? rows.filter((row) => row.entries.id !== heroRow.entries.id) : rows;
@@ -110,7 +125,7 @@ export default async function TimelinePage({
           babyId={selectedBabyId}
           entry={heroRow?.entries}
           authorName={heroRow?.user.name}
-          mediaIds={heroRow ? mediaIdsByEntry.get(heroRow.entries.id) ?? [] : []}
+          mediaItems={heroRow ? mediaItemsByEntry.get(heroRow.entries.id) ?? [] : []}
         />
       </div>
 
@@ -122,7 +137,7 @@ export default async function TimelinePage({
                 entry={row.entries}
                 authorName={row.user.name}
                 authorImage={row.user.image}
-                mediaIds={mediaIdsByEntry.get(row.entries.id) ?? []}
+                mediaItems={mediaItemsByEntry.get(row.entries.id) ?? []}
                 animationDelayMs={100 + index * 60}
               />
             </li>
@@ -136,7 +151,7 @@ export default async function TimelinePage({
 }
 
 function formatBabyAge(birthday: string) {
-  const birth = new Date(`${birthday}T00:00:00Z`);
+  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(birth.getTime())) return '成长记录';
   const now = new Date();
   let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();

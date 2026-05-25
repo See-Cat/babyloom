@@ -25,14 +25,24 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
         {uploadedMedia.map((media) => (
           <li key={media.mediaId} className="relative aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)]">
             {media.status === 'ready' ? (
-              <MediaImage
-                mediaId={media.mediaId}
-                size="thumb"
-                alt={media.filename}
-                width={200}
-                height={200}
-                className="h-full w-full object-cover"
-              />
+              <>
+                <MediaImage
+                  mediaId={media.mediaId}
+                  size="thumb"
+                  alt={media.filename}
+                  width={200}
+                  height={200}
+                  className="h-full w-full object-cover"
+                />
+                {media.type === 'video' && (
+                  <span
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/15 text-[length:var(--text-lg)] text-white drop-shadow"
+                  >
+                    ▶
+                  </span>
+                )}
+              </>
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Spinner />

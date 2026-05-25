@@ -280,7 +280,7 @@ const iconPaths: Record<ProfileIcon, ReactNode> = {
 };
 
 function formatBabyAge(birthday: string) {
-  const birth = new Date(`${birthday}T00:00:00Z`);
+  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
   if (Number.isNaN(birth.getTime())) return '成长记录';
   const now = new Date();
   let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();

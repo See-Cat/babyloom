@@ -13,7 +13,7 @@ const dataDir = process.env.BABYLOOM_DATA_DIR
 
 const createSchema = z.object({
   name: z.string().min(1).max(50),
-  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?$/),
   gender: z.enum(['boy', 'girl', 'other'])
 });
 

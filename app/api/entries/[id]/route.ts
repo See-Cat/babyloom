@@ -9,6 +9,7 @@ import {
   entryMedia,
   entryMilestones,
   familyMembers,
+  media,
   milestones
 } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
@@ -88,8 +89,15 @@ export const GET = withAuthorizedResource({
     .where(eq(entryMilestones.entryId, row.id))
     .all();
   const attachedMedia = db
-    .select({ mediaId: entryMedia.mediaId })
+    .select({
+      mediaId: entryMedia.mediaId,
+      filename: media.filename,
+      status: media.status,
+      type: media.type,
+      durationSec: media.durationSec
+    })
     .from(entryMedia)
+    .innerJoin(media, eq(media.id, entryMedia.mediaId))
     .where(eq(entryMedia.entryId, row.id))
     .all();
 
@@ -102,12 +110,19 @@ export const GET = withAuthorizedResource({
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
     milestones: attached,
+    media: attachedMedia.map((item) => ({
+      mediaId: item.mediaId,
+      filename: item.filename,
+      status: item.status === 'ready' ? 'ready' : 'pending',
+      type: item.type === 'video' ? 'video' : 'photo',
+      durationSec: item.durationSec ?? null
+    })),
     mediaIds: attachedMedia.map((item) => item.mediaId)
   });
 });
 
 const patchSchema = z.object({
-  content: z.string().min(1).max(10000).optional(),
+  content: z.string().max(10000).optional(),
   occurredAt: z.number().int().optional(),
   milestoneIds: z.array(z.string().regex(UUID_RE)).optional()
 });

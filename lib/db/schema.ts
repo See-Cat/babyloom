@@ -102,7 +102,7 @@ export const babies = sqliteTable(
       .notNull()
       .references(() => families.id, { onDelete: 'cascade' }),
     name: text('name').notNull(),
-    birthday: text('birthday').notNull(), // ISO date
+    birthday: text('birthday').notNull(), // YYYY-MM-DD or "YYYY-MM-DD HH:mm"
     gender: text('gender').notNull(), // 'boy' | 'girl' | 'other'
     avatarUrl: text('avatar_url'),
     status: text('status').notNull(), // 'active' | 'trashed' | 'purged'

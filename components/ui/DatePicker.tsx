@@ -16,7 +16,8 @@ export interface DatePickerProps {
   placeholder?: string;
   required?: boolean;
   title?: string;
-  disableFuture?: boolean;
+  minValue?: string;
+  maxValue?: string;
   renderTrigger?: (args: { open: () => void; label: string; placeholder: string; hasValue: boolean }) => React.ReactNode;
   hideLabel?: boolean;
 }
@@ -40,7 +41,8 @@ export function DatePicker({
   required,
   title,
   value,
-  disableFuture = true,
+  minValue,
+  maxValue,
   renderTrigger,
   hideLabel = false
 }: DatePickerProps) {
@@ -53,34 +55,64 @@ export function DatePicker({
     if (open) setDraft(initial);
   }, [open, initial]);
 
-  const nowSnapshot = React.useMemo(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(), hour: d.getHours(), minute: d.getMinutes() };
-  }, [open]);
-  const years = React.useMemo(() => buildYears(disableFuture ? nowSnapshot.year : undefined), [disableFuture, nowSnapshot.year]);
+  const minDraft = React.useMemo(() => (minValue ? parseValue(minValue, mode) : null), [minValue, mode]);
+  const maxDraft = React.useMemo(() => (maxValue ? parseValue(maxValue, mode) : null), [maxValue, mode]);
+
+  const years = React.useMemo(
+    () => buildYears({ minYear: minDraft?.year, maxYear: maxDraft?.year }),
+    [minDraft?.year, maxDraft?.year]
+  );
   const months = React.useMemo(() => {
-    const max = disableFuture && draft.year >= nowSnapshot.year ? nowSnapshot.month : 12;
-    return buildRange(1, max);
-  }, [disableFuture, draft.year, nowSnapshot.year, nowSnapshot.month]);
+    const lo = minDraft && draft.year <= minDraft.year ? minDraft.month : 1;
+    const hi = maxDraft && draft.year >= maxDraft.year ? maxDraft.month : 12;
+    return buildRange(lo, Math.max(lo, hi));
+  }, [draft.year, minDraft, maxDraft]);
   const days = React.useMemo(() => {
     const monthMax = daysInMonth(draft.year, draft.month);
-    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month
-      ? Math.min(monthMax, nowSnapshot.day)
-      : monthMax;
-    return buildRange(1, max);
-  }, [disableFuture, draft.year, draft.month, nowSnapshot.year, nowSnapshot.month, nowSnapshot.day]);
+    const lo =
+      minDraft && draft.year <= minDraft.year && draft.month <= minDraft.month ? minDraft.day : 1;
+    const hi =
+      maxDraft && draft.year >= maxDraft.year && draft.month >= maxDraft.month
+        ? Math.min(monthMax, maxDraft.day)
+        : monthMax;
+    return buildRange(lo, Math.max(lo, hi));
+  }, [draft.year, draft.month, minDraft, maxDraft]);
   const hours = React.useMemo(() => {
-    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month && draft.day >= nowSnapshot.day
-      ? nowSnapshot.hour
-      : 23;
-    return buildRange(0, max);
-  }, [disableFuture, draft.year, draft.month, draft.day, nowSnapshot]);
+    const lo =
+      minDraft &&
+      draft.year <= minDraft.year &&
+      draft.month <= minDraft.month &&
+      draft.day <= minDraft.day
+        ? minDraft.hour
+        : 0;
+    const hi =
+      maxDraft &&
+      draft.year >= maxDraft.year &&
+      draft.month >= maxDraft.month &&
+      draft.day >= maxDraft.day
+        ? maxDraft.hour
+        : 23;
+    return buildRange(lo, Math.max(lo, hi));
+  }, [draft.year, draft.month, draft.day, minDraft, maxDraft]);
   const minutes = React.useMemo(() => {
-    const max = disableFuture && draft.year >= nowSnapshot.year && draft.month >= nowSnapshot.month && draft.day >= nowSnapshot.day && draft.hour >= nowSnapshot.hour
-      ? nowSnapshot.minute
-      : 59;
-    return buildRange(0, max);
-  }, [disableFuture, draft.year, draft.month, draft.day, draft.hour, nowSnapshot]);
+    const lo =
+      minDraft &&
+      draft.year <= minDraft.year &&
+      draft.month <= minDraft.month &&
+      draft.day <= minDraft.day &&
+      draft.hour <= minDraft.hour
+        ? minDraft.minute
+        : 0;
+    const hi =
+      maxDraft &&
+      draft.year >= maxDraft.year &&
+      draft.month >= maxDraft.month &&
+      draft.day >= maxDraft.day &&
+      draft.hour >= maxDraft.hour
+        ? maxDraft.minute
+        : 59;
+    return buildRange(lo, Math.max(lo, hi));
+  }, [draft.year, draft.month, draft.day, draft.hour, minDraft, maxDraft]);
 
   function updateDraft(patch: Partial<DraftValue>) {
     setDraft((current) => {
@@ -91,7 +123,9 @@ export function DatePicker({
   }
 
   const formatted = formatValue(draft, mode);
-  const isInvalid = disableFuture && isFuture(draft, mode);
+  const isInvalid =
+    (minDraft ? compareDraft(draft, minDraft, mode) < 0 : false) ||
+    (maxDraft ? compareDraft(draft, maxDraft, mode) > 0 : false);
 
   function confirm() {
     if (isInvalid) return;
@@ -244,9 +278,10 @@ function Wheel({ title, values, value, onChange, pad: padded = false }: WheelPro
   );
 }
 
-function buildYears(maxYear?: number) {
+function buildYears({ minYear, maxYear }: { minYear?: number; maxYear?: number }) {
   const ceil = maxYear ?? new Date().getFullYear();
-  return buildRange(ceil - 30, ceil);
+  const floor = minYear ?? ceil - 30;
+  return buildRange(Math.min(floor, ceil), ceil);
 }
 
 function buildRange(min: number, max: number) {
@@ -308,14 +343,19 @@ function pad(value: number) {
   return String(value).padStart(2, '0');
 }
 
-function isFuture(draft: DraftValue, mode: DatePickerMode) {
-  const target = new Date(
-    draft.year,
-    draft.month - 1,
-    draft.day,
-    mode === 'datetime' ? draft.hour : 0,
-    mode === 'datetime' ? draft.minute : 0
-  );
-  return target.getTime() > Date.now();
+function compareDraft(a: DraftValue, b: DraftValue, mode: DatePickerMode): number {
+  if (a.year !== b.year) return a.year - b.year;
+  if (a.month !== b.month) return a.month - b.month;
+  if (a.day !== b.day) return a.day - b.day;
+  if (mode !== 'datetime') return 0;
+  if (a.hour !== b.hour) return a.hour - b.hour;
+  return a.minute - b.minute;
+}
+
+export function nowDatePickerValue(mode: DatePickerMode): string {
+  const d = new Date();
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  if (mode === 'datetime') return `${date} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return date;
 }
 

@@ -8,6 +8,7 @@ import { EntryComposer } from '@/components/features/EntryComposer';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
+import { parseBirthdayToMillis } from '@/lib/format-time';
 
 const formId = 'new-entry-form';
 
@@ -16,6 +17,7 @@ function NewEntryForm() {
   const sp = useSearchParams();
   const babyId = sp.get('babyId') ?? '';
   const [babyName, setBabyName] = useState<string>('');
+  const [babyBirthMs, setBabyBirthMs] = useState<number | undefined>(undefined);
   const [content, setContent] = useState('');
   const [occurredAt, setOccurredAt] = useState<number>(() => Date.now());
   const [milestones, setMilestones] = useState<{ id: string; name: string; icon: string }[]>([]);
@@ -47,6 +49,10 @@ function NewEntryForm() {
       if (!res?.ok) return;
       const body = await res.json();
       if (body?.name) setBabyName(body.name);
+      if (typeof body?.birthday === 'string') {
+        const ms = parseBirthdayToMillis(body.birthday);
+        if (ms !== null) setBabyBirthMs(ms);
+      }
     })();
   }, [babyId]);
 
@@ -125,7 +131,15 @@ function NewEntryForm() {
         </button>
       }
       rightSlot={
-        <Button type="submit" form={formId} size="sm" disabled={submitting || content.trim().length === 0}>
+        <Button
+          type="submit"
+          form={formId}
+          size="sm"
+          disabled={
+            submitting ||
+            (content.trim().length === 0 && uploadedMedia.filter((m) => m.status === 'ready').length === 0)
+          }
+        >
           {submitting ? '保存中…' : '保存'}
         </Button>
       }
@@ -142,6 +156,7 @@ function NewEntryForm() {
         error={error}
         submitting={submitting}
         occurredAt={occurredAt}
+        minOccurredAt={babyBirthMs}
         onOccurredAtChange={setOccurredAt}
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}

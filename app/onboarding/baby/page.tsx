@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { CameraIcon } from '@/components/ui/icons';
@@ -111,8 +111,10 @@ export default function OnboardingBabyPage() {
           <DatePicker
             name="birthday"
             required
+            mode="datetime"
             label="生日"
             value={baby.birthday}
+            maxValue={nowDatePickerValue('datetime')}
             onChange={(birthday) => setBaby({ ...baby, birthday })}
           />
           <input type="hidden" name="gender" value={baby.gender} />

@@ -1,8 +1,13 @@
+'use client';
+
+import * as React from 'react';
 import Link from 'next/link';
 import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
+import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { formatRelativeDateTime } from '@/lib/format-time';
+import type { MediaItem } from '@/lib/media/types';
 
 export interface TimelineCardProps {
   entry: {
@@ -12,11 +17,19 @@ export interface TimelineCardProps {
   };
   authorName?: string | null;
   authorImage?: string | null;
-  mediaIds?: string[];
+  mediaItems?: MediaItem[];
   animationDelayMs?: number;
 }
 
-export function TimelineCard({ entry, authorName = '未知', authorImage, mediaIds = [], animationDelayMs }: TimelineCardProps) {
+export function TimelineCard({
+  entry,
+  authorName = '未知',
+  authorImage,
+  mediaItems = [],
+  animationDelayMs
+}: TimelineCardProps) {
+  const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
+
   return (
     <Card
       as="article"
@@ -39,9 +52,12 @@ export function TimelineCard({ entry, authorName = '未知', authorImage, mediaI
             </p>
           </div>
         </div>
-        <p className="line-clamp-3 whitespace-pre-wrap">{entry.content}</p>
-        <ThumbnailStrip mediaIds={mediaIds} />
+        {entry.content && <p className="line-clamp-3 whitespace-pre-wrap">{entry.content}</p>}
       </Link>
+      <ThumbnailStrip items={mediaItems} onOpenAt={(i) => setLightboxAt(i)} />
+      {lightboxAt !== null && (
+        <MediaLightbox items={mediaItems} startIndex={lightboxAt} onClose={() => setLightboxAt(null)} />
+      )}
     </Card>
   );
 }

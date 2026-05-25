@@ -28,3 +28,20 @@ export function formatLongDateTime(value: number): string {
   const d = new Date(value);
   return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · ${formatHm(value)}`;
 }
+
+export function parseBirthdayToMillis(birthday: string): number | null {
+  const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
+  if (!match) return null;
+  const ms = new Date(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    match[4] ? Number(match[4]) : 0,
+    match[5] ? Number(match[5]) : 0
+  ).getTime();
+  return Number.isNaN(ms) ? null : ms;
+}
+
+export function birthdayDatePart(birthday: string): string {
+  return birthday.slice(0, 10);
+}

@@ -105,7 +105,7 @@ function isIsoDate(value: string | undefined): value is string {
 }
 
 function formatBabyAge(birthday: string, isoDate: string) {
-  const birth = new Date(`${birthday}T00:00:00Z`);
+  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
   const at = new Date(`${isoDate}T00:00:00Z`);
   if (Number.isNaN(birth.getTime()) || Number.isNaN(at.getTime())) return '成长记录';
   let months = (at.getUTCFullYear() - birth.getUTCFullYear()) * 12 + at.getUTCMonth() - birth.getUTCMonth();

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Textarea } from '@/components/ui/Textarea';
 import { Avatar } from '@/components/ui/Avatar';
-import { DatePicker } from '@/components/ui/DatePicker';
+import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { ClockIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { requireOnline } from '@/lib/client/require-online';
@@ -27,6 +27,7 @@ export interface EntryComposerProps {
   error?: string | null;
   submitting?: boolean;
   occurredAt?: number;
+  minOccurredAt?: number;
   onOccurredAtChange?: (value: number) => void;
   onContentChange?: (value: string) => void;
   onToggleMilestone: (id: string) => void;
@@ -48,6 +49,7 @@ export function EntryComposer({
   formId,
   milestones,
   occurredAt,
+  minOccurredAt,
   onContentChange,
   onOccurredAtChange,
   onRemoveMedia,
@@ -61,7 +63,7 @@ export function EntryComposer({
   const toast = useToast();
   const charCount = content.length;
   const showCounter = charCount >= MAX_CHARS / 2;
-  const placeholder = contentPlaceholder ?? `今天${babyName ?? '宝宝'}做了什么呢…`;
+  const placeholder = contentPlaceholder ?? `今天${babyName ?? '宝宝'}做了什么呢…也可以直接放张照片`;
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     if (!requireOnline(toast)) {
@@ -90,6 +92,8 @@ export function EntryComposer({
               mode="datetime"
               hideLabel
               value={millisToString(occurredAt)}
+              minValue={minOccurredAt ? millisToString(minOccurredAt) : undefined}
+              maxValue={nowDatePickerValue('datetime')}
               onChange={(next) => {
                 const ms = stringToMillis(next);
                 if (ms !== null) onOccurredAtChange(ms);
@@ -113,7 +117,6 @@ export function EntryComposer({
       <div>
         <Textarea
           name={contentName}
-          required
           rows={8}
           placeholder={placeholder}
           value={content}
@@ -129,10 +132,10 @@ export function EntryComposer({
           </p>
         )}
       </div>
-      <MilestonePicker milestones={milestones} selectedIds={selectedMilestoneIds} onToggle={onToggleMilestone} />
       {babyId && onUploaded && onRemoveMedia && (
         <MediaUploader babyId={babyId} uploadedMedia={uploadedMedia} disabled={submitting} onUploaded={onUploaded} onRemove={onRemoveMedia} />
       )}
+      <MilestonePicker milestones={milestones} selectedIds={selectedMilestoneIds} onToggle={onToggleMilestone} />
       {error && (
         <p role="alert" className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-base)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">
           <span aria-hidden="true" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-error)] text-[length:var(--text-xs)] font-bold text-white">!</span>

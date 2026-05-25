@@ -4,6 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { MediaCarousel } from '@/components/media/MediaCarousel';
+import { MediaLightbox } from '@/components/media/MediaLightbox';
+import type { MediaItem } from '@/lib/media/types';
 import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
@@ -24,7 +26,7 @@ interface EntryDetailViewProps {
   authorName?: string | null;
   authorImage?: string | null;
   milestoneNames: string[];
-  mediaIds: string[];
+  mediaItems: MediaItem[];
   canEdit: boolean;
 }
 
@@ -34,14 +36,15 @@ export function EntryDetailView({
   authorName,
   authorImage,
   milestoneNames,
-  mediaIds,
+  mediaItems,
   canEdit
 }: EntryDetailViewProps) {
   const router = useRouter();
   const toast = useToast();
   const [actionOpen, setActionOpen] = React.useState(false);
+  const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
   const recordedAt = entry.createdAt ?? entry.occurredAt;
-  const hasMedia = mediaIds.length > 0;
+  const hasMedia = mediaItems.length > 0;
 
   async function onTrash() {
     const res = await fetch(`/api/entries/${entry.id}/trash`, { method: 'POST' });
@@ -80,7 +83,7 @@ export function EntryDetailView({
     >
       {hasMedia && (
         <div className="relative -mx-[var(--space-4)] mb-[var(--space-4)]">
-          <MediaCarousel mediaIds={mediaIds} />
+          <MediaCarousel items={mediaItems} onOpenAt={(i) => setLightboxAt(i)} />
           <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))]">
             <Link
               href={`/timeline?babyId=${entry.babyId}`}
@@ -146,6 +149,10 @@ export function EntryDetailView({
         </div>
       </div>
 
+      {lightboxAt !== null && (
+        <MediaLightbox items={mediaItems} startIndex={lightboxAt} onClose={() => setLightboxAt(null)} />
+      )}
+
       <ActionSheet
         open={actionOpen}
         onOpenChange={setActionOpen}
@@ -160,7 +167,7 @@ export function EntryDetailView({
 }
 
 function formatAge(birthday: string, atMs: number) {
-  const birth = new Date(`${birthday}T00:00:00Z`);
+  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
   const at = new Date(atMs);
   if (Number.isNaN(birth.getTime())) return '';
   let months = (at.getUTCFullYear() - birth.getUTCFullYear()) * 12 + at.getUTCMonth() - birth.getUTCMonth();

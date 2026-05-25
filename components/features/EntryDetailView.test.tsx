@@ -28,7 +28,7 @@ describe('EntryDetailView', () => {
           authorName="妈妈"
           authorImage={null}
           milestoneNames={['第一次站立']}
-          mediaIds={['media-1']}
+          mediaItems={[{ id: 'media-1', type: 'photo' }]}
           canEdit
         />
       </ToastContext.Provider>

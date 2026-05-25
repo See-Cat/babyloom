@@ -22,7 +22,7 @@ const dataDir = process.env.BABYLOOM_DATA_DIR
 
 const createSchema = z.object({
   babyId: z.string().regex(UUID_RE),
-  content: z.string().min(1).max(10000),
+  content: z.string().max(10000),
   occurredAt: z.number().int().optional(),
   milestoneIds: z.array(z.string().regex(UUID_RE)).optional()
 });

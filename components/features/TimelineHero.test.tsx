@@ -13,7 +13,7 @@ describe('TimelineHero', () => {
           occurredAt: new Date('2026-05-21T08:00:00Z').getTime()
         }}
         authorName="妈妈"
-        mediaIds={['m1', 'm2']}
+        mediaItems={[{ id: 'm1', type: 'photo' }, { id: 'm2', type: 'photo' }]}
         babyId="baby-1"
       />
     );
