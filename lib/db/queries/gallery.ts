@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { babies, entryMedia, media } from '@/lib/db/schema';
 import type * as schema from '@/lib/db/schema';
+import { parseBirthdayToMillis } from '@/lib/format-time';
 
 export interface GalleryMedia {
   id: string;
@@ -24,14 +25,11 @@ export interface GalleryMonthGroup<T extends { takenAt: number | null; createdAt
 
 export function listGalleryMedia({
   db,
-  babyId,
-  limitMonths = 12
+  babyId
 }: {
   db: BetterSQLite3Database<typeof schema>;
   babyId: string;
-  limitMonths?: number;
 }): GalleryMedia[] {
-  const cutoff = monthCutoff(limitMonths);
   const sortExpr = sql<number>`coalesce(${media.takenAt}, ${media.createdAt})`;
   const rows = db
     .select({
@@ -44,7 +42,8 @@ export function listGalleryMedia({
       filename: media.filename,
       takenAt: media.takenAt,
       createdAt: media.createdAt,
-      entryId: entryMedia.entryId
+      entryId: entryMedia.entryId,
+      birthday: babies.birthday
     })
     .from(media)
     .innerJoin(babies, eq(babies.id, media.babyId))
@@ -53,7 +52,28 @@ export function listGalleryMedia({
     .orderBy(desc(sortExpr))
     .all();
 
-  return rows.filter((row) => (row.takenAt ?? row.createdAt) >= cutoff);
+  const birthdayMs = rows[0] ? parseBirthdayToMillis(rows[0].birthday) : null;
+
+  const seen = new Set<string>();
+  const deduped: GalleryMedia[] = [];
+  for (const row of rows) {
+    if (seen.has(row.id)) continue;
+    seen.add(row.id);
+    const takenAt = row.takenAt != null && birthdayMs != null && row.takenAt < birthdayMs ? null : row.takenAt;
+    deduped.push({
+      id: row.id,
+      type: row.type,
+      mimeType: row.mimeType,
+      width: row.width,
+      height: row.height,
+      durationSec: row.durationSec,
+      filename: row.filename,
+      takenAt,
+      createdAt: row.createdAt,
+      entryId: row.entryId
+    });
+  }
+  return deduped;
 }
 
 export function groupMediaByMonth<T extends { takenAt: number | null; createdAt: number }>(
@@ -75,9 +95,4 @@ export function groupMediaByMonth<T extends { takenAt: number | null; createdAt:
   }
 
   return Array.from(groups.values());
-}
-
-function monthCutoff(limitMonths: number) {
-  const now = new Date();
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - Math.max(limitMonths - 1, 0), 1);
 }
