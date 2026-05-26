@@ -4,7 +4,6 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
 import { CheckIcon, PlusIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
 
@@ -100,10 +99,15 @@ export function LogoutButton() {
   }
 
   return (
-    <div className="mt-[var(--space-6)] flex justify-center">
-      <Button type="button" variant="text" disabled={pending} onClick={onClick} className="text-[color:var(--color-error-active)]">
+    <div className="mt-[var(--space-6)] mb-[var(--space-4)] flex justify-center">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={onClick}
+        className="rounded-[var(--radius-pill)] bg-[var(--color-error-bg)] px-[var(--space-6)] py-[var(--space-3)] text-[length:var(--text-md)] font-bold text-[color:var(--color-error-active)] transition-transform active:translate-y-[1px] disabled:opacity-60"
+      >
         {pending ? '退出中…' : '退出登录'}
-      </Button>
+      </button>
     </div>
   );
 }

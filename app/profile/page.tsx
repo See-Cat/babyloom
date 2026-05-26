@@ -80,20 +80,19 @@ export default async function ProfilePage() {
     ageLabel: formatBabyAge(b.birthday)
   }));
 
+  const countMeta = (count: number, unit: string) => (count > 0 ? `${count} ${unit}` : undefined);
   const ownerLinks: ProfileLink[] = [
-    { href: '/profile/babies', label: '宝宝管理', icon: 'baby', meta: `${familyBabies.length} 个` },
-    { href: '/profile/members', label: '成员管理', icon: 'members', meta: `${memberCount} 人` },
+    { href: '/profile/members', label: '家庭成员', icon: 'members', meta: countMeta(memberCount, '人') },
     { href: '/profile/members/permissions', label: '宝宝权限', icon: 'shield' },
-    { href: '/profile/milestones', label: '里程碑设置', icon: 'star', meta: `${milestoneCount} 个` },
-    { href: '/profile/data', label: '数据导出 / 备份', icon: 'download' }
+    { href: '/profile/milestones', label: '里程碑', icon: 'star', meta: countMeta(milestoneCount, '个') }
   ];
   const otherLinks: ProfileLink[] = [];
+  if (canUseTrash) otherLinks.push({ href: '/profile/trash', label: '回收站', icon: 'trash', meta: countMeta(trashCount, '条') });
   if (canBulkUpload) otherLinks.push({ href: '/profile/bulk-upload', label: '批量补传历史照片', icon: 'upload' });
-  if (canUseTrash) otherLinks.push({ href: '/profile/trash', label: '回收站', icon: 'trash', meta: `${trashCount} 条` });
-  otherLinks.push({ href: 'https://github.com/anthropics/babyloom#readme', label: '关于 Babyloom', icon: 'info', external: true });
+  if (isOwner) otherLinks.push({ href: '/profile/data', label: '数据导出 / 备份', icon: 'download' });
 
   return (
-    <AppShell title="我的">
+    <AppShell title="我的" rightSlot={<InstallChip />}>
       <Card className="mb-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">
           <Avatar src={me?.image ?? undefined} name={me?.name ?? '我'} size="lg" />
@@ -115,33 +114,51 @@ export default async function ProfilePage() {
       </Card>
 
       {activeBaby && (
-        <Card variant="tinted" tint="mint" className="mb-[var(--space-4)]">
-          <div className="flex items-center gap-[var(--space-3)]">
-            <Avatar src={(activeBaby as any).image ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="md" />
-            <div className="min-w-0 flex-1">
-              <p className="text-[length:var(--text-xs)] font-bold uppercase tracking-[0.04em] text-[color:var(--color-primary-active)]">
-                正在记录
-              </p>
-              <p className="truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
-                {activeBaby.name} · {formatBabyAge(activeBaby.birthday)}
-              </p>
-            </div>
+        <section aria-label="正在记录" className="mb-[var(--space-4)]">
+          <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.06em] text-[color:var(--color-fg)]">
+            正在记录
+          </h2>
+          <div
+            className="relative flex items-stretch rounded-[var(--radius-card)] border-[1.5px]"
+            style={{
+              background: 'var(--color-primary-bg)',
+              borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
+            }}
+          >
+            <Link
+              href="/profile/babies"
+              className="flex min-w-0 flex-1 items-center gap-[var(--space-3)] rounded-[var(--radius-card)] px-[var(--space-4)] py-[var(--space-3)] active:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]"
+            >
+              <Avatar src={(activeBaby as any).image ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="lg" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+                  {activeBaby.name}
+                </p>
+                <p className="mt-[2px] truncate text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
+                  {formatActiveBabyMeta(activeBaby.birthday)}
+                </p>
+              </div>
+              {familyBabies.length <= 1 && (
+                <ChevronRightIcon className="h-4 w-4 shrink-0 text-[color:var(--color-primary-active)]" />
+              )}
+            </Link>
             {familyBabies.length > 1 && (
-              <BabySwitcher
-                activeBabyId={activeBaby.id}
-                babies={switcherBabies}
-                trigger={
-                  <span className="inline-flex items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-bg)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)] shadow-[var(--shadow-press-sm)]">
-                    切换 <ChevronRightIcon className="h-3.5 w-3.5" />
-                  </span>
-                }
-              />
+              <div className="flex items-center pr-[var(--space-3)]">
+                <BabySwitcher
+                  activeBabyId={activeBaby.id}
+                  babies={switcherBabies}
+                  trigger={
+                    <span className="inline-flex items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-bg)] px-[var(--space-3)] py-[6px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)] shadow-[var(--shadow-press-sm)]">
+                      切换 <ChevronRightIcon className="h-3 w-3" />
+                    </span>
+                  }
+                />
+              </div>
             )}
           </div>
-        </Card>
+        </section>
       )}
 
-      <InstallChip />
       <nav className="grid gap-[var(--space-4)]">
         {isOwner && <ProfileSection title="家庭管理" links={ownerLinks} />}
         {otherLinks.length > 0 && <ProfileSection title="其他" links={otherLinks} />}
@@ -154,45 +171,44 @@ export default async function ProfilePage() {
 type ProfileIcon = 'baby' | 'download' | 'info' | 'members' | 'shield' | 'sprout' | 'star' | 'trash' | 'upload' | 'user';
 type ProfileLink = { href: string; label: string; icon: ProfileIcon; meta?: string; external?: boolean };
 
-function ProfileSection({ title, links }: { title?: string; links: ProfileLink[] }) {
+function ProfileSection({ title, links, children }: { title?: string; links: ProfileLink[]; children?: ReactNode }) {
+  const rowClass =
+    'flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[14px] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]';
   return (
     <section aria-label={title}>
-      {title && <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg-soft)]">{title}</h2>}
+      {title && <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.06em] text-[color:var(--color-fg)]">{title}</h2>}
       <Card className="px-0 py-0">
         <ul>
           {links.map((link) => {
             const inner = (
               <>
                 <ProfileRowIcon name={link.icon} />
-                <span>{link.label}</span>
-                {link.meta && (
-                  <span className="ml-auto text-[length:var(--text-sm)] font-semibold text-[color:var(--color-fg-soft)]">{link.meta}</span>
-                )}
-                <ChevronRightIcon className={`${link.meta ? 'ml-[var(--space-2)]' : 'ml-auto'} h-4 w-4 text-[color:var(--color-fg-soft)]`} />
+                <span className="min-w-0 flex-1 truncate">
+                  {link.label}
+                  {link.meta && (
+                    <span className="ml-[var(--space-2)] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+                      {link.meta}
+                    </span>
+                  )}
+                </span>
+                <ChevronRightIcon className="ml-[var(--space-2)] h-3.5 w-3.5 shrink-0 text-[color:var(--color-fg-soft)]" />
               </>
             );
             return (
               <li key={link.href} className="border-b border-[var(--color-border-light)] last:border-b-0">
                 {link.external ? (
-                  <a
-                    href={link.href}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]"
-                  >
+                  <a href={link.href} target="_blank" rel="noreferrer" className={rowClass}>
                     {inner}
                   </a>
                 ) : (
-                  <Link
-                    href={link.href}
-                    className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] text-[length:var(--text-md)] font-semibold text-[color:var(--color-fg)] active:bg-[var(--color-press-tint)]"
-                  >
+                  <Link href={link.href} className={rowClass}>
                     {inner}
                   </Link>
                 )}
               </li>
             );
           })}
+          {children}
         </ul>
       </Card>
     </section>
@@ -218,7 +234,7 @@ function RolePill({ role }: { role: string }) {
 
 function ProfileRowIcon({ name }: { name: ProfileIcon }) {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-6 w-6 shrink-0 fill-none stroke-current text-[color:var(--color-fg-soft)] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5 shrink-0 fill-none stroke-current text-[color:var(--color-fg-soft)] [stroke-linecap:round] [stroke-linejoin:round] [stroke-width:1.8]">
       {iconPaths[name]}
     </svg>
   );
@@ -287,6 +303,16 @@ const iconPaths: Record<ProfileIcon, ReactNode> = {
     </>
   )
 };
+
+function formatActiveBabyMeta(birthday: string) {
+  const age = formatBabyAge(birthday);
+  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(birth.getTime())) return age;
+  const today = new Date();
+  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const days = Math.max(1, Math.floor((todayUtc - birth.getTime()) / 86_400_000) + 1);
+  return `${age} · 第 ${days} 天`;
+}
 
 function formatBabyAge(birthday: string) {
   const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
