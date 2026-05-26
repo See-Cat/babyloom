@@ -81,26 +81,10 @@ export function evaluate(opts: EvaluateOptions): EvaluateResult {
     if (opts.override[bit] !== 1) return { allow: false, reason: `baby_perm_${bit}_denied` };
   }
 
-  try {
-    checkOwnershipMatrix(opts.action, opts.role, opts.userId, opts.ownership);
-    return { allow: true, reason: 'allowed' };
-  } catch (e) {
-    if (e instanceof ForbiddenError) return { allow: false, reason: e.reason };
-    throw e;
-  }
-}
-
-// Ownership matrix from spec §5.4 / §9.1 (simplified binary role model).
-// owner-only actions are already rejected by the OWNER_ONLY_ACTIONS gate in evaluate().
-// baby-scoped read/write/trash/restore are fully governed by baby_member_permissions bits;
-// the old "editor can only edit own entries" rule has been removed.
-function checkOwnershipMatrix(
-  _action: Action,
-  _role: 'owner' | 'member',
-  _userId: string,
-  _resource: PermissionResource | undefined
-): void {
-  return;
+  // Spec §9.1 (binary role model): owner-only actions are rejected above by the
+  // OWNER_ONLY_ACTIONS gate; baby-scoped read/write/trash/restore are fully governed
+  // by baby_member_permissions bits. There is no further ownership matrix.
+  return { allow: true, reason: 'allowed' };
 }
 
 export async function assertPermission(

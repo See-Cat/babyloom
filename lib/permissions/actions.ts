@@ -37,8 +37,10 @@ export interface PermissionResource {
   babyId?: string;
   entryId?: string;
   mediaId?: string;
+  // Retained for audit logging / UI display. NOT consulted by evaluate() in the
+  // binary owner|member model — author-restriction rules were removed in spec §9.1.
   authorId?: string; // entry.author
   uploadedBy?: string; // media.uploadedBy
-  deletedBy?: string; // for *:restore matrix
+  deletedBy?: string; // formerly used by *:restore matrix
   targetUserId?: string; // member:manage subject
 }
