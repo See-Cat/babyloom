@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 
 async function freshFamily(dataDir: string) {
@@ -118,6 +119,81 @@ describe('createMember', () => {
       .get();
     expect(verifyPassword('bobsecure', cred!.password!)).toBe(true);
     expect(verifyPassword('wrong', cred!.password!)).toBe(false);
+  });
+
+  it('atomically writes baby associations when provided', async () => {
+    const { createMember } = await import('@/lib/members/create');
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { babies } = await import('@/lib/db/schema');
+    const { listMemberBabyPermissions } = await import('@/lib/db/queries/permissions');
+
+    const babyAId = randomUUID();
+    const babyBId = randomUUID();
+    const nowMs = Date.now();
+    db.insert(babies)
+      .values({
+        id: babyAId,
+        familyId,
+        name: 'Baby A',
+        birthday: '2024-01-01',
+        gender: 'girl',
+        status: 'active',
+        createdAt: nowMs,
+        updatedAt: nowMs
+      })
+      .run();
+    db.insert(babies)
+      .values({
+        id: babyBId,
+        familyId,
+        name: 'Baby B',
+        birthday: '2024-02-01',
+        gender: 'boy',
+        status: 'active',
+        createdAt: nowMs,
+        updatedAt: nowMs
+      })
+      .run();
+
+    const result = await createMember({
+      dataDir,
+      familyId,
+      username: 'grandpa',
+      password: 'pw12345678',
+      nickname: 'Grandpa',
+      role: 'member',
+      babyAssociations: { babyIds: [babyAId, babyBId], permission: 'editor' }
+    });
+
+    const rows = listMemberBabyPermissions({ db, familyMemberId: result.memberId });
+    expect(rows).toHaveLength(2);
+    expect(rows.every((r) => r.permission === 'editor')).toBe(true);
+  });
+
+  it('rolls back account creation when association write fails', async () => {
+    const { createMember } = await import('@/lib/members/create');
+    const { getDb } = await import('@/lib/db/client');
+    const { db } = getDb({ dataDir });
+    const { users } = await import('@/lib/db/schema');
+
+    await expect(
+      createMember({
+        dataDir,
+        familyId,
+        username: 'will-fail',
+        password: 'pw12345678',
+        nickname: 'X',
+        role: 'member',
+        babyAssociations: {
+          babyIds: ['00000000-0000-0000-0000-000000000000'],
+          permission: 'viewer'
+        }
+      })
+    ).rejects.toThrow();
+
+    const u = db.select().from(users).where(eq(users.username, 'will-fail')).get();
+    expect(u).toBeUndefined();
   });
 
   it('resetMemberPassword updates accounts.password only', async () => {
