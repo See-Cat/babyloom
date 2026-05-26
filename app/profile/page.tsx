@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, entries, familyMembers, milestones, users } from '@/lib/db/schema';
+import { babies, babyMemberPermissions, entries, familyMembers, milestones, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { InstallChip } from '@/components/features/InstallChip';
 import { Avatar } from '@/components/ui/Avatar';
@@ -33,15 +33,21 @@ export default async function ProfilePage() {
   if (!member) redirect('/login');
   const me = db.select().from(users).where(eq(users.id, session.user.id)).get();
 
-  const isOwner = member.role === 'owner';
-  const canUseTrash = member.role === 'owner' || member.role === 'editor';
-  const canBulkUpload = member.role === 'owner' || member.role === 'editor';
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
+  const isOwner = role === 'owner';
+
+  // canUseTrash / canBulkUpload: owner OR member with any baby permission row granting the bit
+  const memberCaps = isOwner
+    ? { hasAnyWrite: true, hasAnyDelete: true }
+    : computeMemberCaps(db, member.id);
+  const canUseTrash = isOwner || memberCaps.hasAnyDelete;
+  const canBulkUpload = isOwner || memberCaps.hasAnyWrite;
 
   const familyBabies = listReadableBabies({
     db,
     familyId: member.familyId,
     familyMemberId: member.id,
-    role: member.role as 'owner' | 'editor' | 'viewer',
+    role,
     userId: session.user.id
   });
 
@@ -82,8 +88,7 @@ export default async function ProfilePage() {
 
   const countMeta = (count: number, unit: string) => (count > 0 ? `${count} ${unit}` : undefined);
   const ownerLinks: ProfileLink[] = [
-    { href: '/profile/members', label: '家庭成员', icon: 'members', meta: countMeta(memberCount, '人') },
-    { href: '/profile/members/permissions', label: '宝宝权限', icon: 'shield' },
+    { href: '/profile/members', label: '成员管理', icon: 'members', meta: countMeta(memberCount, '人') },
     { href: '/profile/milestones', label: '里程碑', icon: 'star', meta: countMeta(milestoneCount, '个') }
   ];
   const otherLinks: ProfileLink[] = [];
@@ -100,7 +105,7 @@ export default async function ProfilePage() {
             <h2 className="truncate text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{me?.name}</h2>
             <div className="mt-[var(--space-1)] flex items-center gap-[var(--space-2)]">
               <span className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">@{me?.username}</span>
-              <RolePill role={member.role} />
+              <RolePill role={role} />
             </div>
           </div>
           <Link
@@ -215,21 +220,34 @@ function ProfileSection({ title, links, children }: { title?: string; links: Pro
   );
 }
 
-function RolePill({ role }: { role: string }) {
-  const config =
-    role === 'owner'
-      ? { label: '家庭主理人', bg: 'var(--color-primary-bg)', fg: 'var(--color-primary-active)' }
-      : role === 'editor'
-        ? { label: '可编辑', bg: 'var(--color-warning-bg, var(--color-primary-bg))', fg: 'var(--color-warning-active, var(--color-primary-active))' }
-        : { label: '仅查看', bg: 'var(--color-surface)', fg: 'var(--color-fg-soft)' };
+function RolePill({ role }: { role: 'owner' | 'member' }) {
+  if (role !== 'owner') return null;
   return (
     <span
       className="inline-flex items-center rounded-[var(--radius-pill)] px-[var(--space-2)] py-[3px] text-[length:var(--text-xs)] font-bold leading-none"
-      style={{ background: config.bg, color: config.fg }}
+      style={{ background: 'var(--color-primary-bg)', color: 'var(--color-primary-active)' }}
     >
-      {config.label}
+      家庭主理人
     </span>
   );
+}
+
+function computeMemberCaps(
+  db: ReturnType<typeof getDb>['db'],
+  familyMemberId: string
+): { hasAnyWrite: boolean; hasAnyDelete: boolean } {
+  const rows = db
+    .select({
+      canWrite: babyMemberPermissions.canWrite,
+      canDelete: babyMemberPermissions.canDelete
+    })
+    .from(babyMemberPermissions)
+    .where(eq(babyMemberPermissions.familyMemberId, familyMemberId))
+    .all();
+  return {
+    hasAnyWrite: rows.some((r) => r.canWrite === 1),
+    hasAnyDelete: rows.some((r) => r.canDelete === 1)
+  };
 }
 
 function ProfileRowIcon({ name }: { name: ProfileIcon }) {
