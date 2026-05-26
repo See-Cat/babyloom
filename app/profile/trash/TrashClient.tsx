@@ -11,7 +11,7 @@ import { Tag } from '@/components/ui/Tag';
 import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
 
 type TrashType = 'entries' | 'media' | 'babies';
-type TrashRole = 'owner' | 'editor';
+type TrashRole = 'owner' | 'member';
 
 interface TrashRow {
   id: string;

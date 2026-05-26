@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
@@ -6,6 +6,7 @@ import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import {
   babies,
+  babyMemberPermissions,
   entryMedia,
   entryMilestones,
   familyMembers,
@@ -54,8 +55,21 @@ export default async function EntryDetailPage({
     .from(familyMembers)
     .where(eq(familyMembers.userId, session.user.id))
     .get();
-  const canEdit =
-    member?.role === 'owner' || (member?.role === 'editor' && entry.authorId === session.user.id);
+  const canEdit = (() => {
+    if (!member) return false;
+    if (member.role === 'owner') return true;
+    const perm = db
+      .select()
+      .from(babyMemberPermissions)
+      .where(
+        and(
+          eq(babyMemberPermissions.familyMemberId, member.id),
+          eq(babyMemberPermissions.babyId, entry.babyId)
+        )
+      )
+      .get();
+    return perm?.canWrite === 1;
+  })();
   const attached = db
     .select({ id: milestones.id, name: milestones.name, icon: milestones.icon })
     .from(entryMilestones)

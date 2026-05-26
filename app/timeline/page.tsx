@@ -42,7 +42,7 @@ export default async function TimelinePage({
     db,
     familyId: member.familyId,
     familyMemberId: member.id,
-    role: member.role as 'owner' | 'editor' | 'viewer',
+    role: (member.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
     userId: session.user.id
   });
 

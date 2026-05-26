@@ -1,6 +1,11 @@
 import { resolve } from 'node:path';
-import { countTrashedByType, listTrashed, type TrashType } from '@/lib/db/queries/trash';
-import { jsonBadRequest } from '@/lib/permissions/responses';
+import {
+  countTrashedByType,
+  listTrashed,
+  memberHasAnyCanDelete,
+  type TrashType
+} from '@/lib/db/queries/trash';
+import { jsonBadRequest, jsonNotFound } from '@/lib/permissions/responses';
 import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
@@ -18,6 +23,11 @@ export const GET = withAuthorizedActionRoute({
   action: 'trash:view',
   allowRoles: ['owner', 'member']
 })(async (req, viewer) => {
+  // gate: non-owner must hold canDelete=1 on at least one baby
+  if (viewer.role !== 'owner' && !memberHasAnyCanDelete({ dataDir, userId: viewer.userId })) {
+    return jsonNotFound();
+  }
+
   const url = new URL(req.url);
   const type = parseType(url.searchParams.get('type'));
   if (!type) return jsonBadRequest('bad_type');

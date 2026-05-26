@@ -3,8 +3,8 @@ import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { familyMembers } from '@/lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { babyMemberPermissions, familyMembers } from '@/lib/db/schema';
+import { and, eq } from 'drizzle-orm';
 import TrashClient from './TrashClient';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
@@ -22,7 +22,21 @@ export default async function TrashPage() {
     .from(familyMembers)
     .where(eq(familyMembers.userId, session.user.id))
     .get();
-  if (!member || (member.role !== 'owner' && member.role !== 'editor')) redirect('/profile');
+  if (!member) redirect('/login');
+  if (member.role !== 'owner') {
+    const hasDeletable = db
+      .select({ id: babyMemberPermissions.id })
+      .from(babyMemberPermissions)
+      .where(
+        and(
+          eq(babyMemberPermissions.familyMemberId, member.id),
+          eq(babyMemberPermissions.canDelete, 1)
+        )
+      )
+      .get();
+    if (!hasDeletable) redirect('/profile');
+  }
 
-  return <TrashClient role={member.role} />;
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
+  return <TrashClient role={role} />;
 }

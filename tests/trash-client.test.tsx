@@ -20,10 +20,10 @@ const row = {
 };
 
 describe('TrashClient', () => {
-  it('hides permanent-delete controls from editors', () => {
+  it('hides permanent-delete controls from non-owner members', () => {
     const html = renderToStaticMarkup(
       <TrashClient
-        role="editor"
+        role="member"
         initialRows={[row]}
         initialCounts={{ entries: 1, media: 0, babies: 0 }}
       />

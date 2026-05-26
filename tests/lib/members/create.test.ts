@@ -49,7 +49,7 @@ describe('createMember', () => {
       username: 'alice',
       password: 'alicepass',
       nickname: 'Alice',
-      role: 'editor'
+      role: 'member'
     });
     expect(email).toBe('alice@local.babyloom');
 
@@ -59,7 +59,7 @@ describe('createMember', () => {
 
     const u = db.select().from(users).where(eq(users.id, userId)).get();
     expect(u?.username).toBe('alice');
-    expect(u?.role).toBe('editor');
+    expect(u?.role).toBe('member');
 
     const cred = db
       .select()
@@ -70,7 +70,7 @@ describe('createMember', () => {
     expect(cred?.accountId).toBe(email);
 
     const m = db.select().from(familyMembers).where(eq(familyMembers.id, memberId)).get();
-    expect(m?.role).toBe('editor');
+    expect(m?.role).toBe('member');
     expect(m?.familyId).toBe(familyId);
   });
 
@@ -82,7 +82,7 @@ describe('createMember', () => {
       username: 'alice',
       password: 'p1longenuf',
       nickname: 'A',
-      role: 'editor'
+      role: 'member'
     });
     await expect(
       createMember({
@@ -91,7 +91,7 @@ describe('createMember', () => {
         username: 'alice',
         password: 'p2longenuf',
         nickname: 'A2',
-        role: 'viewer'
+        role: 'member'
       })
     ).rejects.toThrow(/username_taken/);
   });
@@ -105,7 +105,7 @@ describe('createMember', () => {
       username: 'bob',
       password: 'bobsecure',
       nickname: 'Bob',
-      role: 'viewer'
+      role: 'member'
     });
 
     const { getDb } = await import('@/lib/db/client');
@@ -205,7 +205,7 @@ describe('createMember', () => {
       username: 'carol',
       password: 'oldlongenuf',
       nickname: 'C',
-      role: 'editor'
+      role: 'member'
     });
     resetMemberPassword({ dataDir, userId, newPassword: 'newlongenuf' });
 
