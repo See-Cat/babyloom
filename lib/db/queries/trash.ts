@@ -1,13 +1,13 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
-import { babies, entries, media, users } from '@/lib/db/schema';
+import { babies, babyMemberPermissions, entries, familyMembers, media, users } from '@/lib/db/schema';
 
 export type TrashType = 'entries' | 'media' | 'babies';
 
 export interface TrashViewer {
   userId: string;
   familyId: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
 }
 
 export interface TrashRow {
@@ -30,8 +30,48 @@ function afterCursor(rows: TrashRow[], cursor: string | null | undefined) {
   return rows.filter((row) => row.deletedAt < deletedAt || (row.deletedAt === deletedAt && row.id < id));
 }
 
-function editorFilter(viewer: TrashViewer, deletedBy: any) {
-  return viewer.role === 'owner' ? undefined : eq(deletedBy, viewer.userId);
+// Per spec §9.1 (binary role model): a non-owner sees trash for ANY baby they
+// hold `canDelete=1` on, regardless of who deleted the row. Returns an
+// `inArray` constraint on `babyIdColumn`, or `undefined` for owner (no filter).
+// For a member with zero canDelete rows, returns a `false` predicate so the
+// query yields no rows (the route gate also rejects this case with 404).
+function memberBabyScopeFilter(
+  viewer: TrashViewer,
+  dataDir: string,
+  babyIdColumn: any
+) {
+  if (viewer.role === 'owner') return undefined;
+  const allowedBabyIds = listBabiesWithCanDelete({ dataDir, userId: viewer.userId });
+  if (allowedBabyIds.length === 0) {
+    // empty IN () would be a SQL error; use a constraint that matches nothing.
+    return eq(babyIdColumn, '__no_match__');
+  }
+  return inArray(babyIdColumn, allowedBabyIds);
+}
+
+function listBabiesWithCanDelete(opts: { dataDir: string; userId: string }): string[] {
+  const { db } = getDb({ dataDir: opts.dataDir });
+  const member = db
+    .select({ id: familyMembers.id })
+    .from(familyMembers)
+    .where(eq(familyMembers.userId, opts.userId))
+    .get();
+  if (!member) return [];
+  return db
+    .select({ babyId: babyMemberPermissions.babyId })
+    .from(babyMemberPermissions)
+    .where(
+      and(
+        eq(babyMemberPermissions.familyMemberId, member.id),
+        eq(babyMemberPermissions.canDelete, 1)
+      )
+    )
+    .all()
+    .map((r) => r.babyId);
+}
+
+export function memberHasAnyCanDelete(opts: { dataDir: string; userId: string }): boolean {
+  return listBabiesWithCanDelete(opts).length > 0;
 }
 
 export function listTrashed(opts: {
@@ -63,7 +103,7 @@ export function listTrashed(opts: {
           eq(entries.status, 'trashed'),
           eq(babies.familyId, opts.viewer.familyId),
           inArray(babies.status, ['active', 'trashed']),
-          editorFilter(opts.viewer, entries.deletedBy)
+          memberBabyScopeFilter(opts.viewer, opts.dataDir, entries.babyId)
         )
       )
       .orderBy(desc(entries.deletedAt), desc(entries.id))
@@ -95,7 +135,7 @@ export function listTrashed(opts: {
           eq(media.status, 'trashed'),
           eq(babies.familyId, opts.viewer.familyId),
           inArray(babies.status, ['active', 'trashed']),
-          editorFilter(opts.viewer, media.deletedBy)
+          memberBabyScopeFilter(opts.viewer, opts.dataDir, media.babyId)
         )
       )
       .orderBy(desc(media.deletedAt), desc(media.id))
@@ -122,7 +162,7 @@ export function listTrashed(opts: {
       and(
         eq(babies.status, 'trashed'),
         eq(babies.familyId, opts.viewer.familyId),
-        editorFilter(opts.viewer, babies.deletedBy)
+        memberBabyScopeFilter(opts.viewer, opts.dataDir, babies.id)
       )
     )
     .orderBy(desc(babies.deletedAt), desc(babies.id))

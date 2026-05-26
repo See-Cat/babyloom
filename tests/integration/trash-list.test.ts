@@ -30,7 +30,7 @@ app:
   await bootstrapOwner({ dataDir });
 
   const { getDb } = await import('@/lib/db/client');
-  const { users, families, familyMembers, babies, entries, media } = await import('@/lib/db/schema');
+  const { users, families, familyMembers, babies, babyMemberPermissions, entries, media } = await import('@/lib/db/schema');
   const { db } = getDb({ dataDir });
   const owner = db.select().from(users).all()[0];
   const family = db.select().from(families).all()[0];
@@ -39,6 +39,8 @@ app:
 
   const editorId = randomUUID();
   const viewerId = randomUUID();
+  const editorMemberId = randomUUID();
+  const viewerMemberId = randomUUID();
   db.insert(users)
     .values([
       {
@@ -47,7 +49,7 @@ app:
         email: 'editor@local.babyloom',
         emailVerified: true,
         username: 'editor',
-        role: 'editor',
+        role: 'member',
         createdAt: nowDate,
         updatedAt: nowDate
       },
@@ -57,7 +59,7 @@ app:
         email: 'viewer@local.babyloom',
         emailVerified: true,
         username: 'viewer',
-        role: 'viewer',
+        role: 'member',
         createdAt: nowDate,
         updatedAt: nowDate
       }
@@ -65,8 +67,8 @@ app:
     .run();
   db.insert(familyMembers)
     .values([
-      { id: randomUUID(), familyId: family.id, userId: editorId, role: 'editor', joinedAt: now },
-      { id: randomUUID(), familyId: family.id, userId: viewerId, role: 'viewer', joinedAt: now }
+      { id: editorMemberId, familyId: family.id, userId: editorId, role: 'member', joinedAt: now },
+      { id: viewerMemberId, familyId: family.id, userId: viewerId, role: 'member', joinedAt: now }
     ])
     .run();
 
@@ -159,6 +161,18 @@ app:
     })
     .run();
 
+  // Grant editor canDelete=1 on activeBaby. Viewer gets no permission rows.
+  db.insert(babyMemberPermissions)
+    .values({
+      id: randomUUID(),
+      familyMemberId: editorMemberId,
+      babyId: activeBabyId,
+      canRead: 1,
+      canWrite: 1,
+      canDelete: 1
+    })
+    .run();
+
   return { ownerId: owner.id, editorId, viewerId, ownerEntryId, editorEntryId, parentTrashedEntryId };
 }
 
@@ -195,17 +209,22 @@ describe('GET /api/trash', () => {
     expect(body.counts.entries).toBe(3);
   });
 
-  it('editor sees only rows they deleted', async () => {
+  it('member with canDelete sees all trashed entries on that baby (binary model)', async () => {
     const ctx = await seed(dataDir);
     vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
     const { GET } = await import('@/app/api/trash/route');
     const res = await GET(req());
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.rows.map((row: any) => row.id)).toEqual([ctx.editorEntryId]);
+    // Editor has canDelete=1 on activeBaby → sees both owner's and editor's
+    // deletions on that baby (author restriction removed per spec §9.1).
+    // parentTrashedEntryId is on a different baby (no canDelete) → excluded.
+    expect(body.rows.map((row: any) => row.id).sort()).toEqual(
+      [ctx.ownerEntryId, ctx.editorEntryId].sort()
+    );
   });
 
-  it('viewer cannot use the trash endpoint', async () => {
+  it('member without canDelete cannot use the trash endpoint', async () => {
     const ctx = await seed(dataDir);
     vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.viewerId }));
     const { GET } = await import('@/app/api/trash/route');

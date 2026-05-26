@@ -39,7 +39,7 @@ export default async function CalendarPage({
     db,
     familyId: member.familyId,
     familyMemberId: member.id,
-    role: member.role as 'owner' | 'editor' | 'viewer',
+    role: (member.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
     userId: session.user.id
   });
   if (familyBabies.length === 0) redirect('/onboarding/baby');

@@ -84,14 +84,14 @@ export function withAuthorizedResource<R>(opts: WithAuthorizedResourceOpts<R>) {
 
 export interface WithAuthorizedActionRouteOpts {
   action: Action;
-  allowRoles?: ReadonlyArray<'owner' | 'editor' | 'viewer'>;
+  allowRoles?: ReadonlyArray<'owner' | 'member'>;
 }
 
 export function withAuthorizedActionRoute(opts: WithAuthorizedActionRouteOpts) {
   return function wrap(
     handler: (
       req: NextRequest,
-      ctx: { userId: string; role: 'owner' | 'editor' | 'viewer'; familyId: string }
+      ctx: { userId: string; role: 'owner' | 'member'; familyId: string }
     ) => Promise<Response>
   ) {
     return async function route(req: NextRequest): Promise<Response> {
@@ -117,7 +117,7 @@ export function withAuthorizedActionRoute(opts: WithAuthorizedActionRouteOpts) {
           .get();
         if (!member) return jsonNotFound();
 
-        const role = member.role as 'owner' | 'editor' | 'viewer';
+        const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
         if (opts.allowRoles && !opts.allowRoles.includes(role)) return jsonNotFound();
 
         return await handler(req, { userId, role, familyId: member.familyId });

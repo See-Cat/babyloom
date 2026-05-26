@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
-import { accounts, familyMembers, users } from '@/lib/db/schema';
+import { accounts, babies, babyMemberPermissions, familyMembers, users } from '@/lib/db/schema';
 import { hashPassword, ownerInternalEmail } from '@/lib/bootstrap/owner';
+import { permissionToBits } from '@/lib/db/queries/permissions';
 
 export interface CreateMemberOpts {
   dataDir: string;
@@ -10,7 +11,11 @@ export interface CreateMemberOpts {
   username: string;
   password: string;
   nickname: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
+  babyAssociations?: {
+    babyIds: string[];
+    permission: 'viewer' | 'editor';
+  };
 }
 
 export interface CreateMemberResult {
@@ -79,6 +84,36 @@ export async function createMember(opts: CreateMemberOpts): Promise<CreateMember
         joinedAt: nowMs
       })
       .run();
+
+    if (opts.babyAssociations && opts.babyAssociations.babyIds.length > 0) {
+      const bits = permissionToBits(opts.babyAssociations.permission);
+      const owned = tx
+        .select({ id: babies.id })
+        .from(babies)
+        .where(
+          and(
+            eq(babies.familyId, opts.familyId),
+            eq(babies.status, 'active'),
+            inArray(babies.id, opts.babyAssociations.babyIds)
+          )
+        )
+        .all();
+      if (owned.length !== opts.babyAssociations.babyIds.length) {
+        throw new Error('invalid_baby_id');
+      }
+      for (const babyId of opts.babyAssociations.babyIds) {
+        tx.insert(babyMemberPermissions)
+          .values({
+            id: randomUUID(),
+            familyMemberId: memberId,
+            babyId,
+            canRead: bits.canRead,
+            canWrite: bits.canWrite,
+            canDelete: bits.canDelete
+          })
+          .run();
+      }
+    }
   });
 
   return { userId, memberId, email };

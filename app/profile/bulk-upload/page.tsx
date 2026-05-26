@@ -1,10 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
-import { familyMembers } from '@/lib/db/schema';
+import { babyMemberPermissions, familyMembers } from '@/lib/db/schema';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { BulkUploadView } from './BulkUploadView';
 
@@ -24,13 +24,25 @@ export default async function BulkUploadPage() {
     .where(eq(familyMembers.userId, session.user.id))
     .get();
   if (!member) redirect('/login');
-  if (member.role === 'viewer') notFound();
+  if (member.role !== 'owner') {
+    const hasWriteable = db
+      .select({ id: babyMemberPermissions.id })
+      .from(babyMemberPermissions)
+      .where(
+        and(
+          eq(babyMemberPermissions.familyMemberId, member.id),
+          eq(babyMemberPermissions.canWrite, 1)
+        )
+      )
+      .get();
+    if (!hasWriteable) notFound();
+  }
 
   const familyBabies = listReadableBabies({
     db,
     familyId: member.familyId,
     familyMemberId: member.id,
-    role: member.role as 'owner' | 'editor' | 'viewer',
+    role: (member.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
     userId: session.user.id
   });
   if (familyBabies.length === 0) redirect('/onboarding/baby');

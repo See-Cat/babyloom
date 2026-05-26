@@ -19,7 +19,7 @@ export const users = sqliteTable('user', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   // Extensions
   username: text('username').notNull().unique(),
-  role: text('role').notNull() // 'owner' | 'editor' | 'viewer' — only owner used in P0
+  role: text('role').notNull() // 'owner' | 'member'
 });
 
 // Session — better-auth schema.
@@ -85,7 +85,7 @@ export const familyMembers = sqliteTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    role: text('role').notNull(), // 'owner' | 'editor' | 'viewer'
+    role: text('role').notNull(), // 'owner' | 'member'
     joinedAt: integer('joined_at').notNull()
   },
   (t) => ({

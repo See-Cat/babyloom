@@ -222,7 +222,7 @@ describe('withAuthorizedActionRoute', () => {
     const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
     return withAuthorizedActionRoute({
       action: 'trash:view',
-      allowRoles: ['owner', 'editor']
+      allowRoles: ['owner', 'member']
     })(async (_req: any, { userId }) => {
       return new Response(JSON.stringify({ ok: true, userId }), {
         status: 200,
@@ -254,21 +254,21 @@ describe('withAuthorizedActionRoute', () => {
     expect(res.status).toBe(401);
   });
 
-  it('collapses disallowed roles to 404 on a global trash route', async () => {
+  it('returns 404 for a non-owner member when route restricts to owner only', async () => {
     const { getDb } = await import('@/lib/db/client');
     const { users, families, familyMembers } = await import('@/lib/db/schema');
     const { db } = getDb({ dataDir });
     const family = db.select().from(families).all()[0];
-    const viewerId = randomUUID();
+    const memberId = randomUUID();
     const now = new Date();
     db.insert(users)
       .values({
-        id: viewerId,
-        name: 'Viewer',
-        email: 'viewer@local.babyloom',
+        id: memberId,
+        name: 'Member',
+        email: 'member@local.babyloom',
         emailVerified: true,
-        username: 'viewer',
-        role: 'viewer',
+        username: 'member',
+        role: 'member',
         createdAt: now,
         updatedAt: now
       })
@@ -277,15 +277,24 @@ describe('withAuthorizedActionRoute', () => {
       .values({
         id: randomUUID(),
         familyId: family.id,
-        userId: viewerId,
-        role: 'viewer',
+        userId: memberId,
+        role: 'member',
         joinedAt: Date.now()
       })
       .run();
     vi.doMock('@/lib/permissions/session', () => ({
-      getSessionUserId: async () => viewerId
+      getSessionUserId: async () => memberId
     }));
-    const route = await buildRoute();
+    const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
+    const route = withAuthorizedActionRoute({
+      action: 'trash:view',
+      allowRoles: ['owner']
+    })(async (_req: any, { userId }) => {
+      return new Response(JSON.stringify({ ok: true, userId }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' }
+      });
+    });
     const res = await route(mockReq());
     expect(res.status).toBe(404);
   });

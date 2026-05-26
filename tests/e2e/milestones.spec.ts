@@ -57,45 +57,26 @@ test.describe.serial('milestones', () => {
     expect(body.milestones.some((m: any) => m.id === milestoneId)).toBe(false);
   });
 
-  test('editor cannot create a milestone (404, not 403)', async ({ request }) => {
+  test('non-owner member cannot create a milestone (404, not 403)', async ({ request }) => {
+    // milestone:manage is owner-only regardless of per-baby permissions.
     await request.post('/api/family-members', {
       headers: { cookie, 'content-type': 'application/json' },
-      data: { username: 'msedit', password: 'mseditpass1', nickname: 'MS-Edit', role: 'editor' }
+      data: { username: 'msmember', password: 'msmemberpass1', nickname: 'MS-Member' }
     });
     const r = await request.post('/api/auth/sign-in/email', {
-      data: { email: 'msedit@local.babyloom', password: 'mseditpass1' }
+      data: { email: 'msmember@local.babyloom', password: 'msmemberpass1' }
     });
     const sc = r.headers()['set-cookie'] ?? '';
-    const editorCookie = sc
+    const memberCookie = sc
       .split(/,(?=\s*\w+=)/)
       .map((c: string) => c.split(';')[0].trim())
       .join('; ');
     const res = await request.post('/api/milestones', {
-      headers: { cookie: editorCookie, 'content-type': 'application/json' },
-      data: { name: 'Editor attempt', icon: 'no' }
+      headers: { cookie: memberCookie, 'content-type': 'application/json' },
+      data: { name: 'Member attempt', icon: 'no' }
     });
     expect(res.status()).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
-  });
-
-  test('viewer cannot create a milestone (404)', async ({ request }) => {
-    await request.post('/api/family-members', {
-      headers: { cookie, 'content-type': 'application/json' },
-      data: { username: 'msview', password: 'msviewpass1', nickname: 'MS-View', role: 'viewer' }
-    });
-    const r = await request.post('/api/auth/sign-in/email', {
-      data: { email: 'msview@local.babyloom', password: 'msviewpass1' }
-    });
-    const sc = r.headers()['set-cookie'] ?? '';
-    const viewerCookie = sc
-      .split(/,(?=\s*\w+=)/)
-      .map((c: string) => c.split(';')[0].trim())
-      .join('; ');
-    const res = await request.post('/api/milestones', {
-      headers: { cookie: viewerCookie, 'content-type': 'application/json' },
-      data: { name: 'Viewer attempt', icon: 'no' }
-    });
-    expect(res.status()).toBe(404);
   });
 });

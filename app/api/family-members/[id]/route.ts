@@ -29,14 +29,9 @@ async function loadMember(id: string) {
   return row ?? null;
 }
 
-const patchSchema = z
-  .object({
-    role: z.enum(['editor', 'viewer']).optional(),
-    password: z.string().min(8).max(200).optional()
-  })
-  .refine((v) => v.role !== undefined || v.password !== undefined, {
-    message: 'at_least_one_field_required'
-  });
+const patchSchema = z.object({
+  password: z.string().min(8).max(200)
+});
 
 export const PATCH = withAuthorizedResource({
   action: 'member:manage',
@@ -55,22 +50,9 @@ export const PATCH = withAuthorizedResource({
     return jsonBadRequest('invalid_json');
   }
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return jsonBadRequest(parsed.error.issues.map((i) => i.message).join(';'));
+  if (!parsed.success) return jsonBadRequest('invalid_request');
 
-  const { db } = getDb({ dataDir });
-  if (parsed.data.role) {
-    db.update(familyMembers)
-      .set({ role: parsed.data.role })
-      .where(eq(familyMembers.id, row.memberId))
-      .run();
-    db.update(users)
-      .set({ role: parsed.data.role, updatedAt: new Date() })
-      .where(eq(users.id, row.userId))
-      .run();
-  }
-  if (parsed.data.password) {
-    resetMemberPassword({ dataDir, userId: row.userId, newPassword: parsed.data.password });
-  }
+  resetMemberPassword({ dataDir, userId: row.userId, newPassword: parsed.data.password });
   return Response.json({ updated: row.userId });
 });
 

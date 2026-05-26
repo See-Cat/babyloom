@@ -44,7 +44,7 @@ function seed() {
         email: 'editor@example.test',
         emailVerified: true,
         username: 'editor',
-        role: 'editor',
+        role: 'member',
         createdAt: nowDate,
         updatedAt: nowDate
       },
@@ -54,7 +54,7 @@ function seed() {
         email: 'viewer@example.test',
         emailVerified: true,
         username: 'viewer',
-        role: 'viewer',
+        role: 'member',
         createdAt: nowDate,
         updatedAt: nowDate
       }
@@ -74,8 +74,8 @@ function seed() {
   db.insert(familyMembers)
     .values([
       { id: ownerMemberId, familyId, userId: ownerUserId, role: 'owner', joinedAt: now },
-      { id: editorMemberId, familyId, userId: editorUserId, role: 'editor', joinedAt: now + 1 },
-      { id: viewerMemberId, familyId, userId: viewerUserId, role: 'viewer', joinedAt: now + 2 }
+      { id: editorMemberId, familyId, userId: editorUserId, role: 'member', joinedAt: now + 1 },
+      { id: viewerMemberId, familyId, userId: viewerUserId, role: 'member', joinedAt: now + 2 }
     ])
     .run();
 
@@ -221,10 +221,16 @@ describe('permissions queries', () => {
     ]);
   });
 
-  it('lists only babies the member can read after overrides', async () => {
+  it('lists only babies the member has a canRead=1 row for (strict)', async () => {
     const ctx = seed();
     const { listReadableBabies, upsertPermission } = await import('./permissions');
 
+    upsertPermission({
+      db: ctx.db,
+      familyMemberId: ctx.viewerMemberId,
+      babyId: ctx.babyAId,
+      override: { canRead: 1, canWrite: 0, canDelete: 0 }
+    });
     upsertPermission({
       db: ctx.db,
       familyMemberId: ctx.viewerMemberId,
@@ -237,7 +243,7 @@ describe('permissions queries', () => {
         db: ctx.db,
         familyId: ctx.familyId,
         familyMemberId: ctx.viewerMemberId,
-        role: 'viewer',
+        role: 'member',
         userId: 'viewer-id'
       }).map((baby) => baby.id)
     ).toEqual([ctx.babyAId]);

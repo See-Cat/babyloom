@@ -3,7 +3,6 @@ import { and, eq, inArray, ne } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from '../schema';
 import { babies, babyMemberPermissions, familyMembers, users } from '../schema';
-import { evaluate } from '@/lib/permissions/assert';
 
 type Db = BetterSQLite3Database<typeof schema>;
 
@@ -19,13 +18,95 @@ export interface PermissionMatrixRow {
     userId: string;
     username: string;
     nickname: string;
-    role: 'editor' | 'viewer';
+    role: 'member';
   };
   baby: {
     id: string;
     name: string;
   };
   override: PermissionBits | null;
+}
+
+export type Permission = 'viewer' | 'editor';
+
+export function permissionToBits(p: Permission): PermissionBits {
+  return p === 'editor'
+    ? { canRead: 1, canWrite: 1, canDelete: 1 }
+    : { canRead: 1, canWrite: 0, canDelete: 0 };
+}
+
+export function bitsToPermission(bits: PermissionBits): Permission {
+  if (bits.canWrite === 1 && bits.canDelete === 1) return 'editor';
+  return 'viewer';
+}
+
+export interface MemberBabyPermissionRow {
+  babyId: string;
+  babyName: string;
+  babyAvatarUrl: string | null;
+  permission: Permission;
+}
+
+export function listMemberBabyPermissions(opts: {
+  db: Db;
+  familyMemberId: string;
+}): MemberBabyPermissionRow[] {
+  const rows = opts.db
+    .select({
+      babyId: babies.id,
+      babyName: babies.name,
+      babyAvatarUrl: babies.avatarUrl,
+      canRead: babyMemberPermissions.canRead,
+      canWrite: babyMemberPermissions.canWrite,
+      canDelete: babyMemberPermissions.canDelete
+    })
+    .from(babyMemberPermissions)
+    .innerJoin(babies, eq(babies.id, babyMemberPermissions.babyId))
+    .where(
+      and(
+        eq(babyMemberPermissions.familyMemberId, opts.familyMemberId),
+        eq(babies.status, 'active')
+      )
+    )
+    .orderBy(babies.createdAt)
+    .all();
+  return rows.map((r) => ({
+    babyId: r.babyId,
+    babyName: r.babyName,
+    babyAvatarUrl: r.babyAvatarUrl,
+    permission: bitsToPermission({
+      canRead: r.canRead,
+      canWrite: r.canWrite,
+      canDelete: r.canDelete
+    })
+  }));
+}
+
+export function batchUpsertMemberPermissions(opts: {
+  db: Db;
+  familyMemberId: string;
+  babyIds: string[];
+  permission: Permission;
+}): void {
+  const bits = permissionToBits(opts.permission);
+  opts.db.transaction((tx) => {
+    for (const babyId of opts.babyIds) {
+      tx.insert(babyMemberPermissions)
+        .values({
+          id: randomUUID(),
+          familyMemberId: opts.familyMemberId,
+          babyId,
+          canRead: bits.canRead,
+          canWrite: bits.canWrite,
+          canDelete: bits.canDelete
+        })
+        .onConflictDoUpdate({
+          target: [babyMemberPermissions.babyId, babyMemberPermissions.familyMemberId],
+          set: bits
+        })
+        .run();
+    }
+  });
 }
 
 export function listPermissions(opts: { db: Db; familyId: string }): PermissionMatrixRow[] {
@@ -87,7 +168,7 @@ export function listPermissions(opts: { db: Db; familyId: string }): PermissionM
         userId: member.userId,
         username: member.username,
         nickname: member.nickname,
-        role: member.role as 'editor' | 'viewer'
+        role: 'member' as const
       },
       baby,
       override: byPair.get(`${member.id}:${baby.id}`) ?? null
@@ -145,7 +226,7 @@ export function listReadableBabies(opts: {
   db: Db;
   familyId: string;
   familyMemberId: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
   userId: string;
 }) {
   const activeBabies = opts.db
@@ -169,24 +250,8 @@ export function listReadableBabies(opts: {
       )
     )
     .all();
-  const byBaby = new Map(
-    overrides.map((override) => [
-      override.babyId,
-      {
-        canRead: override.canRead,
-        canWrite: override.canWrite,
-        canDelete: override.canDelete
-      }
-    ])
+  const readableIds = new Set(
+    overrides.filter((o) => o.canRead === 1).map((o) => o.babyId)
   );
-
-  return activeBabies.filter((baby) =>
-    evaluate({
-      role: opts.role,
-      userId: opts.userId,
-      action: 'baby:read',
-      ownership: { babyId: baby.id },
-      override: byBaby.get(baby.id) ?? null
-    }).allow
-  );
+  return activeBabies.filter((baby) => readableIds.has(baby.id));
 }
