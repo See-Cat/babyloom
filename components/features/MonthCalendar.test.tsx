@@ -12,7 +12,6 @@ describe('MonthCalendar', () => {
     const html = renderToStaticMarkup(
       <MonthCalendar
         babyId="baby-1"
-        ym="2026-05"
         grid={grid}
         daySet={new Set(['2026-05-24'])}
         todayIso="2026-05-25"
@@ -23,5 +22,27 @@ describe('MonthCalendar', () => {
     expect(html).toContain('/calendar?babyId=baby-1&amp;ym=2026-05&amp;date=2026-05-24');
     expect(html).toContain('aria-current="date"');
     expect(html).not.toContain('/timeline?babyId=baby-1');
+  });
+
+  it('lets neighbouring-month cells link to their own month', () => {
+    const date = new Date(Date.UTC(2026, 5, 1));
+    const grid: MonthCell[][] = [
+      [
+        { date: new Date(Date.UTC(2026, 4, 31)), iso: '2026-05-31', inMonth: true },
+        { date, iso: '2026-06-01', inMonth: false }
+      ]
+    ];
+
+    const html = renderToStaticMarkup(
+      <MonthCalendar
+        babyId="baby-1"
+        grid={grid}
+        daySet={new Set()}
+        todayIso="2026-05-25"
+        selectedIso="2026-05-25"
+      />
+    );
+
+    expect(html).toContain('/calendar?babyId=baby-1&amp;ym=2026-06&amp;date=2026-06-01');
   });
 });

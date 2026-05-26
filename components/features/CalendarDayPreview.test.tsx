@@ -9,21 +9,28 @@ describe('CalendarDayPreview', () => {
       <CalendarDayPreview
         babyId="baby-1"
         selectedIso="2026-05-24"
+        todayIso="2026-05-24"
         babyAge="1岁3月 · 第 457 天"
         entries={[
           {
             id: 'entry-1',
             content: '今天会自己扶站了',
             occurredAt: Date.UTC(2026, 4, 24, 8, 30),
-            authorName: '妈妈'
+            authorName: '妈妈',
+            authorImage: null,
+            mediaItems: []
           }
         ]}
       />
     );
 
-    expect(html).toContain('1岁3月 · 第 457 天');
+    expect(html).toContain('1岁3月');
+    expect(html).toContain('第 457 天');
     expect(html).toContain('今天会自己扶站了');
     expect(html).toContain('/entry/entry-1');
+    expect(html).toContain('星期日');
+    expect(html).toContain('今天');
+    expect(html).toContain('1 条记录');
   });
 
   it('renders empty-day state with sprout emoji and add-record CTA', () => {

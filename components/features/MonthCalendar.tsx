@@ -7,14 +7,12 @@ const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
 
 export function MonthCalendar({
   babyId,
-  ym,
   grid,
   daySet,
   todayIso,
   selectedIso
 }: {
   babyId: string;
-  ym: string;
   grid: MonthCell[][];
   daySet: Set<string>;
   todayIso: string;
@@ -28,8 +26,10 @@ export function MonthCalendar({
             key={day}
             role="columnheader"
             className={cn(
-              'py-[var(--space-1)] text-center text-[length:var(--text-xs)] font-bold',
-              idx === 0 || idx === 6 ? 'text-[color:var(--color-fg-soft)] opacity-60' : 'text-[color:var(--color-muted)]'
+              'py-[var(--space-1)] text-center text-[length:var(--text-xs)] font-bold tracking-wider',
+              idx === 0 || idx === 6
+                ? 'text-[color:var(--color-fg-disabled)]'
+                : 'text-[color:var(--color-fg-soft)]'
             )}
           >
             {day}
@@ -42,7 +42,6 @@ export function MonthCalendar({
             <CalendarCell
               key={cell.iso}
               babyId={babyId}
-              ym={ym}
               cell={cell}
               hasEntry={daySet.has(cell.iso)}
               isToday={cell.iso === todayIso}
@@ -57,36 +56,38 @@ export function MonthCalendar({
 
 function CalendarCell({
   babyId,
-  ym,
   cell,
   hasEntry,
   isToday,
   selected
 }: {
   babyId: string;
-  ym: string;
   cell: MonthCell;
   hasEntry: boolean;
   isToday: boolean;
   selected: boolean;
 }) {
   const className = cn(
-    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-bold transition-colors',
+    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-semibold transition-colors active:bg-black/[0.04]',
     selected
-      ? 'bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] shadow-[0_3px_0_0_var(--color-primary-active)]'
+      ? 'bg-[var(--color-primary)] font-bold text-[color:var(--color-fg-inverse)]'
       : cell.inMonth
-        ? 'bg-[var(--color-surface)] text-[color:var(--color-fg)]'
-        : 'bg-[var(--color-surface)] text-[color:var(--color-muted)] opacity-45'
+        ? cn(
+            'bg-transparent text-[color:var(--color-fg)]',
+            isToday && 'font-bold text-[color:var(--color-primary-active)]'
+          )
+        : 'bg-transparent text-[color:var(--color-fg-disabled)] opacity-40'
   );
   const day = cell.date.getUTCDate();
   const label = `${cell.date.getUTCFullYear()} 年 ${cell.date.getUTCMonth() + 1} 月 ${day} 日`;
+  const targetYm = cell.iso.slice(0, 7);
 
   const inner = (
     <>
       {isToday && !selected && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-[5px] rounded-[var(--radius-sm)] ring-[1.5px] ring-[var(--color-primary)]"
+          className="pointer-events-none absolute inset-[6px] rounded-full ring-[1.5px] ring-[var(--color-primary)]"
         />
       )}
       <span className="relative">{day}</span>
@@ -94,8 +95,8 @@ function CalendarCell({
         <span
           aria-hidden="true"
           className={cn(
-            'absolute bottom-[5px] h-[5px] w-[5px] rounded-full',
-            selected ? 'bg-white/90' : 'bg-[var(--color-primary)]'
+            'absolute bottom-[6px] h-[5px] w-[5px] rounded-full',
+            selected ? 'bg-white' : 'bg-[var(--color-primary)]'
           )}
         />
       )}
@@ -104,17 +105,13 @@ function CalendarCell({
 
   return (
     <div role="gridcell" aria-label={label}>
-      {cell.inMonth ? (
-        <Link
-          className={className}
-          href={`/calendar?babyId=${babyId}&ym=${ym}&date=${cell.iso}`}
-          aria-current={selected ? 'date' : undefined}
-        >
-          {inner}
-        </Link>
-      ) : (
-        <span className={className}>{inner}</span>
-      )}
+      <Link
+        className={className}
+        href={`/calendar?babyId=${babyId}&ym=${targetYm}&date=${cell.iso}`}
+        aria-current={selected ? 'date' : undefined}
+      >
+        {inner}
+      </Link>
     </div>
   );
 }

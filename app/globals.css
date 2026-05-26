@@ -100,3 +100,21 @@ body {
     transform: scale(1.05) translate(-2%, -1%);
   }
 }
+
+/* Vertical fade mask used by wheel-picker columns. Alpha-only — not a color. */
+.wheel-fade-mask {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 1) 35%,
+    rgba(0, 0, 0, 1) 65%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(0, 0, 0, 1) 35%,
+    rgba(0, 0, 0, 1) 65%,
+    transparent 100%
+  );
+}

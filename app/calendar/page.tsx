@@ -1,4 +1,4 @@
-import { and, eq, gte, lt } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
@@ -7,7 +7,8 @@ import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { buildMonthGrid, formatDateInTimezone, getDayUtcRange, listEntryDays } from '@/lib/db/queries/calendar';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, entries, familyMembers, users } from '@/lib/db/schema';
+import { babies, entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
+import type { MediaItem } from '@/lib/media/types';
 import { CalendarDayPreview } from '@/components/features/CalendarDayPreview';
 import { CalendarMonthNav } from '@/components/features/CalendarMonthNav';
 import { MonthCalendar } from '@/components/features/MonthCalendar';
@@ -65,7 +66,8 @@ export default async function CalendarPage({
       id: entries.id,
       content: entries.content,
       occurredAt: entries.occurredAt,
-      authorName: users.name
+      authorName: users.name,
+      authorImage: users.image
     })
     .from(entries)
     .innerJoin(babies, eq(babies.id, entries.babyId))
@@ -81,16 +83,54 @@ export default async function CalendarPage({
     )
     .orderBy(entries.occurredAt)
     .all();
+  const entryIds = selectedRows.map((row) => row.id);
+  const bridges = entryIds.length
+    ? db
+        .select({
+          entryId: entryMedia.entryId,
+          mediaId: entryMedia.mediaId,
+          type: media.type,
+          durationSec: media.durationSec
+        })
+        .from(entryMedia)
+        .innerJoin(media, eq(media.id, entryMedia.mediaId))
+        .where(inArray(entryMedia.entryId, entryIds))
+        .all()
+    : [];
+  const mediaItemsByEntry = new Map<string, MediaItem[]>();
+  for (const bridge of bridges) {
+    const list = mediaItemsByEntry.get(bridge.entryId) ?? [];
+    list.push({
+      id: bridge.mediaId,
+      type: bridge.type === 'video' ? 'video' : 'photo',
+      durationSec: bridge.durationSec ?? null
+    });
+    mediaItemsByEntry.set(bridge.entryId, list);
+  }
+  const previewEntries = selectedRows.map((row) => ({
+    id: row.id,
+    content: row.content,
+    occurredAt: row.occurredAt,
+    authorName: row.authorName,
+    authorImage: row.authorImage ?? null,
+    mediaItems: mediaItemsByEntry.get(row.id) ?? []
+  }));
 
   return (
     <AppShell title="日历" subtitle={`${selectedBaby.name} · ${formatBabyAge(selectedBaby.birthday, selectedIso)}`}>
-      <CalendarMonthNav babyId={selectedBabyId} ym={ym} birthdayYm={selectedBaby.birthday?.slice(0, 7)} />
-      <MonthCalendar babyId={selectedBabyId} ym={ym} grid={grid} daySet={daySet} todayIso={todayIso} selectedIso={selectedIso} />
+      <CalendarMonthNav
+        babyId={selectedBabyId}
+        ym={ym}
+        todayYm={todayIso.slice(0, 7)}
+        birthdayYm={selectedBaby.birthday?.slice(0, 7)}
+      />
+      <MonthCalendar babyId={selectedBabyId} grid={grid} daySet={daySet} todayIso={todayIso} selectedIso={selectedIso} />
       <CalendarDayPreview
         babyId={selectedBabyId}
         selectedIso={selectedIso}
+        todayIso={todayIso}
         babyAge={formatBabyAge(selectedBaby.birthday, selectedIso)}
-        entries={selectedRows}
+        entries={previewEntries}
       />
     </AppShell>
   );
