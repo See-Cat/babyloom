@@ -79,7 +79,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions`;
@@ -109,7 +109,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => caller.userId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions`;
@@ -128,7 +128,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions`;
@@ -150,7 +150,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${ownerMember.id}/baby-permissions`;
@@ -169,7 +169,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions`;
@@ -189,7 +189,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/route'
+      '@/app/api/family-members/[id]/baby-permissions/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions`;
@@ -239,7 +239,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { PATCH } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/[babyId]/route'
+      '@/app/api/family-members/[id]/baby-permissions/[babyId]/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions/${ctx.babyId}`;
@@ -263,7 +263,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
       getSessionUserId: async () => ctx.ownerId
     }));
     const { PATCH } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/[babyId]/route'
+      '@/app/api/family-members/[id]/baby-permissions/[babyId]/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions/${ctx.babyId}`;
@@ -280,7 +280,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
       getSessionUserId: async () => caller.userId
     }));
     const { PATCH } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/[babyId]/route'
+      '@/app/api/family-members/[id]/baby-permissions/[babyId]/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions/${ctx.babyId}`;
@@ -324,7 +324,7 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
       getSessionUserId: async () => ctx.ownerId
     }));
     const { DELETE } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/[babyId]/route'
+      '@/app/api/family-members/[id]/baby-permissions/[babyId]/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions/${ctx.babyId}`;
@@ -347,7 +347,7 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
       getSessionUserId: async () => ctx.ownerId
     }));
     const { DELETE } = await import(
-      '@/app/api/family-members/[memberId]/baby-permissions/[babyId]/route'
+      '@/app/api/family-members/[id]/baby-permissions/[babyId]/route'
     );
 
     const url = `http://localhost/api/family-members/${target.memberId}/baby-permissions/${ctx.babyId}`;
