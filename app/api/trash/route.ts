@@ -16,7 +16,7 @@ function parseType(value: string | null): TrashType | null {
 
 export const GET = withAuthorizedActionRoute({
   action: 'trash:view',
-  allowRoles: ['owner', 'editor']
+  allowRoles: ['owner', 'member']
 })(async (req, viewer) => {
   const url = new URL(req.url);
   const type = parseType(url.searchParams.get('type'));

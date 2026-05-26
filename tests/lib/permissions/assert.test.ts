@@ -137,25 +137,59 @@ describe('assertPermission §5.4 matrix', () => {
     ).resolves.toBeUndefined();
   });
 
-  it('viewer can read but cannot write', async () => {
+  it('member without baby_member_permissions row cannot read', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
+    await expect(
+      assertPermission(ctx.viewerId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
+    ).rejects.toThrow(/no_baby_permission_row/);
+  });
+
+  it('member with canRead=1 can read but without canWrite row cannot write', async () => {
+    const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.viewerMemberId,
+        canRead: 1,
+        canWrite: 0,
+        canDelete: 0
+      })
+      .run();
     await expect(
       assertPermission(ctx.viewerId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
     ).resolves.toBeUndefined();
     await expect(
-      assertPermission(ctx.viewerId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
-    ).rejects.toThrow(/forbidden/);
+      assertPermission(
+        ctx.viewerId,
+        'entry:write',
+        { babyId: ctx.babyId, authorId: ctx.viewerId },
+        { dataDir }
+      )
+    ).rejects.toThrow(/baby_perm_canWrite_denied/);
   });
 
-  it('editor cannot baby:write because baby management is owner only', async () => {
+  it('member cannot baby:write because baby management is owner only', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     await expect(
       assertPermission(ctx.editorId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
     ).rejects.toThrow(/owner_only/);
   });
 
-  it('editor can entry:trash own, cannot entry:trash others', async () => {
+  it('member with canWrite=1 can entry:trash regardless of author (no author restriction)', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.editorMemberId,
+        canRead: 1,
+        canWrite: 1,
+        canDelete: 1
+      })
+      .run();
     await expect(
       assertPermission(
         ctx.editorId,
@@ -171,10 +205,10 @@ describe('assertPermission §5.4 matrix', () => {
         { babyId: ctx.babyId, authorId: ctx.ownerId },
         { dataDir }
       )
-    ).rejects.toThrow(/editor_not_author/);
+    ).resolves.toBeUndefined();
   });
 
-  it('editor cannot purge anything', async () => {
+  it('member cannot purge anything (owner-only)', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     await expect(
       assertPermission(
@@ -186,8 +220,19 @@ describe('assertPermission §5.4 matrix', () => {
     ).rejects.toThrow(/owner_only/);
   });
 
-  it('editor can media:restore own only AND only what they trashed', async () => {
+  it('member with canDelete=1 can media:restore regardless of uploader/deleter', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
+    ctx.db
+      .insert(ctx.schemas.babyMemberPermissions)
+      .values({
+        id: randomUUID(),
+        babyId: ctx.babyId,
+        familyMemberId: ctx.editorMemberId,
+        canRead: 1,
+        canWrite: 1,
+        canDelete: 1
+      })
+      .run();
     await expect(
       assertPermission(
         ctx.editorId,
@@ -200,18 +245,10 @@ describe('assertPermission §5.4 matrix', () => {
       assertPermission(
         ctx.editorId,
         'media:restore',
-        { babyId: ctx.babyId, uploadedBy: ctx.editorId, deletedBy: ctx.ownerId },
+        { babyId: ctx.babyId, uploadedBy: ctx.ownerId, deletedBy: ctx.ownerId },
         { dataDir }
       )
-    ).rejects.toThrow(/editor_did_not_delete/);
-    await expect(
-      assertPermission(
-        ctx.editorId,
-        'media:restore',
-        { babyId: ctx.babyId, uploadedBy: ctx.ownerId, deletedBy: ctx.editorId },
-        { dataDir }
-      )
-    ).rejects.toThrow(/editor_not_uploader/);
+    ).resolves.toBeUndefined();
   });
 
   it('non-family user is denied for any action', async () => {
@@ -287,7 +324,7 @@ describe('assertPermission §5.4 matrix', () => {
     ).rejects.toThrow(/owner_only/);
   });
 
-  it('baby_member_permissions override does NOT widen — viewer with canWrite=1 still cannot write', async () => {
+  it('baby_member_permissions is the sole authority — member with canWrite=1 can write', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
@@ -308,7 +345,7 @@ describe('assertPermission §5.4 matrix', () => {
         { babyId: ctx.babyId, authorId: ctx.viewerId },
         { dataDir }
       )
-    ).rejects.toThrow(/viewer_cannot_write/);
+    ).resolves.toBeUndefined();
   });
 
   it('baby_member_permissions canRead=0 NARROWS editor — denies what role allowed', async () => {
@@ -330,7 +367,7 @@ describe('assertPermission §5.4 matrix', () => {
     ).rejects.toThrow(/baby_perm_canRead_denied/);
   });
 
-  it('baby_member_permissions canWrite=1 with present row does NOT short-circuit ownership check', async () => {
+  it('baby_member_permissions canDelete=1 lets member trash entries authored by others', async () => {
     const { assertPermission } = await import('@/lib/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
@@ -351,7 +388,7 @@ describe('assertPermission §5.4 matrix', () => {
         { babyId: ctx.babyId, authorId: ctx.ownerId },
         { dataDir }
       )
-    ).rejects.toThrow(/editor_not_author/);
+    ).resolves.toBeUndefined();
   });
 
   it('member:manage is owner only', async () => {
@@ -392,44 +429,57 @@ describe('evaluate', () => {
     'milestone:manage',
     'system:backup',
     'system:logs'
-  ] as const)('does not widen editor permissions for owner-only %s', async (action) => {
+  ] as const)('does not widen member permissions for owner-only %s', async (action) => {
     const { evaluate } = await import('@/lib/permissions/assert');
 
     expect(
       evaluate({
-        role: 'editor',
-        userId: 'editor-id',
+        role: 'member',
+        userId: 'member-id',
         action,
         override: { canRead: 1, canWrite: 1, canDelete: 1 }
       })
     ).toEqual({ allow: false, reason: 'owner_only' });
   });
 
-  it('uses override as a narrowing gate before role ownership', async () => {
+  it('denies member when override row is missing on baby-scoped action', async () => {
     const { evaluate } = await import('@/lib/permissions/assert');
 
     expect(
       evaluate({
-        role: 'editor',
-        userId: 'editor-id',
+        role: 'member',
+        userId: 'member-id',
         action: 'entry:write',
-        ownership: { babyId: 'baby-id', authorId: 'editor-id' },
+        ownership: { babyId: 'baby-id', authorId: 'member-id' }
+      })
+    ).toEqual({ allow: false, reason: 'no_baby_permission_row' });
+  });
+
+  it('uses override bit as the sole gate', async () => {
+    const { evaluate } = await import('@/lib/permissions/assert');
+
+    expect(
+      evaluate({
+        role: 'member',
+        userId: 'member-id',
+        action: 'entry:write',
+        ownership: { babyId: 'baby-id', authorId: 'member-id' },
         override: { canRead: 1, canWrite: 0, canDelete: 1 }
       })
     ).toEqual({ allow: false, reason: 'baby_perm_canWrite_denied' });
   });
 
-  it('lets the role matrix decide after an allow bit', async () => {
+  it('allows member when canWrite=1 regardless of authorId', async () => {
     const { evaluate } = await import('@/lib/permissions/assert');
 
     expect(
       evaluate({
-        role: 'viewer',
-        userId: 'viewer-id',
+        role: 'member',
+        userId: 'member-id',
         action: 'entry:write',
-        ownership: { babyId: 'baby-id', authorId: 'viewer-id' },
+        ownership: { babyId: 'baby-id', authorId: 'someone-else' },
         override: { canRead: 1, canWrite: 1, canDelete: 1 }
       })
-    ).toEqual({ allow: false, reason: 'viewer_cannot_write' });
+    ).toEqual({ allow: true, reason: 'allowed' });
   });
 });

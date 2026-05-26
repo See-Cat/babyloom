@@ -7,7 +7,7 @@ export type TrashType = 'entries' | 'media' | 'babies';
 export interface TrashViewer {
   userId: string;
   familyId: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
 }
 
 export interface TrashRow {

@@ -222,7 +222,7 @@ describe('withAuthorizedActionRoute', () => {
     const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
     return withAuthorizedActionRoute({
       action: 'trash:view',
-      allowRoles: ['owner', 'editor']
+      allowRoles: ['owner', 'member']
     })(async (_req: any, { userId }) => {
       return new Response(JSON.stringify({ ok: true, userId }), {
         status: 200,

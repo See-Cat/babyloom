@@ -57,7 +57,7 @@ export interface PermissionOverride {
 }
 
 export interface EvaluateOptions {
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
   override?: PermissionOverride | null;
   action: Action;
   ownership?: PermissionResource;
@@ -75,8 +75,10 @@ export function evaluate(opts: EvaluateOptions): EvaluateResult {
   }
 
   const bit = babyPermBit(opts.action);
-  if (bit && opts.ownership?.babyId && opts.override && opts.override[bit] !== 1) {
-    return { allow: false, reason: `baby_perm_${bit}_denied` };
+  if (bit && opts.ownership?.babyId && opts.role !== 'owner') {
+    // strict: non-owner must have an override row for any baby-scoped action
+    if (!opts.override) return { allow: false, reason: 'no_baby_permission_row' };
+    if (opts.override[bit] !== 1) return { allow: false, reason: `baby_perm_${bit}_denied` };
   }
 
   try {
@@ -88,77 +90,17 @@ export function evaluate(opts: EvaluateOptions): EvaluateResult {
   }
 }
 
-// Ownership matrix from spec §5.4.
+// Ownership matrix from spec §5.4 / §9.1 (simplified binary role model).
+// owner-only actions are already rejected by the OWNER_ONLY_ACTIONS gate in evaluate().
+// baby-scoped read/write/trash/restore are fully governed by baby_member_permissions bits;
+// the old "editor can only edit own entries" rule has been removed.
 function checkOwnershipMatrix(
-  action: Action,
-  role: 'owner' | 'editor' | 'viewer',
-  userId: string,
-  resource: PermissionResource | undefined
+  _action: Action,
+  _role: 'owner' | 'member',
+  _userId: string,
+  _resource: PermissionResource | undefined
 ): void {
-  if (role === 'owner') return; // owner bypasses ownership checks
-
-  switch (action) {
-    // viewer: read-only on baby/entry/media scope (see baby_member_permissions step)
-    case 'baby:read':
-    case 'entry:read':
-    case 'media:read':
-    case 'trash:view':
-      return; // viewer + editor allowed; finer scope handled by baby_member_permissions
-
-    // editor: write/trash own only
-    case 'entry:write':
-    case 'entry:trash':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_write');
-      if (!resource?.authorId || resource.authorId !== userId)
-        throw new ForbiddenError(action, 'editor_not_author');
-      return;
-
-    case 'media:write':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_write');
-      return; // editor allowed for any baby they have media:write on
-
-    case 'media:trash':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_write');
-      if (!resource?.uploadedBy || resource.uploadedBy !== userId)
-        throw new ForbiddenError(action, 'editor_not_uploader');
-      return;
-
-    // restore: must be own AND must have been the one who trashed it
-    case 'entry:restore':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_restore');
-      if (!resource?.authorId || resource.authorId !== userId)
-        throw new ForbiddenError(action, 'editor_not_author');
-      if (!resource?.deletedBy || resource.deletedBy !== userId)
-        throw new ForbiddenError(action, 'editor_did_not_delete');
-      return;
-
-    case 'media:restore':
-      if (role === 'viewer') throw new ForbiddenError(action, 'viewer_cannot_restore');
-      if (!resource?.uploadedBy || resource.uploadedBy !== userId)
-        throw new ForbiddenError(action, 'editor_not_uploader');
-      if (!resource?.deletedBy || resource.deletedBy !== userId)
-        throw new ForbiddenError(action, 'editor_did_not_delete');
-      return;
-
-    // purge: owner only — already rejected above for editor/viewer
-    case 'entry:purge':
-    case 'media:purge':
-    case 'trash:empty':
-    case 'baby:trash':
-    case 'baby:restore':
-    case 'baby:purge':
-    case 'member:manage':
-    case 'family:manage':
-    case 'baby:write':
-    case 'milestone:manage':
-    case 'system:logs':
-    case 'system:backup':
-      throw new ForbiddenError(action, 'owner_only');
-
-    default:
-      // Exhaustiveness — should never hit
-      throw new ForbiddenError(action, 'unhandled_action');
-  }
+  return;
 }
 
 export async function assertPermission(
@@ -184,7 +126,7 @@ export async function assertPermission(
 
   if (!member) throw new ForbiddenError(action, 'not_family_member');
 
-  const role = member.role as 'owner' | 'editor' | 'viewer';
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
 
   // 2. Cross-family check (always run when resource.babyId is set, regardless of bit)
   if (resource?.babyId) {
@@ -207,17 +149,11 @@ export async function assertPermission(
     }
   }
 
-  // 3. Per-baby permission override — ONLY a scope gate, NEVER a grant (spec §5.3)
-  //
-  //   - For owner-only actions: babyPermBit() returns null; override is skipped entirely.
-  //     The action falls through to checkOwnershipMatrix which enforces 'owner_only'.
-  //   - For non-owner-only actions with override row present: a `0` bit DENIES the action
-  //     (narrowing semantics — owner has explicitly removed the role-granted permission
-  //     for this specific baby). A `1` bit lets execution fall through to the role
-  //     matrix; it does NOT short-circuit allow.
-  //   - No override row → fall through to role matrix (override is opt-in).
-  //
-  // Codex round 10 finding #1: removing the early `return` here was the entire fix.
+  // 3. Per-baby permission override — strict (spec §9.1).
+  //   - Owner bypasses entirely.
+  //   - Non-owner on baby-scoped action: MUST have a baby_member_permissions row
+  //     (missing row = deny). Bits in that row are the sole authority for
+  //     read/write/trash/restore. No author-ownership restrictions.
   let override: PermissionOverride | null = null;
   const bit = babyPermBit(action);
   if (bit && resource?.babyId) {
@@ -233,7 +169,7 @@ export async function assertPermission(
       .get() ?? null;
   }
 
-  // 4. Role-based ownership matrix — final authority on allow/deny
+  // 4. Final allow/deny
   const result = evaluate({ role, override, action, ownership: resource, userId });
   if (!result.allow) throw new ForbiddenError(action, result.reason);
 }
