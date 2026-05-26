@@ -216,6 +216,23 @@ if (!row) throw new ForbiddenError(); // 未关联 = 无权限
 // 然后根据 canRead/canWrite/canDelete bit 判定具体动作
 ```
 
+### 9.1 "可编辑"的语义边界
+
+`canWrite=1, canDelete=1`（即 UI 上的"可编辑"）= **该宝宝下所有内容的全权限**，**不限制内容作者**。
+
+具体地：
+- 爷爷对哥哥"可编辑" → 可以编辑/删除任何家人（包括妈妈、其他成员）创建的关于哥哥的 entry、上传的关于哥哥的 media
+- 旧 `checkOwnershipMatrix` 里 `authorId === userId`、`uploadedBy === userId`、`deletedBy === userId` 这类"只能动自己的"限制全部删除
+
+理由：
+- 家庭场景信任度高，"可编辑"应符合用户对字面意思的直觉
+- 删除走 trash 软删，主理人随时可恢复，误删风险可承受
+- 主理人始终可通过日志审计
+
+### 9.2 owner-only 操作不受影响
+
+`OWNER_ONLY_ACTIONS`（`baby:write`、`baby:trash`、`baby:purge`、`member:manage`、`family:manage`、`milestone:manage`、`system:logs`、`system:backup`、`entry:purge`、`media:purge`、`trash:empty` 等）仍然只允许主理人执行，与 per-baby 权限无关。
+
 ## 10. 组件复用与新增
 
 **复用现有**：
