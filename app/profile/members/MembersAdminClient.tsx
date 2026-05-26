@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { PlusIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
 
 interface Member {
   memberId: string;
@@ -47,16 +48,28 @@ export default function MembersAdminPage() {
     reload();
   }, []);
 
+  function validateNewMember(): string | null {
+    if (!/^[a-zA-Z0-9_-]{3,50}$/.test(newMember.username)) return '用户名需 3-50 位，仅支持英文、数字、_ 和 -';
+    if (!newMember.nickname.trim()) return '请填写昵称';
+    if (newMember.password.length < 8) return '初始密码至少 8 位';
+    return null;
+  }
+
   async function createNew() {
     setError(null);
+    const validationError = validateNewMember();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
     const res = await fetch('/api/family-members', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(newMember)
     });
     if (!res.ok) {
-      const body = await res.json();
-      setError(body.error === 'username_taken' ? '用户名已被占用' : '创建失败');
+      const body = await res.json().catch(() => ({}));
+      setError(body.error === 'username_taken' ? '用户名已被占用' : '创建失败，请检查输入');
       return;
     }
     setCreating(false);
@@ -96,10 +109,14 @@ export default function MembersAdminPage() {
 
   return (
     <AppShell
-      title="成员管理"
+      title="家庭成员"
       leftSlot={
-        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
     >
@@ -124,22 +141,27 @@ export default function MembersAdminPage() {
         <Card className="flex flex-col gap-[var(--space-3)]">
           <Input label="用户名" placeholder="用户名 (3-50, a-z0-9_-)" value={newMember.username} onChange={(e) => setNewMember({ ...newMember, username: e.target.value })} />
           <Input label="昵称" placeholder="昵称" value={newMember.nickname} onChange={(e) => setNewMember({ ...newMember, nickname: e.target.value })} />
-          <Input label="初始密码" type="password" placeholder="初始密码 (≥8)" value={newMember.password} onChange={(e) => setNewMember({ ...newMember, password: e.target.value })} />
+          <PasswordInput
+            label="初始密码"
+            placeholder="初始密码 (≥8)"
+            value={newMember.password}
+            onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
+          />
           <SegmentedControl
             ariaLabel="角色"
             value={newMember.role}
             onChange={(value) => setNewMember({ ...newMember, role: value as 'editor' | 'viewer' })}
             className="grid-cols-2"
             options={[
-              { value: 'editor', label: '家庭记录员' },
-              { value: 'viewer', label: '家庭关注者' }
+              { value: 'editor', label: '可编辑' },
+              { value: 'viewer', label: '仅查看' }
             ]}
           />
-          <div className="flex gap-[var(--space-2)]">
-            <Button type="button" size="sm" onClick={createNew}>
+          <div className="mt-[var(--space-1)] grid grid-cols-2 gap-[var(--space-2)]">
+            <Button type="button" size="md" onClick={createNew} fullWidth>
               创建
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
+            <Button type="button" size="md" variant="default" onClick={() => setCreating(false)} fullWidth>
               取消
             </Button>
           </div>
@@ -162,7 +184,7 @@ export default function MembersAdminPage() {
               onSelect: () => setResetFor(activeMember)
             },
             {
-              label: activeMember.role === 'editor' ? '切换为「家庭关注者」' : '切换为「家庭记录员」',
+              label: activeMember.role === 'editor' ? '切换为「仅查看」' : '切换为「可编辑」',
               onSelect: () => changeRole(activeMember.userId, activeMember.role === 'editor' ? 'viewer' : 'editor')
             },
             {
@@ -193,7 +215,12 @@ export default function MembersAdminPage() {
           </>
         }
       >
-        <Input type="password" value={resetPassword} onChange={(e) => setResetPassword(e.target.value)} placeholder="新密码 (至少 8 位)" label="新密码" />
+        <PasswordInput
+          value={resetPassword}
+          onChange={(e) => setResetPassword(e.target.value)}
+          placeholder="新密码 (至少 8 位)"
+          label="新密码"
+        />
       </Dialog>
       <Dialog
         open={Boolean(removeFor)}

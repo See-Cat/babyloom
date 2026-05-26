@@ -10,7 +10,7 @@ import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { birthdayDatePart } from '@/lib/format-time';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { PlusIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
 
 interface Baby {
   id: string;
@@ -53,8 +53,12 @@ export default function BabiesAdminPage() {
     <AppShell
       title="宝宝管理"
       leftSlot={
-        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
     >
@@ -92,11 +96,11 @@ export default function BabiesAdminPage() {
               { value: 'other', label: '其他' }
             ]}
           />
-          <div className="flex gap-[var(--space-2)]">
-            <Button type="button" size="sm" onClick={createBaby}>
+          <div className="mt-[var(--space-1)] grid grid-cols-2 gap-[var(--space-2)]">
+            <Button type="button" size="md" onClick={createBaby} fullWidth>
               创建
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
+            <Button type="button" size="md" variant="default" onClick={() => setCreating(false)} fullWidth>
               取消
             </Button>
           </div>

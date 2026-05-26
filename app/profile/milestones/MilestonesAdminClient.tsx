@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
-import { PlusIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
 
 interface Milestone {
   id: string;
@@ -70,8 +70,12 @@ export default function MilestonesAdminPage() {
     <AppShell
       title="里程碑设置"
       leftSlot={
-        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
     >
@@ -98,11 +102,11 @@ export default function MilestonesAdminPage() {
       {creating ? (
         <Card className="flex flex-col gap-[var(--space-3)]">
           <Input label="名称" placeholder="名称 (如 第一次叫妈妈)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          <div className="flex gap-[var(--space-2)]">
-            <Button type="button" size="sm" onClick={create}>
+          <div className="mt-[var(--space-1)] grid grid-cols-2 gap-[var(--space-2)]">
+            <Button type="button" size="md" onClick={create} fullWidth>
               创建
             </Button>
-            <Button type="button" size="sm" variant="ghost" onClick={() => setCreating(false)}>
+            <Button type="button" size="md" variant="default" onClick={() => setCreating(false)} fullWidth>
               取消
             </Button>
           </div>

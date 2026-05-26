@@ -10,6 +10,7 @@ import { listPermissions } from '@/lib/db/queries/permissions';
 import { evaluate } from '@/lib/permissions/assert';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
+import { ChevronLeftIcon } from '@/components/ui/icons';
 import { PermissionsMatrix } from '@/components/features/PermissionsMatrix';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
@@ -73,8 +74,12 @@ export default async function PermissionsPage() {
     <AppShell
       title="宝宝权限"
       leftSlot={
-        <Link href="/profile/members" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile/members"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
       className="max-w-6xl"

@@ -220,8 +220,8 @@ function RolePill({ role }: { role: string }) {
     role === 'owner'
       ? { label: '家庭主理人', bg: 'var(--color-primary-bg)', fg: 'var(--color-primary-active)' }
       : role === 'editor'
-        ? { label: '家庭记录员', bg: 'var(--color-warning-bg, var(--color-primary-bg))', fg: 'var(--color-warning-active, var(--color-primary-active))' }
-        : { label: '家庭关注者', bg: 'var(--color-surface)', fg: 'var(--color-fg-soft)' };
+        ? { label: '可编辑', bg: 'var(--color-warning-bg, var(--color-primary-bg))', fg: 'var(--color-warning-active, var(--color-primary-active))' }
+        : { label: '仅查看', bg: 'var(--color-surface)', fg: 'var(--color-fg-soft)' };
   return (
     <span
       className="inline-flex items-center rounded-[var(--radius-pill)] px-[var(--space-2)] py-[3px] text-[length:var(--text-xs)] font-bold leading-none"

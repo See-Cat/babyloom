@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { BackupPanel } from '@/components/features/BackupPanel';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
-import { ChevronRightIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { babies, entries, familyMembers, media } from '@/lib/db/schema';
@@ -57,8 +57,12 @@ export default async function ProfileDataPage() {
     <AppShell
       title="数据导出"
       leftSlot={
-        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
     >

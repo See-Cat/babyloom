@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path';
 import { LogViewer } from '@/components/features/LogViewer';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
+import { ChevronLeftIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers } from '@/lib/db/schema';
@@ -47,8 +48,12 @@ export default async function ProfileDataLogsPage({ searchParams }: LogsPageProp
     <AppShell
       title="系统日志"
       leftSlot={
-        <Link href="/profile/data" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile/data"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
       className="max-w-6xl"

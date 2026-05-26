@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Tag } from '@/components/ui/Tag';
-import { CheckIcon } from '@/components/ui/icons';
+import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
 
 type TrashType = 'entries' | 'media' | 'babies';
 type TrashRole = 'owner' | 'editor';
@@ -176,8 +176,12 @@ export default function TrashClient({
     <AppShell
       title="垃圾桶"
       leftSlot={
-        <Link href="/profile" className="text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
-          返回
+        <Link
+          href="/profile"
+          aria-label="返回"
+          className="-ml-2 inline-flex h-9 w-9 items-center justify-center rounded-full bg-transparent text-[color:var(--color-fg)] active:bg-black/5"
+        >
+          <ChevronLeftIcon />
         </Link>
       }
       rightSlot={

@@ -48,7 +48,7 @@ test.describe('P5 visual regression', () => {
         ['entry-new', '/entry/new', /写一条记录/],
         ['profile', '/profile', /家庭设置/],
         ['profile-babies', '/profile/babies', /宝宝管理/],
-        ['profile-members', '/profile/members', /成员管理/],
+        ['profile-members', '/profile/members', /家庭成员/],
         ['profile-milestones', '/profile/milestones', /里程碑管理/],
         ['profile-trash', '/profile/trash', /垃圾桶/]
       ] as const;

@@ -63,7 +63,7 @@ test('P5 pages have no critical or serious axe violations', async ({ page }) => 
     [`/entry/${entryId}/edit`, /编辑记录/],
     ['/profile', /我的/],
     ['/profile/babies', /宝宝管理/],
-    ['/profile/members', /成员管理/],
+    ['/profile/members', /家庭成员/],
     ['/profile/milestones', /里程碑设置/],
     ['/profile/trash', /垃圾桶/]
   ] as const;

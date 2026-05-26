@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { loginAction } from './actions';
 
 export default function LoginPage() {
@@ -10,7 +11,6 @@ export default function LoginPage() {
   const [pending, setPending] = useState(false);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
 
   async function onSubmit(formData: FormData) {
     setPending(true);
@@ -31,9 +31,8 @@ export default function LoginPage() {
         </div>
         <div className="flex flex-col gap-[var(--space-4)]">
           <Input name="username" type="text" required placeholder="例如 mama" label="用户名" autoComplete="username" disabled={pending} value={username} onChange={(e) => setUsername(e.target.value)} />
-          <Input
+          <PasswordInput
             name="password"
-            type={showPassword ? 'text' : 'password'}
             required
             placeholder="密码"
             label="密码"
@@ -41,29 +40,6 @@ export default function LoginPage() {
             disabled={pending}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            trailingSlot={
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                aria-pressed={showPassword}
-                className="inline-flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[color:var(--color-fg-soft)] hover:text-[color:var(--color-fg-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
-              >
-                {showPassword ? (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a21.77 21.77 0 0 1 5.06-5.94" />
-                    <path d="M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a21.83 21.83 0 0 1-3.17 4.19" />
-                    <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
-                    <line x1="1" y1="1" x2="23" y2="23" />
-                  </svg>
-                ) : (
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                )}
-              </button>
-            }
           />
           {error && (
             <p role="alert" className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-base)] bg-[var(--color-error-bg)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-error-active)]">
