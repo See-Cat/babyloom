@@ -15,7 +15,7 @@ describe('FamilyMemberList', () => {
     );
 
     expect(html).toContain('主理人');
-    expect(html).toContain('编辑成员');
+    expect(html).toContain('家庭记录员');
     expect(html).toContain('<svg');
     expect(html).not.toContain('›');
     expect(html).not.toContain('confirm(');

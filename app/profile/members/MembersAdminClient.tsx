@@ -131,8 +131,8 @@ export default function MembersAdminPage() {
             onChange={(value) => setNewMember({ ...newMember, role: value as 'editor' | 'viewer' })}
             className="grid-cols-2"
             options={[
-              { value: 'editor', label: '编辑成员' },
-              { value: 'viewer', label: '仅查看' }
+              { value: 'editor', label: '家庭记录员' },
+              { value: 'viewer', label: '家庭关注者' }
             ]}
           />
           <div className="flex gap-[var(--space-2)]">
@@ -162,7 +162,7 @@ export default function MembersAdminPage() {
               onSelect: () => setResetFor(activeMember)
             },
             {
-              label: activeMember.role === 'editor' ? '切换为「仅查看」' : '切换为「编辑成员」',
+              label: activeMember.role === 'editor' ? '切换为「家庭关注者」' : '切换为「家庭记录员」',
               onSelect: () => changeRole(activeMember.userId, activeMember.role === 'editor' ? 'viewer' : 'editor')
             },
             {

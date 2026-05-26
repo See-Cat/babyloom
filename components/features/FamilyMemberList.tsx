@@ -59,8 +59,8 @@ export function FamilyMemberList({ members, onSelect, resetSlot }: FamilyMemberL
 
 function roleLabel(role: FamilyMemberListItem['role']) {
   if (role === 'owner') return '主理人';
-  if (role === 'editor') return '编辑成员';
-  return '仅查看';
+  if (role === 'editor') return '家庭记录员';
+  return '家庭关注者';
 }
 
 function roleBadgeClass(role: FamilyMemberListItem['role']) {
