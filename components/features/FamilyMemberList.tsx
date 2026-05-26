@@ -1,76 +1,122 @@
 'use client';
 
 import * as React from 'react';
-import type { ReactNode } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
-import { ChevronRightIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
+
+export interface FamilyMemberBabyPermission {
+  babyId: string;
+  babyName: string;
+  babyAvatarUrl: string | null;
+  permission: 'viewer' | 'editor';
+}
 
 export interface FamilyMemberListItem {
   memberId: string;
   userId: string;
   username: string;
   nickname: string;
-  role: 'owner' | 'editor' | 'viewer';
+  role: 'owner' | 'member';
+  babyPermissions: FamilyMemberBabyPermission[];
 }
 
 export interface FamilyMemberListProps {
   members: FamilyMemberListItem[];
-  onSelect?: (member: FamilyMemberListItem) => void;
-  resetSlot?: (member: FamilyMemberListItem) => ReactNode;
+  onMemberAction: (member: FamilyMemberListItem) => void;
+  onAssociationClick: (member: FamilyMemberListItem, perm: FamilyMemberBabyPermission) => void;
+  onAddAssociation: (member: FamilyMemberListItem) => void;
+  canAddDisabledReason?: (member: FamilyMemberListItem) => string | null;
 }
 
-export function FamilyMemberList({ members, onSelect, resetSlot }: FamilyMemberListProps) {
+export function FamilyMemberList({
+  members,
+  onMemberAction,
+  onAssociationClick,
+  onAddAssociation,
+  canAddDisabledReason
+}: FamilyMemberListProps) {
   return (
     <ul className="flex flex-col gap-[var(--space-3)]">
-      {members.map((member) => (
-        <li key={member.memberId}>
-          <Card className={cn(member.role === 'owner' && 'border border-[color-mix(in_srgb,var(--color-primary)_30%,transparent)] bg-[var(--color-primary-bg)]')}>
-            <button
-              type="button"
-              className="flex w-full items-center gap-[var(--space-3)] text-left"
-              disabled={member.role === 'owner'}
-              onClick={() => onSelect?.(member)}
-            >
-              <Avatar name={member.nickname} size="lg" className={avatarClass(member.role)} />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-[var(--space-2)]">
+      {members.map((member) => {
+        const disabledReason = canAddDisabledReason?.(member) ?? null;
+        return (
+          <li key={member.memberId}>
+            <Card>
+              <div className="flex items-start gap-[var(--space-3)]">
+                <Avatar name={member.nickname} size="lg" className="bg-[var(--color-avatar-blue)]" />
+                <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-[color:var(--color-fg-strong)]">{member.nickname}</p>
-                  <span className={cn('rounded-[var(--radius-pill)] px-[var(--space-2)] py-[2px] text-[10px] font-bold', roleBadgeClass(member.role))}>
-                    {roleLabel(member.role)}
-                  </span>
+                  <p className="truncate text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
+                    @{member.username}
+                  </p>
                 </div>
-                <p className="truncate text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-                  @{member.username} · {member.role === 'owner' ? '你自己' : '家庭成员'}
-                </p>
+                <button
+                  type="button"
+                  aria-label="更多操作"
+                  className="-mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--color-fg-soft)] active:bg-black/5"
+                  onClick={() => onMemberAction(member)}
+                >
+                  ⋯
+                </button>
               </div>
-              {member.role !== 'owner' && (
-                <ChevronRightIcon className="h-4 w-4 text-[color:var(--color-fg-soft)]" />
+
+              {member.babyPermissions.length > 0 && (
+                <ul className="mt-[var(--space-3)] flex flex-col gap-[var(--space-2)] border-t border-[var(--color-border-light)] pt-[var(--space-3)]">
+                  {member.babyPermissions.map((perm) => (
+                    <li key={perm.babyId}>
+                      <button
+                        type="button"
+                        className="flex w-full items-center gap-[var(--space-2)] rounded-[var(--radius-sm)] py-[var(--space-1)] text-left active:bg-[var(--color-press-tint)]"
+                        onClick={() => onAssociationClick(member, perm)}
+                      >
+                        <Avatar
+                          src={perm.babyAvatarUrl ?? undefined}
+                          name={perm.babyName}
+                          colorKey={perm.babyId}
+                          size="sm"
+                        />
+                        <span className="min-w-0 flex-1 truncate text-[length:var(--text-sm)] text-[color:var(--color-fg)]">
+                          {perm.babyName}
+                        </span>
+                        <span
+                          className={cn(
+                            'rounded-[var(--radius-pill)] px-[var(--space-2)] py-[2px] text-[10px] font-bold',
+                            perm.permission === 'editor'
+                              ? 'bg-[var(--color-surface-2)] text-[color:var(--color-fg-strong)]'
+                              : 'bg-[var(--color-bg-disabled)] text-[color:var(--color-fg-soft)]'
+                          )}
+                        >
+                          {perm.permission === 'editor' ? '可编辑' : '仅查看'}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </button>
-            {resetSlot?.(member)}
-          </Card>
-        </li>
-      ))}
+
+              <button
+                type="button"
+                disabled={Boolean(disabledReason)}
+                onClick={() => onAddAssociation(member)}
+                className={cn(
+                  'mt-[var(--space-3)] w-full rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] py-[var(--space-2)] text-[length:var(--text-sm)] font-semibold',
+                  disabledReason
+                    ? 'cursor-not-allowed text-[color:var(--color-fg-soft)]'
+                    : 'text-[color:var(--color-primary-active)] active:bg-[var(--color-press-tint)]'
+                )}
+              >
+                + 关联宝宝
+              </button>
+              {disabledReason && (
+                <p className="mt-[var(--space-1)] text-center text-[length:var(--text-xs)] text-[color:var(--color-fg-soft)]">
+                  {disabledReason}
+                </p>
+              )}
+            </Card>
+          </li>
+        );
+      })}
     </ul>
   );
-}
-
-function roleLabel(role: FamilyMemberListItem['role']) {
-  if (role === 'owner') return '主理人';
-  if (role === 'editor') return '可编辑';
-  return '仅查看';
-}
-
-function roleBadgeClass(role: FamilyMemberListItem['role']) {
-  if (role === 'owner') return 'bg-[var(--color-primary-bg)] text-[color:var(--color-primary-active)]';
-  if (role === 'editor') return 'bg-[var(--color-surface-2)] text-[color:var(--color-fg-strong)]';
-  return 'bg-[var(--color-bg-disabled)] text-[color:var(--color-fg-soft)]';
-}
-
-function avatarClass(role: FamilyMemberListItem['role']) {
-  if (role === 'owner') return 'bg-[var(--color-avatar-peach)]';
-  if (role === 'editor') return 'bg-[var(--color-avatar-blue)]';
-  return 'bg-[var(--color-avatar-purple)]';
 }

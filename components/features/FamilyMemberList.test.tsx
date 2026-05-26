@@ -1,33 +1,97 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { FamilyMemberList } from './FamilyMemberList';
+import { FamilyMemberList, type FamilyMemberListItem } from './FamilyMemberList';
+
+const noop = () => {};
+
+function member(overrides: Partial<FamilyMemberListItem> = {}): FamilyMemberListItem {
+  return {
+    memberId: 'm1',
+    userId: 'u1',
+    username: 'grandpa',
+    nickname: 'Grandpa',
+    role: 'member',
+    babyPermissions: [],
+    ...overrides
+  };
+}
 
 describe('FamilyMemberList', () => {
-  it('renders role badges and chevrons for manageable members', () => {
+  it('renders baby permission rows with localized labels', () => {
     const html = renderToStaticMarkup(
       <FamilyMemberList
         members={[
-          member('owner-1', '妈妈', 'mama', 'owner'),
-          member('editor-1', '爸爸', 'baba', 'editor')
+          member({
+            babyPermissions: [
+              { babyId: 'b1', babyName: 'Big Bro', babyAvatarUrl: null, permission: 'editor' },
+              { babyId: 'b2', babyName: 'Sis', babyAvatarUrl: null, permission: 'viewer' }
+            ]
+          })
         ]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
       />
     );
 
-    expect(html).toContain('主理人');
+    expect(html).toContain('Big Bro');
+    expect(html).toContain('Sis');
     expect(html).toContain('可编辑');
-    expect(html).toContain('<svg');
-    expect(html).not.toContain('›');
-    expect(html).not.toContain('confirm(');
+    expect(html).toContain('仅查看');
+  });
+
+  it('shows "+ 关联宝宝" button for members with zero associations', () => {
+    const html = renderToStaticMarkup(
+      <FamilyMemberList
+        members={[member()]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
+      />
+    );
+
+    expect(html).toContain('+ 关联宝宝');
+  });
+
+  it('disables "+ 关联宝宝" and shows the reason when canAddDisabledReason returns text', () => {
+    const html = renderToStaticMarkup(
+      <FamilyMemberList
+        members={[member()]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
+        canAddDisabledReason={() => '请先在「宝宝管理」中添加宝宝'}
+      />
+    );
+
+    expect(html).toContain('disabled');
+    expect(html).toContain('请先在「宝宝管理」中添加宝宝');
+  });
+
+  it('exposes the more-actions trigger with an accessible label', () => {
+    const html = renderToStaticMarkup(
+      <FamilyMemberList
+        members={[member()]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
+      />
+    );
+
+    expect(html).toContain('aria-label="更多操作"');
+  });
+
+  it('renders nothing when members list is empty', () => {
+    const html = renderToStaticMarkup(
+      <FamilyMemberList
+        members={[]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
+      />
+    );
+
+    expect(html).toBe('<ul class="flex flex-col gap-[var(--space-3)]"></ul>');
   });
 });
-
-function member(userId: string, nickname: string, username: string, role: 'owner' | 'editor' | 'viewer') {
-  return {
-    memberId: `${userId}-member`,
-    userId,
-    username,
-    nickname,
-    role
-  };
-}
