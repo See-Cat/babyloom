@@ -91,7 +91,8 @@ export function listTrashed(opts: {
   if (opts.type === 'all') {
     const entriesRows = listTrashed({ ...opts, type: 'entries', cursor: null, limit: 10000 });
     const mediaRows = listTrashed({ ...opts, type: 'media', cursor: null, limit: 10000 });
-    const merged = [...entriesRows, ...mediaRows].sort((a, b) => {
+    const babiesRows = listTrashed({ ...opts, type: 'babies', cursor: null, limit: 10000 });
+    const merged = [...entriesRows, ...mediaRows, ...babiesRows].sort((a, b) => {
       if (b.deletedAt !== a.deletedAt) return b.deletedAt - a.deletedAt;
       return b.id.localeCompare(a.id);
     });

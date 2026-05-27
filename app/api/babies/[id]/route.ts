@@ -84,12 +84,9 @@ export const DELETE = withAuthorizedResource({
 })(async (_req, _ctx, row) => {
   assertWritesAllowed();
 
-  const result = purgeBaby(dataDir, row.id);
+  const result = await purgeBaby(dataDir, row.id);
   if (!result.purged) {
-    return Response.json(
-      { error: 'has_active_children', detail: 'trash all entries first' },
-      { status: 409 }
-    );
+    return Response.json({ error: result.reason }, { status: 409 });
   }
 
   return Response.json({ purged: row.id });

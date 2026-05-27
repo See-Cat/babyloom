@@ -64,7 +64,7 @@ export async function bulkPurgeByType(opts: {
     .where(and(eq(babies.status, 'trashed'), eq(babies.familyId, opts.familyId)))
     .all();
   for (const row of rows) {
-    const result = purgeBaby(opts.dataDir, row.id);
+    const result = await purgeBaby(opts.dataDir, row.id);
     if (result.purged) purged += 1;
     else skipped.push({ id: row.id, reason: result.reason });
   }

@@ -167,21 +167,21 @@ describe('POST /api/trash/empty', () => {
     expect(res.status).toBe(404);
   });
 
-  it('skips babies that still have active children', async () => {
+  it('archives babies even when they still have active children', async () => {
     const ctx = await seed(dataDir);
     vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { POST } = await import('@/app/api/trash/empty/route');
     const res = await POST(post('babies'));
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.purged).toBe(0);
-    expect(body.skipped).toEqual([{ id: ctx.blockedBabyId, reason: 'has_active_children' }]);
+    expect(body.purged).toBe(1);
+    expect(body.skipped).toEqual([]);
     const baby = ctx.db
       .select()
       .from(ctx.schemas.babies)
       .where(eq(ctx.schemas.babies.id, ctx.blockedBabyId))
       .get();
-    expect(baby?.status).toBe('trashed');
+    expect(baby?.status).toBe('purged');
   });
 
   it('rejects an invalid type', async () => {

@@ -13,7 +13,7 @@ import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
 import type { MediaItem } from '@/lib/media/types';
 import { milestoneTagStyle } from '@/lib/milestone-tint';
 
-type TrashItemType = 'entries' | 'media';
+type TrashItemType = 'entries' | 'media' | 'babies';
 type TrashRole = 'owner' | 'member';
 
 interface TrashRow {
@@ -26,11 +26,13 @@ interface TrashRow {
   label: string;
   mediaItems?: MediaItem[];
   milestoneNames?: string[];
+  childCount?: number;
 }
 
 const restorePath: Record<TrashItemType, string> = {
   entries: 'entries',
-  media: 'media'
+  media: 'media',
+  babies: 'babies'
 };
 
 interface TrashClientProps {
@@ -78,7 +80,7 @@ export default function TrashClient({
     }
     const body = await res.json();
     setRows((current) => (cursor ? [...current, ...body.rows] : body.rows));
-    setCount((body.counts?.entries ?? 0) + (body.counts?.media ?? 0));
+    setCount((body.counts?.entries ?? 0) + (body.counts?.media ?? 0) + (body.counts?.babies ?? 0));
     setNextCursor(body.nextCursor);
   }, []);
 
@@ -88,6 +90,7 @@ export default function TrashClient({
 
   function toggleSelected(row: TrashRow) {
     if (!canPurge) return;
+    if (row.type === 'babies') return;
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(row.id)) next.delete(row.id);
@@ -245,14 +248,20 @@ export default function TrashClient({
           if (!open) setPending(null);
         }}
         dismissible={false}
-        title={pending?.action === 'batch' ? `永久删除 ${selectedIds.size} 条记录?` : '永久删除'}
+        title={
+          pending?.action === 'batch'
+            ? `永久删除 ${selectedIds.size} 条记录?`
+            : pending?.row?.type === 'babies'
+            ? `归档「${pending?.row?.label ?? ''}」?`
+            : '永久删除'
+        }
         footer={
           <>
             <Button type="button" variant="default" onClick={() => setPending(null)}>
               取消
             </Button>
             <Button type="button" variant="error" onClick={confirmPending}>
-              永久删除
+              {pending?.row?.type === 'babies' && pending?.action !== 'batch' ? '归档' : '永久删除'}
             </Button>
           </>
         }
@@ -260,6 +269,8 @@ export default function TrashClient({
         <p className="text-[length:var(--text-base)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           {pending?.action === 'batch'
             ? '此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。'
+            : pending?.row?.type === 'babies'
+            ? '宝宝及其所有记录、相册将从回收站中移除并归档保留。归档后无法在应用内恢复。'
             : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从回收站中移除。`}
         </p>
       </Modal>
@@ -289,8 +300,9 @@ function TrashRowCard({
   const [lightboxAt, setLightboxAt] = useState<number | null>(null);
   const mediaItems = row.mediaItems ?? [];
   const milestoneNames = row.milestoneNames ?? [];
+  const isBaby = row.type === 'babies';
   const hasText = row.type === 'entries' && Boolean(row.label);
-  const hasMedia = mediaItems.length > 0;
+  const hasMedia = !isBaby && mediaItems.length > 0;
 
   const onKeyDown = selecting
     ? (event: KeyboardEvent<HTMLDivElement>) => {
@@ -325,13 +337,28 @@ function TrashRowCard({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-            {row.babyName && <Avatar name={row.babyName} size="xs" />}
+            {row.babyName && <Avatar name={row.babyName} size={isBaby ? 'sm' : 'xs'} />}
             <span className="truncate">
-              {row.babyName ? `${row.babyName} · ` : ''}
-              {row.deletedByName ?? '未知'}
+              {isBaby ? (
+                <span className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+                  {row.babyName}
+                </span>
+              ) : (
+                <>
+                  {row.babyName ? `${row.babyName} · ` : ''}
+                  {row.deletedByName ?? '未知'}
+                </>
+              )}
             </span>
             <span className="ml-auto shrink-0">删除于 {relativeTime(row.deletedAt)}</span>
           </div>
+          {isBaby && (
+            <p className="my-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">
+              {row.childCount && row.childCount > 0
+                ? `包含 ${row.childCount} 条记录与相册`
+                : '无活跃记录'}
+            </p>
+          )}
           {hasText && (
             <p className="my-[var(--space-2)] line-clamp-2 whitespace-pre-wrap text-[length:var(--text-sm)] leading-[var(--leading-base)]">
               {row.label}
@@ -367,7 +394,7 @@ function TrashRowCard({
                   onClick={onPurge}
                   className="rounded-[var(--radius-pill)] bg-transparent px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-error)] active:bg-[var(--color-error-bg)]"
                 >
-                  永久删除
+                  {isBaby ? '归档' : '永久删除'}
                 </button>
               )}
               <Button type="button" size="sm" variant="primary" onClick={onRestore}>
