@@ -170,7 +170,7 @@ export default function TrashClient({
               setSelectedIds(new Set());
             }}
             className={[
-              'rounded-[var(--radius-pill)] bg-transparent px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-sm)] font-bold active:bg-black/5',
+              'rounded-[var(--radius-pill)] bg-transparent px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-md)] font-bold active:bg-black/5',
               selecting
                 ? 'text-[color:var(--color-muted)]'
                 : 'text-[color:var(--color-primary-active)]'
