@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { Toast } from './Toast';
 import { ToastProvider } from './ToastProvider';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 
 describe('Toast', () => {
   it('renders message, variant, and action slot', () => {

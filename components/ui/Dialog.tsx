@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { ReactNode } from 'react';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
-import { useMediaQuery } from '@/lib/hooks/useMediaQuery';
+import { useMediaQuery } from '@/lib/client/hooks/useMediaQuery';
 import { Modal } from './Modal';
 
 export interface DialogProps {

@@ -7,7 +7,7 @@ import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { ClockIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { requireOnline } from '@/lib/client/require-online';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 import { MediaUploader } from './MediaUploader';
 import { MilestonePicker, type MilestonePickerItem } from './MilestonePicker';
 

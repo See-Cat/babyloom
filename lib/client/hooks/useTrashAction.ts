@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { requireOnline } from '@/lib/client/require-online';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 
 type Resource = 'entry' | 'media' | 'baby';
 

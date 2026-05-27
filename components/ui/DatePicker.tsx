@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { cn } from '@/lib/shared/cn';
-import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
+import { usePopupAnimation } from '@/lib/client/hooks/usePopupAnimation';
 import { ChevronRightIcon } from './icons';
 
 export type DatePickerMode = 'date' | 'datetime';

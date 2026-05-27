@@ -7,7 +7,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { CheckIcon, PlusIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 import { cn } from '@/lib/shared/cn';
 
 export interface BabySwitcherBaby {

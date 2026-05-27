@@ -8,7 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { XIcon } from '@/components/ui/icons';
 import { requireOnline } from '@/lib/client/require-online';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 
 export type FormActionResult = { ok: true; message: string } | { ok: false; message: string };
 

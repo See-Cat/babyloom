@@ -20,7 +20,7 @@ import { Switch } from '@/components/ui/Switch';
 import { Tag } from '@/components/ui/Tag';
 import { Textarea } from '@/components/ui/Textarea';
 import { ArrowDownIcon, CheckIcon, ErrorIcon, InfoIcon, PlusIcon, WarningIcon } from '@/components/ui/icons';
-import { useToast } from '@/lib/hooks/useToast';
+import { useToast } from '@/lib/client/hooks/useToast';
 
 const avatars = [
   { name: 'Ava', alt: 'Ava', colorKey: 'ava' },

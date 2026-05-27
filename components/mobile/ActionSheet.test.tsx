@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ActionSheet } from './ActionSheet';
 
-vi.mock('@/lib/hooks/useDialog', () => ({
+vi.mock('@/lib/client/hooks/useDialog', () => ({
   useDialog: () => ({ panelRef: { current: null }, panelProps: { role: 'dialog' } })
 }));
 

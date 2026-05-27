@@ -3,8 +3,8 @@
 import * as React from 'react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/shared/cn';
-import { useDialog } from '@/lib/hooks/useDialog';
-import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
+import { useDialog } from '@/lib/client/hooks/useDialog';
+import { usePopupAnimation } from '@/lib/client/hooks/usePopupAnimation';
 
 export interface BottomSheetProps {
   open: boolean;

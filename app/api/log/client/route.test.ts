@@ -34,7 +34,7 @@ describe('/api/log/client', () => {
 
   it('rate limits the 61st report from the same unauthenticated source', async () => {
     const { POST } = await import('@/app/api/log/client/route');
-    const { resetClientLogRateLimitForTesting } = await import('@/lib/log/client-rate-limit');
+    const { resetClientLogRateLimitForTesting } = await import('@/lib/client/log/client-rate-limit');
     resetClientLogRateLimitForTesting();
 
     let res = new Response(null);
