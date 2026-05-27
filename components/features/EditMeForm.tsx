@@ -1,9 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { XIcon } from '@/components/ui/icons';
 import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/hooks/useToast';
 
@@ -12,99 +15,152 @@ export type FormActionResult = { ok: true; message: string } | { ok: false; mess
 export interface EditMeFormProps {
   initial: {
     name: string;
-    username: string;
+    image: string | null;
   };
+  username: string;
+  target: 'me' | `baby:${string}`;
   updateMyName: (name: string) => Promise<FormActionResult>;
-  changeMyPassword: (input: { currentPassword: string; newPassword: string }) => Promise<FormActionResult>;
 }
 
-export function EditMeForm({ initial, updateMyName, changeMyPassword }: EditMeFormProps) {
+export function EditMeForm({ initial, username, target, updateMyName }: EditMeFormProps) {
   const toast = useToast();
-  const [nameError, setNameError] = React.useState<string | null>(null);
-  const [passwordError, setPasswordError] = React.useState<string | null>(null);
-  const [pending, setPending] = React.useState<'name' | 'password' | null>(null);
+  const router = useRouter();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  async function onNameSubmit(event: React.FormEvent<HTMLFormElement>) {
+  const [name, setName] = React.useState(initial.name);
+  const [nameError, setNameError] = React.useState<string | null>(null);
+  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = React.useState(false);
+  const [saving, setSaving] = React.useState(false);
+
+  React.useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
+
+  const displayUrl = pendingFile ? previewUrl : pendingDelete ? null : initial.image;
+  const hasDisplayedAvatar = Boolean(displayUrl);
+  const dirty = name.trim() !== initial.name || pendingFile !== null || pendingDelete;
+
+  function pickFile(file: File | null) {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    if (file) {
+      setPendingFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setPendingDelete(false);
+    } else {
+      setPendingFile(null);
+      setPreviewUrl(null);
+    }
+  }
+
+  function onRemoveAvatar() {
+    if (pendingFile) {
+      pickFile(null);
+      return;
+    }
+    if (initial.image) setPendingDelete(true);
+  }
+
+  async function onSave(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!requireOnline(toast)) return;
     setNameError(null);
-    const form = new FormData(event.currentTarget);
-    const name = String(form.get('name') ?? '').trim();
-    if (!name) {
+
+    const trimmed = name.trim();
+    if (!trimmed) {
       setNameError('请输入昵称');
       return;
     }
-    setPending('name');
-    const result = await updateMyName(name);
-    setPending(null);
-    if (result.ok) toast.show({ message: result.message, variant: 'success' });
-    else setNameError(result.message);
-  }
 
-  async function onPasswordSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!requireOnline(toast)) return;
-    setPasswordError(null);
-    const form = new FormData(event.currentTarget);
-    const input = {
-      currentPassword: String(form.get('currentPassword') ?? ''),
-      newPassword: String(form.get('newPassword') ?? ''),
-      confirmNewPassword: String(form.get('confirmNewPassword') ?? '')
-    };
-    const error = validatePasswordInput(input);
-    if (error) {
-      setPasswordError(error);
-      return;
-    }
-    setPending('password');
-    const result = await changeMyPassword({
-      currentPassword: input.currentPassword,
-      newPassword: input.newPassword
-    });
-    setPending(null);
-    if (result.ok) {
-      event.currentTarget.reset();
-      toast.show({ message: result.message, variant: 'success' });
-    } else {
-      setPasswordError(result.message);
+    setSaving(true);
+    try {
+      if (pendingFile) {
+        const form = new FormData();
+        form.set('target', target);
+        form.set('file', pendingFile);
+        const res = await fetch('/api/avatar', { method: 'POST', body: form });
+        if (!res.ok) {
+          toast.show({ message: '头像上传失败', variant: 'error' });
+          return;
+        }
+      } else if (pendingDelete) {
+        const res = await fetch(`/api/avatar?target=${encodeURIComponent(target)}`, { method: 'DELETE' });
+        if (!res.ok) {
+          toast.show({ message: '删除头像失败', variant: 'error' });
+          return;
+        }
+      }
+
+      if (trimmed !== initial.name) {
+        const result = await updateMyName(trimmed);
+        if (!result.ok) {
+          setNameError(result.message);
+          return;
+        }
+      }
+
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPendingFile(null);
+      setPreviewUrl(null);
+      setPendingDelete(false);
+      toast.show({ message: '已保存', variant: 'success' });
+      router.refresh();
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <div className="grid gap-[var(--space-4)]">
-      <Card as="section">
-        <form aria-label="基本资料" className="grid gap-[var(--space-3)]" onSubmit={onNameSubmit}>
-          <h2 className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">基本资料</h2>
-          <Input name="name" label="昵称" defaultValue={initial.name} error={nameError ?? undefined} />
-          <Input name="username" label="用户名" defaultValue={initial.username} readOnly />
-          <Button type="submit" disabled={pending === 'name'}>
-            保存
-          </Button>
-        </form>
-      </Card>
+    <Card as="section">
+      <form aria-label="我的资料" onSubmit={onSave} className="grid gap-[var(--space-4)]">
+        <div className="flex flex-col items-center gap-[var(--space-2)]">
+          <div className="relative">
+            <Avatar src={displayUrl ?? undefined} name={initial.name} size="xl" />
+            {hasDisplayedAvatar && (
+              <button
+                type="button"
+                aria-label="删除头像"
+                onClick={onRemoveAvatar}
+                className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[color:var(--color-muted)] ring-1 ring-black/10 transition hover:text-[color:var(--color-fg)] active:scale-95"
+              >
+                <XIcon className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="sr-only"
+            onChange={(event) => pickFile(event.currentTarget.files?.[0] ?? null)}
+          />
+          <button
+            type="button"
+            onClick={() => requireOnline(toast) && fileInputRef.current?.click()}
+            className="text-[length:var(--text-sm)] font-semibold text-[color:var(--color-accent)] underline-offset-2 hover:underline"
+          >
+            更换头像
+          </button>
+        </div>
 
-      <Card as="section">
-        <form aria-label="修改密码" className="grid gap-[var(--space-3)]" onSubmit={onPasswordSubmit}>
-          <h2 className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">修改密码</h2>
-          <Input name="currentPassword" label="当前密码" type="password" autoComplete="current-password" />
-          <Input name="newPassword" label="新密码" type="password" autoComplete="new-password" />
-          <Input name="confirmNewPassword" label="确认新密码" type="password" autoComplete="new-password" error={passwordError ?? undefined} />
-          <Button type="submit" disabled={pending === 'password'}>
-            更新密码
-          </Button>
-        </form>
-      </Card>
-    </div>
+        <div className="grid gap-[var(--space-3)]">
+          <Input name="username" label="用户名" defaultValue={username} readOnly />
+          <Input
+            name="name"
+            label="昵称"
+            value={name}
+            onChange={(event) => setName(event.currentTarget.value)}
+            error={nameError ?? undefined}
+          />
+        </div>
+
+        <Button type="submit" disabled={saving || !dirty} loading={saving}>
+          保存
+        </Button>
+      </form>
+    </Card>
   );
-}
-
-export function validatePasswordInput(input: {
-  currentPassword: string;
-  newPassword: string;
-  confirmNewPassword: string;
-}) {
-  if (!input.currentPassword) return '请输入当前密码';
-  if (input.newPassword.length < 8) return '新密码至少 8 位';
-  if (input.newPassword !== input.confirmNewPassword) return '两次输入的新密码不一致';
-  return null;
 }

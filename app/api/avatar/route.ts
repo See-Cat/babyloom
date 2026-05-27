@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { mkdir, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { avatarFilePath, avatarPublicUrl } from '@/lib/avatar/paths';
 import {
@@ -80,6 +80,42 @@ export const POST = withAuthorizedActionRoute({ action: 'baby:read' })(async (re
   }
 
   return Response.json({ url });
+});
+
+export const DELETE = withAuthorizedActionRoute({ action: 'baby:read' })(async (req, { userId }) => {
+  const target = new URL(req.url).searchParams.get('target') ?? '';
+  const resolved = parseTarget(target, userId);
+  if (!resolved) return jsonBadRequest('target_required');
+
+  try {
+    if (resolved.kind === 'babies') {
+      await assertPermission(userId, 'baby:write', { babyId: resolved.id }, { dataDir });
+    }
+  } catch (e) {
+    if (e instanceof ForbiddenError || e instanceof NotFoundError) return jsonNotFound();
+    throw e;
+  }
+
+  try {
+    await unlink(avatarFilePath(resolved.kind, resolved.id, dataDir));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') throw e;
+  }
+
+  const { db } = getDb({ dataDir });
+  if (resolved.kind === 'users') {
+    db.update(users)
+      .set({ image: null, updatedAt: new Date() })
+      .where(eq(users.id, resolved.id))
+      .run();
+  } else {
+    db.update(babies)
+      .set({ avatarUrl: null, updatedAt: Date.now() })
+      .where(eq(babies.id, resolved.id))
+      .run();
+  }
+
+  return Response.json({ ok: true });
 });
 
 function parseTarget(target: string, userId: string) {
