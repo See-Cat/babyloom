@@ -1,8 +1,10 @@
-import { and, desc, eq, inArray } from 'drizzle-orm';
+import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
-import { babies, babyMemberPermissions, entries, familyMembers, media, users } from '@/lib/db/schema';
+import { babies, babyMemberPermissions, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/db/schema';
+import type { MediaItem } from '@/lib/media/types';
 
 export type TrashType = 'entries' | 'media' | 'babies';
+export type TrashListType = TrashType | 'all';
 
 export interface TrashViewer {
   userId: string;
@@ -19,6 +21,8 @@ export interface TrashRow {
   deletedBy: string | null;
   deletedByName: string | null;
   label: string;
+  mediaItems?: MediaItem[];
+  milestoneNames?: string[];
   childCount?: number;
 }
 
@@ -75,7 +79,7 @@ export function memberHasAnyCanDelete(opts: { dataDir: string; userId: string })
 }
 
 export function listTrashed(opts: {
-  type: TrashType;
+  type: TrashListType;
   cursor?: string | null;
   viewer: TrashViewer;
   dataDir: string;
@@ -84,8 +88,18 @@ export function listTrashed(opts: {
   const { db } = getDb({ dataDir: opts.dataDir });
   const limit = opts.limit ?? 51;
 
+  if (opts.type === 'all') {
+    const entriesRows = listTrashed({ ...opts, type: 'entries', cursor: null, limit: 10000 });
+    const mediaRows = listTrashed({ ...opts, type: 'media', cursor: null, limit: 10000 });
+    const merged = [...entriesRows, ...mediaRows].sort((a, b) => {
+      if (b.deletedAt !== a.deletedAt) return b.deletedAt - a.deletedAt;
+      return b.id.localeCompare(a.id);
+    });
+    return afterCursor(merged, opts.cursor).slice(0, limit);
+  }
+
   if (opts.type === 'entries') {
-    const rows = db
+    const baseRows = db
       .select({
         id: entries.id,
         babyId: entries.babyId,
@@ -107,16 +121,75 @@ export function listTrashed(opts: {
         )
       )
       .orderBy(desc(entries.deletedAt), desc(entries.id))
-      .all()
-      .map((row) => ({
-        ...row,
-        type: 'entries' as const,
-        deletedAt: row.deletedAt ?? 0
-      }));
+      .all();
+
+    const entryIds = baseRows.map((r) => r.id);
+    const mediaByEntry = new Map<string, MediaItem[]>();
+    const milestonesByEntry = new Map<string, string[]>();
+    if (entryIds.length > 0) {
+      const links = db
+        .select({
+          entryId: entryMedia.entryId,
+          mediaId: entryMedia.mediaId,
+          type: media.type,
+          durationSec: media.durationSec,
+          filename: media.filename,
+          attachedAt: entryMedia.attachedAt
+        })
+        .from(entryMedia)
+        .innerJoin(media, eq(media.id, entryMedia.mediaId))
+        .where(
+          and(
+            inArray(entryMedia.entryId, entryIds),
+            inArray(media.status, ['ready', 'trashed'])
+          )
+        )
+        .orderBy(entryMedia.attachedAt)
+        .all();
+      for (const link of links) {
+        const arr = mediaByEntry.get(link.entryId) ?? [];
+        arr.push({
+          id: link.mediaId,
+          type: (link.type as 'photo' | 'video' | null) ?? 'photo',
+          durationSec: link.durationSec,
+          filename: link.filename
+        });
+        mediaByEntry.set(link.entryId, arr);
+      }
+
+      const mlinks = db
+        .select({ entryId: entryMilestones.entryId, name: milestones.name })
+        .from(entryMilestones)
+        .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
+        .where(inArray(entryMilestones.entryId, entryIds))
+        .all();
+      for (const m of mlinks) {
+        const arr = milestonesByEntry.get(m.entryId) ?? [];
+        arr.push(m.name);
+        milestonesByEntry.set(m.entryId, arr);
+      }
+    }
+
+    const rows = baseRows.map((row) => ({
+      ...row,
+      type: 'entries' as const,
+      deletedAt: row.deletedAt ?? 0,
+      mediaItems: mediaByEntry.get(row.id) ?? [],
+      milestoneNames: milestonesByEntry.get(row.id) ?? []
+    }));
     return afterCursor(rows, opts.cursor).slice(0, limit);
   }
 
   if (opts.type === 'media') {
+    // standalone (bulk-uploaded) trashed media only: exclude any media that
+    // is attached to an entry, since entry cards already render attached
+    // thumbnails inline.
+    const attachedMediaIds = db
+      .select({ mediaId: entryMedia.mediaId })
+      .from(entryMedia)
+      .all()
+      .map((r) => r.mediaId);
+
     const rows = db
       .select({
         id: media.id,
@@ -125,7 +198,9 @@ export function listTrashed(opts: {
         deletedAt: media.deletedAt,
         deletedBy: media.deletedBy,
         deletedByName: users.name,
-        label: media.filename
+        label: media.filename,
+        mediaType: media.type,
+        durationSec: media.durationSec
       })
       .from(media)
       .innerJoin(babies, eq(babies.id, media.babyId))
@@ -135,15 +210,29 @@ export function listTrashed(opts: {
           eq(media.status, 'trashed'),
           eq(babies.familyId, opts.viewer.familyId),
           inArray(babies.status, ['active', 'trashed']),
-          memberBabyScopeFilter(opts.viewer, opts.dataDir, media.babyId)
+          memberBabyScopeFilter(opts.viewer, opts.dataDir, media.babyId),
+          attachedMediaIds.length > 0 ? notInArray(media.id, attachedMediaIds) : sql`1=1`
         )
       )
       .orderBy(desc(media.deletedAt), desc(media.id))
       .all()
       .map((row) => ({
-        ...row,
+        id: row.id,
+        babyId: row.babyId,
+        babyName: row.babyName,
+        deletedAt: row.deletedAt ?? 0,
+        deletedBy: row.deletedBy,
+        deletedByName: row.deletedByName,
+        label: row.label,
         type: 'media' as const,
-        deletedAt: row.deletedAt ?? 0
+        mediaItems: [
+          {
+            id: row.id,
+            type: (row.mediaType as 'photo' | 'video' | null) ?? 'photo',
+            durationSec: row.durationSec,
+            filename: row.label
+          }
+        ]
       }));
     return afterCursor(rows, opts.cursor).slice(0, limit);
   }

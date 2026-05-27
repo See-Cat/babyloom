@@ -1,49 +1,42 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
+import { MediaLightbox } from '@/components/media/MediaLightbox';
+import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Tag } from '@/components/ui/Tag';
 import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
+import type { MediaItem } from '@/lib/media/types';
+import { milestoneTagStyle } from '@/lib/milestone-tint';
 
-type TrashType = 'entries' | 'media' | 'babies';
+type TrashItemType = 'entries' | 'media';
 type TrashRole = 'owner' | 'member';
 
 interface TrashRow {
   id: string;
-  type: TrashType;
+  type: TrashItemType;
   babyId: string | null;
   babyName: string | null;
   deletedAt: number;
   deletedByName: string | null;
   label: string;
-  childCount?: number;
+  mediaItems?: MediaItem[];
+  milestoneNames?: string[];
 }
 
-const tabs: Array<{ type: TrashType; label: string }> = [
-  { type: 'entries', label: '日志' },
-  { type: 'media', label: '照片' },
-  { type: 'babies', label: '宝宝' }
-];
-
-const restorePath: Record<TrashType, string> = {
+const restorePath: Record<TrashItemType, string> = {
   entries: 'entries',
-  media: 'media',
-  babies: 'babies'
+  media: 'media'
 };
 
 interface TrashClientProps {
   role: TrashRole;
   initialRows?: TrashRow[];
-  initialCounts?: Record<TrashType, number>;
-}
-
-function isTrashType(value: string | null): value is TrashType {
-  return value === 'entries' || value === 'media' || value === 'babies';
+  initialCount?: number;
 }
 
 function relativeTime(ts: number) {
@@ -53,20 +46,20 @@ function relativeTime(ts: number) {
   if (minutes < 60) return `${minutes} 分钟前`;
   const hours = Math.round(minutes / 60);
   if (hours < 24) return `${hours} 小时前`;
-  return `${Math.round(hours / 24)} 天前`;
+  const days = Math.round(hours / 24);
+  if (days < 30) return `${days} 天前`;
+  const months = Math.round(days / 30);
+  if (months < 12) return `${months} 个月前`;
+  return `${Math.round(days / 365)} 年前`;
 }
 
 export default function TrashClient({
   role,
   initialRows = [],
-  initialCounts = { entries: 0, media: 0, babies: 0 }
+  initialCount = 0
 }: TrashClientProps) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const typeParam = searchParams.get('type');
-  const activeType: TrashType = isTrashType(typeParam) ? typeParam : 'entries';
   const [rows, setRows] = useState<TrashRow[]>(initialRows);
-  const [counts, setCounts] = useState<Record<TrashType, number>>(initialCounts);
+  const [count, setCount] = useState<number>(initialCount);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -75,43 +68,26 @@ export default function TrashClient({
   const [pending, setPending] = useState<{ action: 'purge' | 'batch'; row?: TrashRow } | null>(null);
   const canPurge = role === 'owner';
 
-  const activeLabel = useMemo(
-    () => tabs.find((tab) => tab.type === activeType)?.label ?? '日志',
-    [activeType]
-  );
-
   const load = useCallback(async (cursor?: string) => {
     setLoading(true);
-    const res = await fetch(`/api/trash?type=${activeType}${cursor ? `&cursor=${cursor}` : ''}`);
+    const res = await fetch(`/api/trash${cursor ? `?cursor=${cursor}` : ''}`);
     setLoading(false);
     if (!res.ok) {
-      setMessage(res.status === 404 ? '没有权限查看垃圾桶' : '加载失败');
+      setMessage(res.status === 404 ? '没有权限查看回收站' : '加载失败');
       return;
     }
     const body = await res.json();
     setRows((current) => (cursor ? [...current, ...body.rows] : body.rows));
-    setCounts(body.counts);
+    setCount((body.counts?.entries ?? 0) + (body.counts?.media ?? 0));
     setNextCursor(body.nextCursor);
-  }, [activeType]);
+  }, []);
 
   useEffect(() => {
-    setRows([]);
-    setNextCursor(null);
-    load();
-  }, [activeType, load]);
-
-  function switchTab(type: TrashType) {
-    setSelecting(false);
-    setSelectedIds(new Set());
-    router.push(`/profile/trash?type=${type}`);
-  }
-
-  function canSelect(row: TrashRow) {
-    return row.type !== 'babies' || !row.childCount;
-  }
+    if (initialRows.length === 0) load();
+  }, [initialRows.length, load]);
 
   function toggleSelected(row: TrashRow) {
-    if (!canPurge || !canSelect(row)) return;
+    if (!canPurge) return;
     setSelectedIds((current) => {
       const next = new Set(current);
       if (next.has(row.id)) next.delete(row.id);
@@ -123,27 +99,27 @@ export default function TrashClient({
   async function restore(row: TrashRow) {
     const res = await fetch(`/api/${restorePath[row.type]}/${row.id}/restore`, { method: 'POST' });
     if (!res.ok) {
-      setMessage(res.status === 409 ? '此照片与垃圾桶外的版本重复,请先处理' : '还原失败');
+      setMessage(res.status === 409 ? '此照片与回收站外的版本重复,请先处理' : '还原失败');
       return;
     }
     setRows(rows.filter((item) => item.id !== row.id));
-    setCounts({ ...counts, [row.type]: Math.max(0, counts[row.type] - 1) });
+    setCount(Math.max(0, count - 1));
     setMessage('已还原');
   }
 
   async function purge(row: TrashRow) {
     const res = await fetch(`/api/${restorePath[row.type]}/${row.id}`, { method: 'DELETE' });
     if (!res.ok) {
-      setMessage(res.status === 409 ? '该宝宝还有数据未清理,请先清理后再删除' : '永久删除失败');
+      setMessage('永久删除失败');
       return;
     }
     setRows(rows.filter((item) => item.id !== row.id));
-    setCounts({ ...counts, [row.type]: Math.max(0, counts[row.type] - 1) });
+    setCount(Math.max(0, count - 1));
     setMessage('已永久删除');
   }
 
   async function purgeSelected() {
-    const selectedRows = rows.filter((row) => selectedIds.has(row.id) && canSelect(row));
+    const selectedRows = rows.filter((row) => selectedIds.has(row.id));
     if (selectedRows.length === 0) return;
 
     const purgedIds = new Set<string>();
@@ -158,7 +134,7 @@ export default function TrashClient({
     }
 
     setRows(rows.filter((row) => !purgedIds.has(row.id)));
-    setCounts({ ...counts, [activeType]: Math.max(0, counts[activeType] - purgedIds.size) });
+    setCount(Math.max(0, count - purgedIds.size));
     setSelectedIds(new Set());
     setSelecting(false);
     setMessage(`已永久删除 ${purgedIds.size} 项`);
@@ -172,9 +148,13 @@ export default function TrashClient({
     if (current.action === 'purge' && current.row) await purge(current.row);
   }
 
+  const subtitle = selecting ? '选择要删除的记录' : `${count} 条记录`;
+
   return (
     <AppShell
-      title="垃圾桶"
+      title="回收站"
+      subtitle={subtitle}
+      hideTabbar={selecting}
       leftSlot={
         <Link
           href="/profile"
@@ -185,7 +165,7 @@ export default function TrashClient({
         </Link>
       }
       rightSlot={
-        canPurge && counts[activeType] > 0 ? (
+        canPurge && count > 0 ? (
           <Button
             type="button"
             size="sm"
@@ -200,25 +180,10 @@ export default function TrashClient({
         ) : null
       }
     >
-      <Card className="mb-[var(--space-4)] text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-muted)]">
-        删除的记录会留在这里,可随时恢复。
+      <Card className="mb-[var(--space-4)] flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-muted)]">
+        <span aria-hidden="true">ℹ</span>
+        <span>删除的记录会留在这里,可随时恢复</span>
       </Card>
-
-      <div role="tablist" className="mb-[var(--space-4)] flex gap-[var(--space-2)] overflow-x-auto">
-        {tabs.map((tab) => (
-          <button
-            key={tab.type}
-            type="button"
-            role="tab"
-            aria-selected={activeType === tab.type}
-            onClick={() => switchTab(tab.type)}
-          >
-            <Tag variant={activeType === tab.type ? 'accent' : 'neutral'}>
-              {tab.label} ({counts[tab.type]})
-            </Tag>
-          </button>
-        ))}
-      </div>
 
       {message && (
         <Card className="mb-[var(--space-3)] text-[length:var(--text-sm)]" aria-live="polite">
@@ -228,74 +193,21 @@ export default function TrashClient({
 
       {rows.length === 0 && !loading ? (
         <div className="mt-[var(--space-12)] text-center text-[color:var(--color-muted)]">
-          <p>当前没有已删除的 {activeLabel}</p>
+          <p>回收站是空的</p>
         </div>
       ) : (
-        <ul className="flex flex-col gap-[var(--space-3)]">
+        <ul className={`flex flex-col gap-[var(--space-3)] ${selecting ? 'pb-[88px]' : ''}`}>
           {rows.map((row) => (
             <li key={row.id}>
-              <Card
-                role={selecting && canSelect(row) ? 'button' : undefined}
-                tabIndex={selecting && canSelect(row) ? 0 : undefined}
-                onClick={selecting ? () => toggleSelected(row) : undefined}
-                onKeyDown={selecting ? (event) => {
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    toggleSelected(row);
-                  }
-                } : undefined}
-                className={selecting && canSelect(row) ? 'w-full text-left' : undefined}
-              >
-                <div className="flex gap-[var(--space-3)]">
-                  {selecting && (
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        'mt-[var(--space-1)] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 text-[length:var(--text-sm)] font-bold',
-                        selectedIds.has(row.id)
-                          ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)]'
-                          : 'border-[var(--color-border)] bg-[var(--color-surface-2)] text-transparent',
-                        !canSelect(row) && 'opacity-45'
-                      ].filter(Boolean).join(' ')}
-                    >
-                      <CheckIcon className="h-3.5 w-3.5" />
-                    </span>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-                      {row.babyName ? `${row.babyName} · ` : ''}
-                      {row.deletedByName ?? '未知'} · {relativeTime(row.deletedAt)}
-                    </p>
-                    <p className="my-[var(--space-2)] whitespace-pre-wrap text-[length:var(--text-sm)]">{row.label || '无内容'}</p>
-                    {row.type === 'babies' && row.childCount ? (
-                      <p className="mb-[var(--space-2)] text-[length:var(--text-xs)] text-[color:var(--color-error)]">还有 {row.childCount} 项数据未清理</p>
-                    ) : null}
-                    {!selecting && (
-                      <div className="flex gap-[var(--space-2)]">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => restore(row)}
-                        >
-                          还原
-                        </Button>
-                        {canPurge && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="error"
-                            onClick={() => setPending({ action: 'purge', row })}
-                            disabled={row.type === 'babies' && Boolean(row.childCount)}
-                          >
-                            永久删除
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
+              <TrashRowCard
+                row={row}
+                selecting={selecting}
+                selected={selectedIds.has(row.id)}
+                canPurge={canPurge}
+                onToggleSelect={() => toggleSelected(row)}
+                onRestore={() => restore(row)}
+                onPurge={() => setPending({ action: 'purge', row })}
+              />
             </li>
           ))}
         </ul>
@@ -305,7 +217,7 @@ export default function TrashClient({
         <div className="fixed inset-x-0 bottom-0 z-[var(--z-sticky)] border-t border-[var(--color-border-light)] bg-[var(--color-bg)] px-[var(--space-4)] pb-[calc(var(--space-4)+env(safe-area-inset-bottom))] pt-[var(--space-3)]">
           <div className="mx-auto flex max-w-screen-sm items-center gap-[var(--space-3)]">
             <span className="min-w-0 flex-1 text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)]">
-              已选 {selectedIds.size} 条
+              已选 <span className="text-[color:var(--color-primary)]">{selectedIds.size} 条</span>
             </span>
             <Button
               type="button"
@@ -347,9 +259,130 @@ export default function TrashClient({
         <p className="text-[length:var(--text-base)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           {pending?.action === 'batch'
             ? '此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。'
-            : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从垃圾桶中移除。`}
+            : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从回收站中移除。`}
         </p>
       </Dialog>
     </AppShell>
+  );
+}
+
+interface TrashRowCardProps {
+  row: TrashRow;
+  selecting: boolean;
+  selected: boolean;
+  canPurge: boolean;
+  onToggleSelect: () => void;
+  onRestore: () => void;
+  onPurge: () => void;
+}
+
+function TrashRowCard({
+  row,
+  selecting,
+  selected,
+  canPurge,
+  onToggleSelect,
+  onRestore,
+  onPurge
+}: TrashRowCardProps) {
+  const [lightboxAt, setLightboxAt] = useState<number | null>(null);
+  const mediaItems = row.mediaItems ?? [];
+  const milestoneNames = row.milestoneNames ?? [];
+  const hasText = row.type === 'entries' && Boolean(row.label);
+  const hasMedia = mediaItems.length > 0;
+
+  const onKeyDown = selecting
+    ? (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggleSelect();
+        }
+      }
+    : undefined;
+
+  return (
+    <Card
+      role={selecting ? 'button' : undefined}
+      tabIndex={selecting ? 0 : undefined}
+      onClick={selecting ? onToggleSelect : undefined}
+      onKeyDown={onKeyDown}
+      className={selecting ? 'w-full text-left' : undefined}
+    >
+      <div className="flex gap-[var(--space-3)]">
+        {selecting && (
+          <span
+            aria-hidden="true"
+            className={[
+              'mt-[var(--space-1)] flex h-6 w-6 shrink-0 items-center justify-center rounded-[var(--radius-pill)] border-2 text-[length:var(--text-sm)] font-bold',
+              selected
+                ? 'border-[var(--color-primary)] bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)]'
+                : 'border-[var(--color-border)] bg-[var(--color-surface-2)] text-transparent'
+            ].join(' ')}
+          >
+            <CheckIcon className="h-3.5 w-3.5" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
+            {row.babyName && <Avatar name={row.babyName} size="xs" />}
+            <span className="truncate">
+              {row.babyName ? `${row.babyName} · ` : ''}
+              {row.deletedByName ?? '未知'}
+            </span>
+            <span className="ml-auto shrink-0">删除于 {relativeTime(row.deletedAt)}</span>
+          </div>
+          {hasText && (
+            <p className="my-[var(--space-2)] line-clamp-2 whitespace-pre-wrap text-[length:var(--text-sm)] leading-[var(--leading-base)]">
+              {row.label}
+            </p>
+          )}
+          {milestoneNames.length > 0 && (
+            <div className="mt-[var(--space-2)] flex flex-wrap gap-[var(--space-2)]">
+              {milestoneNames.map((name) => (
+                <span
+                  key={name}
+                  className="inline-flex items-center rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold"
+                  style={milestoneTagStyle(name)}
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+          {hasMedia && (
+            <ThumbnailStrip
+              items={mediaItems}
+              onOpenAt={selecting ? undefined : (i) => setLightboxAt(i)}
+            />
+          )}
+          {row.type === 'entries' && !hasText && !hasMedia && (
+            <p className="my-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-muted)]">无内容</p>
+          )}
+          {!selecting && (
+            <div className="mt-[var(--space-3)] flex items-center justify-end gap-[var(--space-3)]">
+              {canPurge && (
+                <button
+                  type="button"
+                  onClick={onPurge}
+                  className="rounded-[var(--radius-pill)] bg-transparent px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-error)] active:bg-[var(--color-error-bg)]"
+                >
+                  永久删除
+                </button>
+              )}
+              <Button type="button" size="sm" variant="primary" onClick={onRestore}>
+                恢复
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+      {lightboxAt !== null && (
+        <MediaLightbox
+          items={mediaItems}
+          startIndex={lightboxAt}
+          onClose={() => setLightboxAt(null)}
+        />
+      )}
+    </Card>
   );
 }

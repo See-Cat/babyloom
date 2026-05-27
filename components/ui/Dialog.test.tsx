@@ -16,7 +16,7 @@ describe('Dialog', () => {
 
   it('renders accessible dialog semantics when open', () => {
     const html = renderToStaticMarkup(
-      <Dialog open onOpenChange={() => undefined} title="确认删除" description="删除后可在垃圾桶恢复">
+      <Dialog open onOpenChange={() => undefined} title="确认删除" description="删除后可在回收站恢复">
         内容
       </Dialog>
     );
@@ -24,6 +24,6 @@ describe('Dialog', () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain('确认删除');
-    expect(html).toContain('删除后可在垃圾桶恢复');
+    expect(html).toContain('删除后可在回收站恢复');
   });
 });

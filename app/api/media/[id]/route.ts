@@ -65,7 +65,9 @@ export const GET = withAuthorizedResource({
   action: 'media:read',
   loader: loadMediaForRead,
   getStatus: (row) => row.status,
-  allowedStatuses: ['ready'],
+  // 'trashed' is allowed so the trash UI can render thumbnails for items
+  // soft-deleted but not yet purged. Authorization is still enforced.
+  allowedStatuses: ['ready', 'trashed'],
   toResource: (row) => ({ babyId: row.babyId, mediaId: row.id, uploadedBy: row.uploadedBy })
 })(async (req, _ctx, row) => {
   let desc;

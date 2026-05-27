@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, babyMemberPermissions, entries, familyMembers, milestones, users } from '@/lib/db/schema';
+import { babies, babyMemberPermissions, entries, familyMembers, media, milestones, users } from '@/lib/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
 import { InstallChip } from '@/components/features/InstallChip';
 import { Avatar } from '@/components/ui/Avatar';
@@ -71,12 +71,18 @@ export default async function ProfilePage() {
         .get()?.count ?? 0
     : 0;
   const trashCount = canUseTrash
-    ? db
+    ? (db
         .select({ count: sql<number>`count(*)`.as('count') })
         .from(entries)
         .innerJoin(babies, eq(babies.id, entries.babyId))
         .where(and(eq(entries.status, 'trashed'), eq(babies.familyId, member.familyId)))
-        .get()?.count ?? 0
+        .get()?.count ?? 0) +
+      (db
+        .select({ count: sql<number>`count(*)`.as('count') })
+        .from(media)
+        .innerJoin(babies, eq(babies.id, media.babyId))
+        .where(and(eq(media.status, 'trashed'), eq(babies.familyId, member.familyId)))
+        .get()?.count ?? 0)
     : 0;
 
   const switcherBabies: BabySwitcherBaby[] = familyBabies.map((b) => ({

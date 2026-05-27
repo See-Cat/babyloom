@@ -176,8 +176,9 @@ app:
   return { ownerId: owner.id, editorId, viewerId, ownerEntryId, editorEntryId, parentTrashedEntryId };
 }
 
-function req(type = 'entries') {
-  return new Request(`http://localhost/api/trash?type=${type}`) as any;
+function req(type: string | null = 'entries') {
+  const url = type === null ? 'http://localhost/api/trash' : `http://localhost/api/trash?type=${type}`;
+  return new Request(url) as any;
 }
 
 describe('GET /api/trash', () => {

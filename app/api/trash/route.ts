@@ -3,7 +3,7 @@ import {
   countTrashedByType,
   listTrashed,
   memberHasAnyCanDelete,
-  type TrashType
+  type TrashListType
 } from '@/lib/db/queries/trash';
 import { jsonBadRequest, jsonNotFound } from '@/lib/permissions/responses';
 import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
@@ -12,11 +12,11 @@ const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
   : resolve(process.cwd(), 'data');
 
-const TRASH_TYPES = new Set(['entries', 'media', 'babies']);
+const TRASH_TYPES = new Set(['all', 'entries', 'media', 'babies']);
 
-function parseType(value: string | null): TrashType | null {
-  const type = value ?? 'entries';
-  return TRASH_TYPES.has(type) ? (type as TrashType) : null;
+function parseType(value: string | null): TrashListType | null {
+  const type = value ?? 'all';
+  return TRASH_TYPES.has(type) ? (type as TrashListType) : null;
 }
 
 export const GET = withAuthorizedActionRoute({

@@ -22,29 +22,21 @@ const row = {
 describe('TrashClient', () => {
   it('hides permanent-delete controls from non-owner members', () => {
     const html = renderToStaticMarkup(
-      <TrashClient
-        role="member"
-        initialRows={[row]}
-        initialCounts={{ entries: 1, media: 0, babies: 0 }}
-      />
+      <TrashClient role="member" initialRows={[row]} initialCount={1} />
     );
 
-    expect(html).toContain('还原');
+    expect(html).toContain('恢复');
     expect(html).not.toContain('选择');
     expect(html).not.toContain('永久删除');
   });
 
   it('shows owner-only selection and permanent-delete controls', () => {
     const html = renderToStaticMarkup(
-      <TrashClient
-        role="owner"
-        initialRows={[row]}
-        initialCounts={{ entries: 1, media: 0, babies: 0 }}
-      />
+      <TrashClient role="owner" initialRows={[row]} initialCount={1} />
     );
 
     expect(html).toContain('选择');
-    expect(html).toContain('还原');
+    expect(html).toContain('恢复');
     expect(html).toContain('永久删除');
   });
 });
