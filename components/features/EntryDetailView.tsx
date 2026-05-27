@@ -11,6 +11,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ChevronLeftIcon, DotsIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/hooks/useToast';
 import { formatLongDateTime } from '@/lib/format-time';
+import { milestoneTagStyle } from '@/lib/milestone-tint';
 
 interface EntryDetailViewProps {
   entry: {
@@ -135,9 +136,10 @@ export function EntryDetailView({
             {milestoneNames.map((name) => (
               <span
                 key={name}
-                className="inline-flex items-center rounded-[var(--radius-sm)] bg-[var(--color-primary-bg)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]"
+                className="inline-flex items-center rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold"
+                style={milestoneTagStyle(name)}
               >
-                ★ {name}
+                {name}
               </span>
             ))}
           </div>

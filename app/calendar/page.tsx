@@ -7,7 +7,7 @@ import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { buildMonthGrid, formatDateInTimezone, getDayUtcRange, listEntryDays } from '@/lib/db/queries/calendar';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
+import { babies, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/db/schema';
 import type { MediaItem } from '@/lib/media/types';
 import { CalendarDayPreview } from '@/components/features/CalendarDayPreview';
 import { CalendarMonthNav } from '@/components/features/CalendarMonthNav';
@@ -109,13 +109,28 @@ export default async function CalendarPage({
     });
     mediaItemsByEntry.set(bridge.entryId, list);
   }
+  const milestoneRows = entryIds.length
+    ? db
+        .select({ entryId: entryMilestones.entryId, name: milestones.name })
+        .from(entryMilestones)
+        .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
+        .where(inArray(entryMilestones.entryId, entryIds))
+        .all()
+    : [];
+  const milestoneNamesByEntry = new Map<string, string[]>();
+  for (const row of milestoneRows) {
+    const list = milestoneNamesByEntry.get(row.entryId) ?? [];
+    list.push(row.name);
+    milestoneNamesByEntry.set(row.entryId, list);
+  }
   const previewEntries = selectedRows.map((row) => ({
     id: row.id,
     content: row.content,
     occurredAt: row.occurredAt,
     authorName: row.authorName,
     authorImage: row.authorImage ?? null,
-    mediaItems: mediaItemsByEntry.get(row.id) ?? []
+    mediaItems: mediaItemsByEntry.get(row.id) ?? [],
+    milestoneNames: milestoneNamesByEntry.get(row.id) ?? []
   }));
 
   return (

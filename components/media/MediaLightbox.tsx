@@ -10,13 +10,16 @@ export interface MediaLightboxProps {
   items: MediaItem[];
   startIndex: number;
   onClose: () => void;
+  /** Optional content rendered between the pager and the thumbnail strip (e.g. CTA links). */
+  renderFooter?: (current: MediaItem, index: number) => React.ReactNode;
 }
 
-export function MediaLightbox({ items, startIndex, onClose }: MediaLightboxProps) {
+export function MediaLightbox({ items, startIndex, onClose, renderFooter }: MediaLightboxProps) {
   const [index, setIndex] = React.useState(startIndex);
   const total = items.length;
   const current = items[index];
   const stripRef = React.useRef<HTMLDivElement>(null);
+  const pagerRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -32,6 +35,36 @@ export function MediaLightbox({ items, startIndex, onClose }: MediaLightboxProps
     const node = stripRef.current?.querySelector<HTMLButtonElement>(`button[data-strip-index="${index}"]`);
     node?.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
   }, [index]);
+
+  // Sync pager scroll position only when index changed via keyboard / thumbnail.
+  // Swipe-driven index changes must NOT re-scroll, or the programmatic scrollTo
+  // interrupts the browser's native snap settle and the image visibly jitters.
+  const didInitRef = React.useRef(false);
+  const fromScrollRef = React.useRef(false);
+  React.useLayoutEffect(() => {
+    if (fromScrollRef.current) {
+      fromScrollRef.current = false;
+      didInitRef.current = true;
+      return;
+    }
+    const node = pagerRef.current;
+    if (!node) return;
+    const target = index * node.clientWidth;
+    if (Math.abs(node.scrollLeft - target) > 1) {
+      node.scrollTo({ left: target, behavior: didInitRef.current ? 'smooth' : 'auto' });
+    }
+    didInitRef.current = true;
+  }, [index]);
+
+  function onPagerScroll() {
+    const node = pagerRef.current;
+    if (!node || node.clientWidth === 0) return;
+    const next = Math.round(node.scrollLeft / node.clientWidth);
+    if (next !== index && next >= 0 && next < total) {
+      fromScrollRef.current = true;
+      setIndex(next);
+    }
+  }
 
   if (!current) return null;
 
@@ -65,26 +98,40 @@ export function MediaLightbox({ items, startIndex, onClose }: MediaLightboxProps
           <XIcon />
         </button>
       </header>
-      <div className="flex flex-1 items-center justify-center px-[var(--space-2)]">
-        {current.type === 'video' ? (
-          <video
-            key={current.id}
-            src={`/api/media/${current.id}?size=original`}
-            poster={`/api/media/${current.id}?size=poster`}
-            controls
-            playsInline
-            preload="metadata"
-            className="max-h-full max-w-full"
-          />
-        ) : (
-          <MediaImage
-            mediaId={current.id}
-            size="large"
-            alt={current.filename || ''}
-            className="max-h-full max-w-full object-contain"
-          />
-        )}
+      <div
+        ref={pagerRef}
+        onScroll={onPagerScroll}
+        className="flex flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden"
+        style={{ scrollbarWidth: 'none' }}
+      >
+        {items.map((item, i) => (
+          <div
+            key={item.id}
+            className="flex h-full w-full shrink-0 snap-center items-center justify-center px-[var(--space-2)]"
+          >
+            {item.type === 'video' ? (
+              <video
+                src={`/api/media/${item.id}?size=original`}
+                poster={`/api/media/${item.id}?size=poster`}
+                controls={i === index}
+                playsInline
+                preload={i === index ? 'metadata' : 'none'}
+                className="max-h-full max-w-full"
+              />
+            ) : (
+              <MediaImage
+                mediaId={item.id}
+                size="large"
+                alt={item.filename || ''}
+                className="max-h-full max-w-full object-contain"
+              />
+            )}
+          </div>
+        ))}
       </div>
+      {renderFooter && (
+        <div className="px-[var(--space-4)] pb-[var(--space-2)]">{renderFooter(current, index)}</div>
+      )}
       {total > 1 && (
         <div
           ref={stripRef}

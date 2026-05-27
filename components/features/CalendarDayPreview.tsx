@@ -13,6 +13,7 @@ export interface CalendarPreviewEntry {
   authorName: string | null;
   authorImage: string | null;
   mediaItems: MediaItem[];
+  milestoneNames?: string[];
 }
 
 export function CalendarDayPreview({
@@ -63,6 +64,7 @@ export function CalendarDayPreview({
                 authorName={entry.authorName ?? '家人'}
                 authorImage={entry.authorImage}
                 mediaItems={entry.mediaItems}
+                milestoneNames={entry.milestoneNames ?? []}
                 animationDelayMs={index * 50}
               />
             </li>

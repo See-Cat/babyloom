@@ -2,12 +2,14 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { formatRelativeDateTime } from '@/lib/format-time';
 import type { MediaItem } from '@/lib/media/types';
+import { milestoneTagStyle } from '@/lib/milestone-tint';
 
 export interface TimelineCardProps {
   entry: {
@@ -18,6 +20,7 @@ export interface TimelineCardProps {
   authorName?: string | null;
   authorImage?: string | null;
   mediaItems?: MediaItem[];
+  milestoneNames?: string[];
   animationDelayMs?: number;
 }
 
@@ -26,18 +29,28 @@ export function TimelineCard({
   authorName = '未知',
   authorImage,
   mediaItems = [],
+  milestoneNames = [],
   animationDelayMs
 }: TimelineCardProps) {
+  const router = useRouter();
   const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
+  const href = `/entry/${entry.id}`;
+
+  const handleCardClick = (event: React.MouseEvent<HTMLElement>) => {
+    const target = event.target as HTMLElement;
+    if (target.closest('a, button')) return;
+    router.push(href);
+  };
 
   return (
     <Card
       as="article"
       interactive
-      className="bl-rise-card"
+      className="bl-rise-card cursor-pointer"
       style={typeof animationDelayMs === 'number' ? { animationDelay: `${animationDelayMs}ms` } : undefined}
+      onClick={handleCardClick}
     >
-      <Link href={`/entry/${entry.id}`} className="block">
+      <Link href={href} className="block">
         <div className="mb-[var(--space-3)] flex items-center gap-[var(--space-3)]">
           <Avatar
             src={authorImage ?? undefined}
@@ -54,6 +67,19 @@ export function TimelineCard({
         </div>
         {entry.content && <p className="line-clamp-3 whitespace-pre-wrap">{entry.content}</p>}
       </Link>
+      {milestoneNames.length > 0 && (
+        <div className="mt-[var(--space-3)] flex flex-wrap gap-[var(--space-2)]">
+          {milestoneNames.map((name) => (
+            <span
+              key={name}
+              className="inline-flex items-center rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-bold"
+              style={milestoneTagStyle(name)}
+            >
+              {name}
+            </span>
+          ))}
+        </div>
+      )}
       <ThumbnailStrip items={mediaItems} onOpenAt={(i) => setLightboxAt(i)} />
       {lightboxAt !== null && (
         <MediaLightbox items={mediaItems} startIndex={lightboxAt} onClose={() => setLightboxAt(null)} />

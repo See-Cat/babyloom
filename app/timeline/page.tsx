@@ -8,7 +8,7 @@ import { loadConfig } from '@/lib/config/load';
 import { getDb } from '@/lib/db/client';
 import { getDayUtcRange } from '@/lib/db/queries/calendar';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { babies, entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
+import { babies, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/db/schema';
 import type { MediaItem } from '@/lib/media/types';
 import { AppShell } from '@/components/mobile/AppShell';
 import { TimelineCard } from '@/components/features/TimelineCard';
@@ -106,6 +106,20 @@ export default async function TimelinePage({
   for (const [entryId, items] of mediaItemsByEntry) {
     mediaIdsByEntry.set(entryId, items.map((item) => item.id));
   }
+  const milestoneRows = entryIds.length
+    ? db
+        .select({ entryId: entryMilestones.entryId, name: milestones.name })
+        .from(entryMilestones)
+        .innerJoin(milestones, eq(milestones.id, entryMilestones.milestoneId))
+        .where(inArray(entryMilestones.entryId, entryIds))
+        .all()
+    : [];
+  const milestoneNamesByEntry = new Map<string, string[]>();
+  for (const row of milestoneRows) {
+    const list = milestoneNamesByEntry.get(row.entryId) ?? [];
+    list.push(row.name);
+    milestoneNamesByEntry.set(row.entryId, list);
+  }
   const heroRow = rows.find((row) => (mediaIdsByEntry.get(row.entries.id)?.length ?? 0) > 0) ?? rows[0];
   const listRows = heroRow ? rows.filter((row) => row.entries.id !== heroRow.entries.id) : rows;
 
@@ -140,6 +154,7 @@ export default async function TimelinePage({
                 authorName={row.user.name}
                 authorImage={row.user.image}
                 mediaItems={mediaItemsByEntry.get(row.entries.id) ?? []}
+                milestoneNames={milestoneNamesByEntry.get(row.entries.id) ?? []}
                 animationDelayMs={100 + index * 60}
               />
             </li>

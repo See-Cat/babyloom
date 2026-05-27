@@ -10,15 +10,13 @@ export interface ThumbnailStripProps {
 
 export function ThumbnailStrip({ items, onOpenAt }: ThumbnailStripProps) {
   if (items.length === 0) return null;
-  const visible = items.slice(0, 4);
-  const overflow = items.length - visible.length;
 
   return (
-    <ul className="thumbnail-strip mt-[var(--space-3)] flex gap-[var(--space-2)]">
-      {visible.map((item, i) => (
+    <ul className="thumbnail-strip mt-[var(--space-3)] flex gap-[var(--space-2)] overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      {items.map((item, i) => (
         <li
           key={item.id}
-          className="relative h-16 w-16 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)]"
+          className="relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-bg)]"
         >
           {onOpenAt ? (
             <button
@@ -38,11 +36,6 @@ export function ThumbnailStrip({ items, onOpenAt }: ThumbnailStripProps) {
           )}
         </li>
       ))}
-      {overflow > 0 && (
-        <li className="flex h-16 w-16 items-center justify-center rounded-[var(--radius-sm)] border border-[var(--color-border)] text-[length:var(--text-sm)]">
-          +{overflow}
-        </li>
-      )}
     </ul>
   );
 }
