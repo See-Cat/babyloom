@@ -122,7 +122,7 @@ function NewEntryForm() {
       }
     }
     setSubmitting(false);
-    router.push(`/entry/${data.id}`);
+    router.replace(`/entry/${data.id}`);
     router.refresh();
   }
 

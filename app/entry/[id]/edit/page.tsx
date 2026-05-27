@@ -164,8 +164,7 @@ export default function EditEntryPage() {
     }
 
     setPending(false);
-    router.push(`/entry/${entry.id}`);
-    router.refresh();
+    router.back();
   }
 
   if (!entry) {

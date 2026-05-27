@@ -1,4 +1,5 @@
 import { and, eq, inArray, isNull, or } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { assertWritesAllowed } from '@/lib/backup/write-barrier';
@@ -184,6 +185,8 @@ export const PATCH = withAuthorizedResource({
       }
     }
   });
+  revalidatePath(`/entry/${row.id}`);
+  revalidatePath('/timeline');
   return Response.json({ updated: row.id });
 });
 
