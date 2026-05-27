@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { ButtonHTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface SwitchProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onChange'> {
   checked: boolean;

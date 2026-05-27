@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { HTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 

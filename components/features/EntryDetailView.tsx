@@ -10,8 +10,8 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChevronLeftIcon, DotsIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/hooks/useToast';
-import { formatLongDateTime } from '@/lib/format-time';
-import { milestoneTagStyle } from '@/lib/milestone-tint';
+import { formatLongDateTime } from '@/lib/shared/format-time';
+import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 interface EntryDetailViewProps {
   entry: {

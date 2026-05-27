@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { babies, entryMedia, media } from '@/lib/db/schema';
 import type * as schema from '@/lib/db/schema';
-import { parseBirthdayToMillis } from '@/lib/format-time';
+import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 
 export interface GalleryMedia {
   id: string;

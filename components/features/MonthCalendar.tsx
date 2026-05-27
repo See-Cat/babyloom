@@ -1,6 +1,6 @@
 import * as React from 'react';
 import Link from 'next/link';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import type { MonthCell } from '@/lib/db/queries/calendar';
 
 const weekdays = ['日', '一', '二', '三', '四', '五', '六'];

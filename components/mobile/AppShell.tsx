@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
 import { Tabbar } from './Tabbar';
 

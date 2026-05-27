@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 type CardElement = 'div' | 'article' | 'section';
 type CardVariant = 'default' | 'dashed' | 'tinted';

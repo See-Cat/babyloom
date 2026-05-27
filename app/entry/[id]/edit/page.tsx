@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
-import { parseBirthdayToMillis } from '@/lib/format-time';
+import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 
 const formId = 'edit-entry-form';
 

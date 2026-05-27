@@ -1,6 +1,6 @@
 'use client';
 
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { Avatar } from '@/components/ui/Avatar';
 import { Dialog } from '@/components/ui/Dialog';
 import { CheckIcon } from '@/components/ui/icons';

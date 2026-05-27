@@ -11,7 +11,7 @@ import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
 import type { MediaItem } from '@/lib/media/types';
-import { milestoneTagStyle } from '@/lib/milestone-tint';
+import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 type TrashItemType = 'entries' | 'media' | 'babies';
 type TrashRole = 'owner' | 'member';

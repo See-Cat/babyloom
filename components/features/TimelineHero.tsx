@@ -6,7 +6,7 @@ import { MediaImage } from '@/components/media/MediaImage';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Button } from '@/components/ui/Button';
 import { CameraIcon } from '@/components/ui/icons';
-import { formatRelativeDateTime } from '@/lib/format-time';
+import { formatRelativeDateTime } from '@/lib/shared/format-time';
 import type { MediaItem } from '@/lib/media/types';
 
 export interface TimelineHeroEntry {

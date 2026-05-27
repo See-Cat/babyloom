@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { PullToRefresh } from '@/components/mobile/PullToRefresh';

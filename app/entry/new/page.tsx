@@ -8,7 +8,7 @@ import { EntryComposer } from '@/components/features/EntryComposer';
 import { Button } from '@/components/ui/Button';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
-import { parseBirthdayToMillis } from '@/lib/format-time';
+import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 
 const formId = 'new-entry-form';
 

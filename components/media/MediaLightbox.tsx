@@ -4,7 +4,7 @@ import * as React from 'react';
 import { MediaImage } from './MediaImage';
 import type { MediaItem } from '@/lib/media/types';
 import { ChevronLeftIcon, XIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface MediaLightboxProps {
   items: MediaItem[];

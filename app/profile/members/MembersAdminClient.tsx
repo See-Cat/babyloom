@@ -13,7 +13,7 @@ import {
   BabyAssociationSheet,
   type BabyOption
 } from '@/components/features/BabyAssociationSheet';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';

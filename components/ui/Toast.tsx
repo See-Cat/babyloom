@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { CheckIcon, ErrorIcon, InfoIcon, WarningIcon } from './icons';
 
 export type ToastVariant = 'neutral' | 'success' | 'error' | 'warning';

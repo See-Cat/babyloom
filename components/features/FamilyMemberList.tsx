@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface FamilyMemberBabyPermission {
   babyId: string;

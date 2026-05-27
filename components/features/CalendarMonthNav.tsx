@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { ChevronDownIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export function CalendarMonthNav({
   babyId,

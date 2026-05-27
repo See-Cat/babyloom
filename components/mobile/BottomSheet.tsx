@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { useDialog } from '@/lib/hooks/useDialog';
 import { usePopupAnimation } from '@/lib/hooks/usePopupAnimation';
 

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Spinner } from '@/components/ui/Spinner';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface PullToRefreshProps {
   children: React.ReactNode;

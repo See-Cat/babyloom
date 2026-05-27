@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Tag } from '@/components/ui/Tag';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 interface Milestone {
   id: string;

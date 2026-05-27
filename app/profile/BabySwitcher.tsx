@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { CheckIcon, PlusIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/lib/hooks/useToast';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface BabySwitcherBaby {
   id: string;

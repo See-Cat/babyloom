@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 import { XIcon } from './icons';
 
 type TagVariant = 'neutral' | 'accent' | 'error';

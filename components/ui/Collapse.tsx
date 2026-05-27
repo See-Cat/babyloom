@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface CollapseProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   open?: boolean;

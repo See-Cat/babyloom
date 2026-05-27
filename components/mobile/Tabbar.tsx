@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 interface TabItem {
   label: string;

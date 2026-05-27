@@ -3,7 +3,7 @@
 import * as React from 'react';
 import type { ButtonHTMLAttributes } from 'react';
 import { ActionSheet, type ActionSheetOption } from '@/components/mobile/ActionSheet';
-import { cn } from '@/lib/cn';
+import { cn } from '@/lib/shared/cn';
 
 export interface AvatarPickerProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   name: string;
