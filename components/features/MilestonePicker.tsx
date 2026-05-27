@@ -19,6 +19,30 @@ export interface MilestonePickerProps {
 
 export function MilestonePicker({ milestones, onToggle, selectedIds, visibleCount = 4 }: MilestonePickerProps) {
   const [moreOpen, setMoreOpen] = React.useState(false);
+  const [draftIds, setDraftIds] = React.useState<Set<string>>(selectedIds);
+
+  React.useEffect(() => {
+    if (moreOpen) setDraftIds(new Set(selectedIds));
+  }, [moreOpen, selectedIds]);
+
+  function toggleDraft(id: string) {
+    setDraftIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function commitDraft() {
+    for (const id of draftIds) {
+      if (!selectedIds.has(id)) onToggle(id);
+    }
+    for (const id of selectedIds) {
+      if (!draftIds.has(id)) onToggle(id);
+    }
+    setMoreOpen(false);
+  }
 
   if (milestones.length === 0) return null;
 
@@ -59,13 +83,35 @@ export function MilestonePicker({ milestones, onToggle, selectedIds, visibleCoun
         )}
       </div>
 
-      <BottomSheet open={moreOpen} onOpenChange={setMoreOpen} title={`选择里程碑${selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}`}>
+      <BottomSheet
+        open={moreOpen}
+        onOpenChange={setMoreOpen}
+        title="选择里程碑"
+        leadingAction={
+          <button
+            type="button"
+            onClick={() => setMoreOpen(false)}
+            className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]"
+          >
+            取消
+          </button>
+        }
+        trailingAction={
+          <button
+            type="button"
+            onClick={commitDraft}
+            className="text-[length:var(--text-sm)] font-semibold text-[color:var(--color-accent)]"
+          >
+            完成{draftIds.size > 0 ? ` (${draftIds.size})` : ''}
+          </button>
+        }
+      >
         <div className="-mx-[var(--space-2)] mt-[var(--space-2)] max-h-[60vh] overflow-y-auto px-[var(--space-2)]">
           <div className="flex flex-wrap gap-[var(--space-2)] pb-[var(--space-2)]">
             {milestones.map((m) => {
-              const selected = selectedIds.has(m.id);
+              const selected = draftIds.has(m.id);
               return (
-                <button key={m.id} type="button" aria-pressed={selected} onClick={() => onToggle(m.id)}>
+                <button key={m.id} type="button" aria-pressed={selected} onClick={() => toggleDraft(m.id)}>
                   <Tag variant={selected ? 'accent' : 'neutral'}>{m.name}</Tag>
                 </button>
               );
