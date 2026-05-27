@@ -1,7 +1,7 @@
 import { describe, it } from 'vitest';
 import { RuleTester } from 'eslint';
 
-const rule = require('../../eslint-rules/parent-chain-join');
+const rule = require('./parent-chain-join');
 
 const tester = new RuleTester({
   languageOptions: {

@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { seedOwnerBabyEntries } from './_seed';
+import { seedOwnerBabyEntries } from '@/tests/fixtures/seed';
 
 function mockReq(): any {
   return { headers: new Headers() };

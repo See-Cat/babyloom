@@ -6,7 +6,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import sharp from 'sharp';
 import { eq } from 'drizzle-orm';
-import { seedOwnerBabyEntries } from '../../lib/permissions/_seed';
+import { seedOwnerBabyEntries } from '@/tests/fixtures/seed';
 
 describe('avatar API routes', () => {
   let dataDir: string;

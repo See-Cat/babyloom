@@ -1,6 +1,6 @@
-@import "../styles/tokens.css";
-@import "../styles/typography.css";
-@import "../styles/reference-components.css";
+@import "./styles/tokens.css";
+@import "./styles/typography.css";
+@import "./styles/reference-components.css";
 
 html, body {
   background: var(--color-bg);

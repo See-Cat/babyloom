@@ -10,7 +10,7 @@ import { ChevronLeftIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers } from '@/lib/db/schema';
-import { tail, type LogRow } from '@/lib/logs/tail';
+import { tail, type LogRow } from '@/lib/log/tail';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)

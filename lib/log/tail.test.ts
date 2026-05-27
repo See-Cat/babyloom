@@ -2,7 +2,7 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { tail } from '@/lib/logs/tail';
+import { tail } from '@/lib/log/tail';
 
 describe('tail', () => {
   it('returns the last N JSON lines from a short file', async () => {

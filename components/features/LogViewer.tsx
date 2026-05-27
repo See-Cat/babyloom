@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import type { LogRow } from '@/lib/logs/tail';
+import type { LogRow } from '@/lib/log/tail';
 
 export function LogViewer({ rows }: { rows: LogRow[] }) {
   const router = useRouter();

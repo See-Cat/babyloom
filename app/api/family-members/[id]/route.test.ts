@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { seedOwnerBabyEntries } from '../../lib/permissions/_seed';
+import { seedOwnerBabyEntries } from '@/tests/fixtures/seed';
 
 function jsonReq(url: string, method: string, body?: unknown): any {
   return new Request(url, {

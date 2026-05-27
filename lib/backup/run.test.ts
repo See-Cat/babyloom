@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { seedOwnerBabyEntries } from '../permissions/_seed';
+import { seedOwnerBabyEntries } from '@/tests/fixtures/seed';
 
 describe('backup', () => {
   let dataDir: string;

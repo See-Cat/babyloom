@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { seedOwnerBabyEntries } from '../../lib/permissions/_seed';
+import { seedOwnerBabyEntries } from '@/tests/fixtures/seed';
 
 function postReq(body: unknown): any {
   return new Request('http://localhost/api/entries', {

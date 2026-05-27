@@ -14,7 +14,7 @@ test-results/
 collapse-after-fix.png
 components-full.png
 .DS_Store
-docs/superpowers/plans/_*.md
+.dev-docs/plans/_*.md
 .superpowers/
 .sisyphus/
 .claude/

@@ -7,8 +7,14 @@ export default defineConfig({
     environment: 'node',
     pool: 'forks',
     testTimeout: 10_000,
-    include: ['tests/**/*.test.ts', 'lib/**/*.test.ts', 'components/**/*.test.tsx'],
-    exclude: ['tests/e2e/**', 'node_modules/**']
+    include: [
+      'app/**/*.test.{ts,tsx}',
+      'components/**/*.test.{ts,tsx}',
+      'lib/**/*.test.{ts,tsx}',
+      'eslint-rules/**/*.test.{ts,js}',
+      'tests/integration/**/*.test.{ts,tsx}'
+    ],
+    exclude: ['tests/e2e/**', 'node_modules/**', '.next/**']
   },
   resolve: {
     alias: {

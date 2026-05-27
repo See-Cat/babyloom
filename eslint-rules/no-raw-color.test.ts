@@ -2,7 +2,7 @@ import { describe, it } from 'vitest';
 import { RuleTester } from 'eslint';
 import tseslint from '@typescript-eslint/parser';
 
-const rule = require('../../eslint-rules/no-raw-color');
+const rule = require('./no-raw-color');
 
 const tester = new RuleTester({
   languageOptions: {
