@@ -163,17 +163,21 @@ export default function TrashClient({
       }
       rightSlot={
         canPurge && count > 0 ? (
-          <Button
+          <button
             type="button"
-            size="sm"
-            variant="ghost"
             onClick={() => {
               setSelecting(!selecting);
               setSelectedIds(new Set());
             }}
+            className={[
+              'rounded-[var(--radius-pill)] bg-transparent px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-sm)] font-bold active:bg-black/5',
+              selecting
+                ? 'text-[color:var(--color-muted)]'
+                : 'text-[color:var(--color-primary-active)]'
+            ].join(' ')}
           >
             {selecting ? '取消' : '选择'}
-          </Button>
+          </button>
         ) : null
       }
     >
