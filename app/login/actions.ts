@@ -3,8 +3,8 @@
 import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
 import { resolve } from 'node:path';
-import { getAuth } from '@/lib/auth/server';
-import { ownerInternalEmail } from '@/lib/bootstrap/owner';
+import { getAuth } from '@/lib/server/auth/server';
+import { ownerInternalEmail } from '@/lib/server/bootstrap/owner';
 import { ensureStartup } from '@/instrumentation.node';
 
 const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');

@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { ensureStartup } from '@/instrumentation.node';
 
 const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');

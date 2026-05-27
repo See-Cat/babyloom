@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
 import { entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
-import { resetMemberPassword } from '@/lib/members/create';
+import { resetMemberPassword } from '@/lib/server/members/create';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
 import { jsonBadRequest } from '@/lib/permissions/responses';
 

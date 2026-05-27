@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { getDb } from '../../lib/db/client';
 import { users, accounts, families, babies } from '../../lib/db/schema';
-import { hashPassword, ownerInternalEmail } from '../../lib/bootstrap/owner';
+import { hashPassword, ownerInternalEmail } from '../../lib/server/bootstrap/owner';
 
 export async function seedE2eExtras() {
   const dataDir = resolve(process.cwd(), 'test-data/e2e');

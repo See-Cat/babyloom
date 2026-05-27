@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { babyMemberPermissions, familyMembers } from '@/lib/db/schema';
 import { listReadableBabies } from '@/lib/db/queries/permissions';

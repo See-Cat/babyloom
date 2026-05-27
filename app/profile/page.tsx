@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import type { ReactNode } from 'react';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { listReadableBabies } from '@/lib/db/queries/permissions';
 import { babies, babyMemberPermissions, entries, familyMembers, media, milestones, users } from '@/lib/db/schema';

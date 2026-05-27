@@ -21,12 +21,12 @@ app:
 `
   );
   const { resetDbForTesting } = await import('@/lib/db/client');
-  const { clearConfigCache } = await import('@/lib/config/load');
+  const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
   const { runMigrations } = await import('@/lib/db/migrate');
   runMigrations(dataDir);
-  const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+  const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
   const { getDb } = await import('@/lib/db/client');
@@ -34,7 +34,7 @@ app:
   const { users, families, familyMembers, babies, babyMemberPermissions } = await import(
     '@/lib/db/schema'
   );
-  const { ownerInternalEmail } = await import('@/lib/bootstrap/owner');
+  const { ownerInternalEmail } = await import('@/lib/server/bootstrap/owner');
 
   const ownerUser = db.select().from(users).all()[0];
   const family = db.select().from(families).all()[0];

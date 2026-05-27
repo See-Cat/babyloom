@@ -1,5 +1,5 @@
 import { resolve } from 'node:path';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { UnauthorizedError } from './errors';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

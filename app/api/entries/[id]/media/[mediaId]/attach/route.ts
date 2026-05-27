@@ -2,7 +2,7 @@
 import { and, eq } from 'drizzle-orm';
 import { type NextRequest } from 'next/server';
 import { resolve } from 'node:path';
-import { assertWritesAllowed } from '@/lib/backup/write-barrier';
+import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { entryMedia } from '@/lib/db/schema';
 import {

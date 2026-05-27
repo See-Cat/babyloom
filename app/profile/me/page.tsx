@@ -6,7 +6,7 @@ import { resolve } from 'node:path';
 import { EditMeForm } from '@/components/features/EditMeForm';
 import { AppShell } from '@/components/mobile/AppShell';
 import { ChevronLeftIcon } from '@/components/ui/icons';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import { updateMyName } from './actions';

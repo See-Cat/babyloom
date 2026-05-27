@@ -7,7 +7,7 @@ import { LogViewer } from '@/components/features/LogViewer';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon } from '@/components/ui/icons';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers } from '@/lib/db/schema';
 import { tail, type LogRow } from '@/lib/log/tail';

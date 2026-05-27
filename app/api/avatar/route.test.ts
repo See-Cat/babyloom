@@ -31,7 +31,7 @@ describe('avatar API routes', () => {
     }));
     const { getDb } = await import('@/lib/db/client');
     const { users } = await import('@/lib/db/schema');
-    const { avatarFilePath } = await import('@/lib/avatar/paths');
+    const { avatarFilePath } = await import('@/lib/server/avatar/paths');
     const { POST } = await import('@/app/api/avatar/route');
     const { GET } = await import('@/app/api/avatar/[kind]/[id]/route');
 

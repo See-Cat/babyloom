@@ -3,14 +3,14 @@ import { createReadStream } from 'fs';
 import { stat } from 'fs/promises';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { assertWritesAllowed } from '@/lib/backup/write-barrier';
+import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies, media } from '@/lib/db/schema';
 import { OutputBadRequestError, resolveOutputVariant } from '@/lib/media/output';
 import { resolveVariantPath } from '@/lib/media/paths';
 import { jsonBadRequest } from '@/lib/permissions/responses';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { purgeMedia } from '@/lib/trash/purge';
+import { purgeMedia } from '@/lib/server/trash/purge';
 
 export const runtime = 'nodejs';
 

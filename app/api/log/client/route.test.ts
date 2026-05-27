@@ -9,7 +9,7 @@ describe('/api/log/client', () => {
   beforeEach(() => {
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-client-log-'));
     process.env.BABYLOOM_DATA_DIR = dataDir;
-    vi.doMock('@/lib/auth/server', () => ({
+    vi.doMock('@/lib/server/auth/server', () => ({
       getAuth: () => ({
         api: {
           getSession: async () => null
@@ -19,7 +19,7 @@ describe('/api/log/client', () => {
   });
 
   afterEach(async () => {
-    vi.doUnmock('@/lib/auth/server');
+    vi.doUnmock('@/lib/server/auth/server');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });

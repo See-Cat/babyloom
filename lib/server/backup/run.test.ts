@@ -15,7 +15,7 @@ describe('backup', () => {
   });
 
   afterEach(async () => {
-    const { setBackupInProgress } = await import('@/lib/backup/write-barrier');
+    const { setBackupInProgress } = await import('@/lib/server/backup/write-barrier');
     setBackupInProgress(false);
     vi.doUnmock('@/lib/permissions/session');
     vi.resetModules();
@@ -26,7 +26,7 @@ describe('backup', () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const { getDb } = await import('@/lib/db/client');
     const { media, sessions } = await import('@/lib/db/schema');
-    const { runBackup } = await import('@/lib/backup/run');
+    const { runBackup } = await import('@/lib/server/backup/run');
     const { db } = getDb({ dataDir });
     const now = Date.now();
     const readyId = randomUUID();
@@ -118,7 +118,7 @@ describe('backup', () => {
   });
 
   it('blocks writes while the flag is set', async () => {
-    const { assertWritesAllowed, setBackupInProgress } = await import('@/lib/backup/write-barrier');
+    const { assertWritesAllowed, setBackupInProgress } = await import('@/lib/server/backup/write-barrier');
     setBackupInProgress(true);
     expect(() => assertWritesAllowed()).toThrow('backup_in_progress');
     setBackupInProgress(false);
@@ -130,7 +130,7 @@ describe('backup', () => {
     vi.doMock('@/lib/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
-    const { setBackupInProgress } = await import('@/lib/backup/write-barrier');
+    const { setBackupInProgress } = await import('@/lib/server/backup/write-barrier');
     const { POST } = await import('@/app/api/entries/route');
 
     setBackupInProgress(true);

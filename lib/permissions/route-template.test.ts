@@ -18,12 +18,12 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
   const { resetDbForTesting } = await import('@/lib/db/client');
-  const { clearConfigCache } = await import('@/lib/config/load');
+  const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
   const { runMigrations } = await import('@/lib/db/migrate');
   runMigrations(dataDir);
-  const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+  const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
   const { getDb } = await import('@/lib/db/client');
   const { db } = getDb({ dataDir });

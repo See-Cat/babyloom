@@ -8,7 +8,7 @@ describe('loadConfig', () => {
 
   beforeEach(async () => {
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-config-'));
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     clearConfigCache();
   });
 
@@ -27,7 +27,7 @@ app:
 log:
   level: info
 `);
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     const cfg = loadConfig({ dataDir });
     expect(cfg.owner.username).toBe('alice');
     expect(cfg.owner.password).toBe('secret123');
@@ -51,7 +51,7 @@ app:
 log:
   level: info
 `);
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     expect(() => loadConfig({ dataDir })).toThrow(/password/);
   });
 
@@ -68,7 +68,7 @@ app:
 log:
   level: info
 `);
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     expect(() => loadConfig({ dataDir })).toThrow(/at least 6/);
   });
 
@@ -83,7 +83,7 @@ family:
 app:
   secret: local-test-secret-123456789012345
 `);
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     const cfg = loadConfig({ dataDir });
     expect(cfg.log.level).toBe('info');
     expect(cfg.app.baseUrl).toBe('http://localhost:3000');
@@ -101,12 +101,12 @@ family:
 app:
   secret: too-short
 `);
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     expect(() => loadConfig({ dataDir })).toThrow(/app.secret/);
   });
 
   it('throws a clear error if file does not exist', async () => {
-    const { loadConfig } = await import('@/lib/config/load');
+    const { loadConfig } = await import('@/lib/server/config/load');
     expect(() => loadConfig({ dataDir })).toThrow(/config\.yaml not found/);
   });
 });

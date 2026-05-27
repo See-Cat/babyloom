@@ -1,4 +1,4 @@
-import { loadConfig } from '@/lib/config/load';
+import { loadConfig } from '@/lib/server/config/load';
 
 export interface MediaLimits {
   maxPhotoBytes: number;

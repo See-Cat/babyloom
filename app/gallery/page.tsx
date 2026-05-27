@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { familyMembers } from '@/lib/db/schema';
 import { groupMediaByMonth, listGalleryMedia } from '@/lib/db/queries/gallery';

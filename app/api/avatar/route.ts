@@ -1,13 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { mkdir, rename, stat, unlink, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
-import { avatarFilePath, avatarPublicUrl } from '@/lib/avatar/paths';
+import { avatarFilePath, avatarPublicUrl } from '@/lib/server/avatar/paths';
 import {
   AvatarDecodeError,
   AvatarTooLargeError,
   AvatarUnsupportedError,
   processAvatar
-} from '@/lib/avatar/process';
+} from '@/lib/server/avatar/process';
 import { getDb } from '@/lib/db/client';
 import { babies, users } from '@/lib/db/schema';
 import { assertPermission } from '@/lib/permissions/assert';

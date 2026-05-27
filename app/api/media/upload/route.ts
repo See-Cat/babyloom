@@ -4,7 +4,7 @@ import { IncomingMessage } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
-import { assertWritesAllowed } from '@/lib/backup/write-barrier';
+import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { runUploadPipeline, UploadValidationError } from '@/lib/media/upload-pipeline';
 import { withAuthorizedAction } from '@/lib/permissions/action-template';
 import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';

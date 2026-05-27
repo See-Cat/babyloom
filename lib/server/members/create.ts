@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { and, eq, inArray } from 'drizzle-orm';
 import { getDb } from '@/lib/db/client';
 import { accounts, babies, babyMemberPermissions, familyMembers, users } from '@/lib/db/schema';
-import { hashPassword, ownerInternalEmail } from '@/lib/bootstrap/owner';
+import { hashPassword, ownerInternalEmail } from '@/lib/server/bootstrap/owner';
 import { permissionToBits } from '@/lib/db/queries/permissions';
 
 export interface CreateMemberOpts {

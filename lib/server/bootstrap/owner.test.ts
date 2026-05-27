@@ -24,7 +24,7 @@ log:
   level: info
 `);
     const { resetDbForTesting } = await import('@/lib/db/client');
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     resetDbForTesting();
     clearConfigCache();
     const { runMigrations } = await import('@/lib/db/migrate');
@@ -32,7 +32,7 @@ log:
   });
 
   it('creates the owner user + credential account if no user exists', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
     const { getDb } = await import('@/lib/db/client');
@@ -58,7 +58,7 @@ log:
   });
 
   it('is idempotent — second call does not create duplicate', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
     await bootstrapOwner({ dataDir });
 
@@ -70,7 +70,7 @@ log:
   });
 
   it('updates the owner password if config.yaml changed', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
     const { getDb } = await import('@/lib/db/client');
@@ -78,7 +78,7 @@ log:
     const { accounts } = await import('@/lib/db/schema');
     const firstHash = db.select().from(accounts).all()[0].password;
 
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     clearConfigCache();
     writeFileSync(join(dataDir, 'config.yaml'), `
 owner:
@@ -99,10 +99,10 @@ log:
   });
 
   it('updates username and internal email without creating a new owner', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     clearConfigCache();
     writeFileSync(join(dataDir, 'config.yaml'), `
 owner:
@@ -130,7 +130,7 @@ app:
   });
 
   it('creates exactly one family per config and a family_members row for the owner', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
     const { getDb } = await import('@/lib/db/client');
@@ -150,7 +150,7 @@ app:
   });
 
   it('is idempotent across family + family_members too', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
     await bootstrapOwner({ dataDir });
 
@@ -166,10 +166,10 @@ app:
   });
 
   it('updates family.name if config.family.name changed', async () => {
-    const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+    const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     clearConfigCache();
     writeFileSync(join(dataDir, 'config.yaml'), `
 owner:
@@ -195,11 +195,11 @@ app:
 
   it('after username change, the owner can sign in with the new internal email (Codex round-10 regression)', async () => {
     const { bootstrapOwner, ownerInternalEmail, verifyPassword } = await import(
-      '@/lib/bootstrap/owner'
+      '@/lib/server/bootstrap/owner'
     );
     await bootstrapOwner({ dataDir });
 
-    const { clearConfigCache } = await import('@/lib/config/load');
+    const { clearConfigCache } = await import('@/lib/server/config/load');
     clearConfigCache();
     writeFileSync(join(dataDir, 'config.yaml'), `
 owner:

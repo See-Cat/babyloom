@@ -2,7 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from 'node:crypto';
 import { getDb } from '@/lib/db/client';
 import { users, accounts, families, familyMembers } from '@/lib/db/schema';
-import { loadConfig } from '@/lib/config/load';
+import { loadConfig } from '@/lib/server/config/load';
 import { seedDefaultMilestones } from './default-milestones';
 
 export interface BootstrapOwnerOptions {

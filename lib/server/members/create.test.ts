@@ -19,12 +19,12 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
   const { resetDbForTesting } = await import('@/lib/db/client');
-  const { clearConfigCache } = await import('@/lib/config/load');
+  const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
   const { runMigrations } = await import('@/lib/db/migrate');
   runMigrations(dataDir);
-  const { bootstrapOwner } = await import('@/lib/bootstrap/owner');
+  const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
   const { getDb } = await import('@/lib/db/client');
   const { db } = getDb({ dataDir });
@@ -42,7 +42,7 @@ describe('createMember', () => {
   });
 
   it('creates user + credential account + family_members in one go', async () => {
-    const { createMember } = await import('@/lib/members/create');
+    const { createMember } = await import('@/lib/server/members/create');
     const { userId, memberId, email } = await createMember({
       dataDir,
       familyId,
@@ -75,7 +75,7 @@ describe('createMember', () => {
   });
 
   it('rejects duplicate username', async () => {
-    const { createMember } = await import('@/lib/members/create');
+    const { createMember } = await import('@/lib/server/members/create');
     await createMember({
       dataDir,
       familyId,
@@ -97,8 +97,8 @@ describe('createMember', () => {
   });
 
   it('the created member can sign in with the chosen password', async () => {
-    const { createMember } = await import('@/lib/members/create');
-    const { verifyPassword } = await import('@/lib/bootstrap/owner');
+    const { createMember } = await import('@/lib/server/members/create');
+    const { verifyPassword } = await import('@/lib/server/bootstrap/owner');
     await createMember({
       dataDir,
       familyId,
@@ -122,7 +122,7 @@ describe('createMember', () => {
   });
 
   it('atomically writes baby associations when provided', async () => {
-    const { createMember } = await import('@/lib/members/create');
+    const { createMember } = await import('@/lib/server/members/create');
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
     const { babies } = await import('@/lib/db/schema');
@@ -172,7 +172,7 @@ describe('createMember', () => {
   });
 
   it('rolls back account creation when association write fails', async () => {
-    const { createMember } = await import('@/lib/members/create');
+    const { createMember } = await import('@/lib/server/members/create');
     const { getDb } = await import('@/lib/db/client');
     const { db } = getDb({ dataDir });
     const { users } = await import('@/lib/db/schema');
@@ -197,8 +197,8 @@ describe('createMember', () => {
   });
 
   it('resetMemberPassword updates accounts.password only', async () => {
-    const { createMember, resetMemberPassword } = await import('@/lib/members/create');
-    const { verifyPassword } = await import('@/lib/bootstrap/owner');
+    const { createMember, resetMemberPassword } = await import('@/lib/server/members/create');
+    const { verifyPassword } = await import('@/lib/server/bootstrap/owner');
     const { userId } = await createMember({
       dataDir,
       familyId,

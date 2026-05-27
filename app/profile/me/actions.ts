@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/db/client';
 import { users } from '@/lib/db/schema';
 import type { FormActionResult } from '@/components/features/EditMeForm';

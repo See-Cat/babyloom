@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { getAuth } from '@/lib/auth/server';
+import { getAuth } from '@/lib/server/auth/server';
 import { takeClientLogToken } from '@/lib/client/log/client-rate-limit';
 import { createLogger } from '@/lib/log/server';
 

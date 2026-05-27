@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
-import { assertWritesAllowed } from '@/lib/backup/write-barrier';
+import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/db/client';
 import { babies, entries } from '@/lib/db/schema';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';

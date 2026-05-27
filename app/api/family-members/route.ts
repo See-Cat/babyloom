@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
 import { babies, babyMemberPermissions, familyMembers, users } from '@/lib/db/schema';
-import { createMember } from '@/lib/members/create';
+import { createMember } from '@/lib/server/members/create';
 import {
   bitsToPermission,
   type MemberBabyPermissionRow

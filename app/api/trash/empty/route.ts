@@ -1,9 +1,9 @@
 import { resolve } from 'node:path';
-import { assertWritesAllowed } from '@/lib/backup/write-barrier';
+import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { type TrashType } from '@/lib/db/queries/trash';
 import { jsonBadRequest } from '@/lib/permissions/responses';
 import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
-import { bulkPurgeByType } from '@/lib/trash/empty';
+import { bulkPurgeByType } from '@/lib/server/trash/empty';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)

@@ -1,9 +1,9 @@
 import { join, resolve } from 'node:path';
-import { loadConfig } from '@/lib/config/load';
+import { loadConfig } from '@/lib/server/config/load';
 import { createLogger } from '@/lib/log/server';
 import { pruneOldLogs } from '@/lib/log/prune';
 import { runMigrations } from '@/lib/db/migrate';
-import { bootstrapOwner } from '@/lib/bootstrap/owner';
+import { bootstrapOwner } from '@/lib/server/bootstrap/owner';
 import { startReconcileWorker } from '@/lib/media/reconcile';
 
 let startupPromise: Promise<void> | null = null;
