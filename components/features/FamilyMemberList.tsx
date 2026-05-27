@@ -27,6 +27,7 @@ export interface FamilyMemberListProps {
   onAssociationClick: (member: FamilyMemberListItem, perm: FamilyMemberBabyPermission) => void;
   onAddAssociation: (member: FamilyMemberListItem) => void;
   canAddDisabledReason?: (member: FamilyMemberListItem) => string | null;
+  isAddHidden?: (member: FamilyMemberListItem) => boolean;
 }
 
 export function FamilyMemberList({
@@ -34,12 +35,14 @@ export function FamilyMemberList({
   onMemberAction,
   onAssociationClick,
   onAddAssociation,
-  canAddDisabledReason
+  canAddDisabledReason,
+  isAddHidden
 }: FamilyMemberListProps) {
   return (
     <ul className="flex flex-col gap-[var(--space-3)]">
       {members.map((member) => {
         const disabledReason = canAddDisabledReason?.(member) ?? null;
+        const hideAdd = isAddHidden?.(member) ?? false;
         return (
           <li key={member.memberId}>
             <Card>
@@ -95,21 +98,28 @@ export function FamilyMemberList({
                 </ul>
               )}
 
-              <button
-                type="button"
-                disabled={Boolean(disabledReason)}
-                onClick={() => onAddAssociation(member)}
-                className={cn(
-                  'mt-[var(--space-3)] w-full rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] py-[var(--space-2)] text-[length:var(--text-sm)] font-semibold',
-                  disabledReason
-                    ? 'cursor-not-allowed text-[color:var(--color-fg-soft)]'
-                    : 'text-[color:var(--color-primary-active)] active:bg-[var(--color-press-tint)]'
-                )}
-              >
-                + 关联宝宝
-              </button>
+              {!hideAdd && (
+                <button
+                  type="button"
+                  disabled={Boolean(disabledReason)}
+                  onClick={() => onAddAssociation(member)}
+                  className={cn(
+                    'mt-[var(--space-3)] w-full rounded-[var(--radius-sm)] border border-dashed border-[var(--color-border)] py-[var(--space-2)] text-[length:var(--text-sm)] font-semibold',
+                    disabledReason
+                      ? 'cursor-not-allowed text-[color:var(--color-fg-soft)]'
+                      : 'text-[color:var(--color-primary-active)] active:bg-[var(--color-press-tint)]'
+                  )}
+                >
+                  + 关联宝宝
+                </button>
+              )}
               {disabledReason && (
-                <p className="mt-[var(--space-1)] text-center text-[length:var(--text-xs)] text-[color:var(--color-fg-soft)]">
+                <p
+                  className={cn(
+                    'text-center text-[length:var(--text-xs)] text-[color:var(--color-fg-soft)]',
+                    hideAdd ? 'mt-[var(--space-3)]' : 'mt-[var(--space-1)]'
+                  )}
+                >
                   {disabledReason}
                 </p>
               )}

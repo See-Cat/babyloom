@@ -13,11 +13,14 @@ import {
   BabyAssociationSheet,
   type BabyOption
 } from '@/components/features/BabyAssociationSheet';
+import { cn } from '@/lib/cn';
+import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
 
 interface InitialBaby {
@@ -234,6 +237,7 @@ export default function MembersAdminPage({
           onAssociationClick={(member, perm) => setEditingAssoc({ member, perm })}
           onAddAssociation={setAssocFor}
           canAddDisabledReason={disabledReason}
+          isAddHidden={(item) => babies.length > 0 && item.babyPermissions.length >= babies.length}
         />
       </div>
 
@@ -258,36 +262,78 @@ export default function MembersAdminPage({
             onChange={(e) => setNewMember({ ...newMember, password: e.target.value })}
           />
           {babies.length > 0 && (
-            <fieldset className="flex flex-col gap-[var(--space-2)]">
-              <legend className="text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg)]">
+            <fieldset className="flex flex-col gap-[var(--space-3)]">
+              <legend className="mb-[var(--space-2)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg)]">
                 关联宝宝（可跳过）
               </legend>
-              {babies.map((b) => (
-                <label key={b.id} className="flex items-center gap-[var(--space-2)]">
-                  <input
-                    type="checkbox"
-                    checked={newAssocBabyIds.has(b.id)}
-                    onChange={() => {
-                      const next = new Set(newAssocBabyIds);
-                      if (next.has(b.id)) next.delete(b.id);
-                      else next.add(b.id);
-                      setNewAssocBabyIds(next);
-                    }}
-                  />
-                  <span className="text-[length:var(--text-sm)]">{b.name}</span>
-                </label>
-              ))}
+              <div className="grid grid-cols-3 gap-[var(--space-3)]">
+                {babies.map((b) => {
+                  const selected = newAssocBabyIds.has(b.id);
+                  return (
+                    <button
+                      type="button"
+                      key={b.id}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        const next = new Set(newAssocBabyIds);
+                        if (next.has(b.id)) next.delete(b.id);
+                        else next.add(b.id);
+                        setNewAssocBabyIds(next);
+                      }}
+                      className={cn(
+                        'relative flex flex-col items-center gap-[var(--space-2)] rounded-[var(--radius-card)] border-2 px-[var(--space-2)] py-[var(--space-3)] transition-transform duration-100 active:scale-[0.97]',
+                        selected
+                          ? 'border-[color:var(--color-primary)] bg-[var(--color-primary-bg)]'
+                          : 'border-[var(--color-border-light)] bg-[var(--color-surface-2)]'
+                      )}
+                    >
+                      <Avatar
+                        src={b.avatarUrl ?? undefined}
+                        name={b.name}
+                        colorKey={b.id}
+                        size="lg"
+                      />
+                      <span
+                        className={cn(
+                          'max-w-full truncate text-[length:var(--text-sm)] font-bold',
+                          selected
+                            ? 'text-[color:var(--color-primary-active)]'
+                            : 'text-[color:var(--color-fg-strong)]'
+                        )}
+                      >
+                        {b.name}
+                      </span>
+                      <span
+                        aria-hidden
+                        className={cn(
+                          'absolute -right-[6px] -top-[6px] flex h-6 w-6 items-center justify-center rounded-full border-2 border-[var(--color-surface-2)] text-[11px] font-black transition-all duration-150',
+                          selected
+                            ? 'scale-100 bg-[var(--color-primary)] text-white'
+                            : 'scale-0 bg-transparent text-transparent'
+                        )}
+                      >
+                        ✓
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
               {newAssocBabyIds.size > 0 && (
-                <select
-                  value={newAssocPermission}
-                  onChange={(e) =>
-                    setNewAssocPermission(e.target.value as 'viewer' | 'editor')
-                  }
-                  className="rounded-[var(--radius-sm)] border border-[var(--color-border)] px-[var(--space-2)] py-[var(--space-1)]"
-                >
-                  <option value="editor">可编辑</option>
-                  <option value="viewer">仅查看</option>
-                </select>
+                <div>
+                  <p className="mb-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg)]">
+                    权限
+                  </p>
+                  <SegmentedControl
+                    ariaLabel="权限"
+                    value={newAssocPermission}
+                    onChange={(v) => setNewAssocPermission(v as 'viewer' | 'editor')}
+                    className="grid-cols-2"
+                    options={[
+                      { value: 'editor', label: '可编辑' },
+                      { value: 'viewer', label: '仅查看' }
+                    ]}
+                  />
+                </div>
               )}
             </fieldset>
           )}

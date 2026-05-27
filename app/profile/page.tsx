@@ -60,7 +60,7 @@ export default async function ProfilePage() {
     ? db
         .select({ count: sql<number>`count(*)`.as('count') })
         .from(familyMembers)
-        .where(eq(familyMembers.familyId, member.familyId))
+        .where(and(eq(familyMembers.familyId, member.familyId), sql`${familyMembers.role} != 'owner'`))
         .get()?.count ?? 0
     : 0;
   const milestoneCount = isOwner
