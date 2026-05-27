@@ -38,7 +38,9 @@ export default async function GalleryPage({
     role: (member.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
     userId: session.user.id
   });
-  if (familyBabies.length === 0) redirect('/onboarding/baby');
+  if (familyBabies.length === 0) {
+    redirect(member.role === 'owner' ? '/onboarding/baby' : '/no-access');
+  }
 
   const sp = await searchParams;
   const cookieBabyId = (await cookies()).get('bl_baby')?.value;

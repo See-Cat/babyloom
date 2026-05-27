@@ -42,7 +42,9 @@ export default async function CalendarPage({
     role: (member.role === 'owner' ? 'owner' : 'member') as 'owner' | 'member',
     userId: session.user.id
   });
-  if (familyBabies.length === 0) redirect('/onboarding/baby');
+  if (familyBabies.length === 0) {
+    redirect(member.role === 'owner' ? '/onboarding/baby' : '/no-access');
+  }
 
   const config = loadConfig({ dataDir });
   const timezone = config.app.timezone;

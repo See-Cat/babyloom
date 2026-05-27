@@ -29,6 +29,8 @@ export default async function HomePage() {
     .where(and(eq(babies.familyId, member.familyId), eq(babies.status, 'active')))
     .all();
 
-  if (activeBabies.length === 0) redirect('/onboarding/baby');
+  if (activeBabies.length === 0) {
+    redirect(member.role === 'owner' ? '/onboarding/baby' : '/no-access');
+  }
   redirect('/timeline');
 }
