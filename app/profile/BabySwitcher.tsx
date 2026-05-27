@@ -62,7 +62,7 @@ export function BabySwitcher({
                   active && 'bg-[var(--color-surface)]'
                 )}
               >
-                <Avatar src={baby.image ?? undefined} name={baby.name} size="sm" />
+                <Avatar src={baby.image ?? undefined} name={baby.name} colorKey={baby.id} size="sm" />
                 <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
                   {baby.name}
                 </span>
@@ -74,7 +74,7 @@ export function BabySwitcher({
             );
           })}
           <a
-            href="/onboarding/baby"
+            href="/onboarding/baby?back=1"
             className="mt-[6px] flex items-center gap-[10px] border-t border-[color:var(--color-border-light)] px-[6px] pt-[14px] text-[length:var(--text-base)] font-bold text-[color:var(--color-primary-active)]"
           >
             <PlusIcon className="h-4 w-4" /> 添加新宝宝

@@ -123,44 +123,36 @@ export default async function ProfilePage() {
           <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.06em] text-[color:var(--color-fg)]">
             正在记录
           </h2>
-          <div
-            className="relative flex items-stretch rounded-[var(--radius-card)] border-[1.5px]"
-            style={{
-              background: 'var(--color-primary-bg)',
-              borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
-            }}
-          >
-            <Link
-              href="/profile/babies"
-              className="flex min-w-0 flex-1 items-center gap-[var(--space-3)] rounded-[var(--radius-card)] px-[var(--space-4)] py-[var(--space-3)] active:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]"
-            >
-              <Avatar src={(activeBaby as any).image ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="lg" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
-                  {activeBaby.name}
-                </p>
-                <p className="mt-[2px] truncate text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
-                  {formatActiveBabyMeta(activeBaby.birthday)}
-                </p>
+          <BabySwitcher
+            activeBabyId={activeBaby.id}
+            babies={switcherBabies}
+            trigger={
+              <div
+                className="relative flex w-full items-center gap-[var(--space-3)] rounded-[var(--radius-card)] border-[1.5px] px-[var(--space-4)] py-[var(--space-3)] text-left active:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]"
+                style={{
+                  background: 'var(--color-primary-bg)',
+                  borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
+                }}
+              >
+                <Avatar src={(activeBaby as any).image ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+                    {activeBaby.name}
+                  </p>
+                  <p className="mt-[2px] truncate text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
+                    {formatActiveBabyMeta(activeBaby.birthday)}
+                  </p>
+                </div>
+                {familyBabies.length > 1 ? (
+                  <span className="inline-flex items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-bg)] px-[var(--space-3)] py-[6px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)] shadow-[var(--shadow-press-sm)]">
+                    切换 <ChevronRightIcon className="h-3 w-3" />
+                  </span>
+                ) : (
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-[color:var(--color-primary-active)]" />
+                )}
               </div>
-              {familyBabies.length <= 1 && (
-                <ChevronRightIcon className="h-4 w-4 shrink-0 text-[color:var(--color-primary-active)]" />
-              )}
-            </Link>
-            {familyBabies.length > 1 && (
-              <div className="flex items-center pr-[var(--space-3)]">
-                <BabySwitcher
-                  activeBabyId={activeBaby.id}
-                  babies={switcherBabies}
-                  trigger={
-                    <span className="inline-flex items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-bg)] px-[var(--space-3)] py-[6px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)] shadow-[var(--shadow-press-sm)]">
-                      切换 <ChevronRightIcon className="h-3 w-3" />
-                    </span>
-                  }
-                />
-              </div>
-            )}
-          </div>
+            }
+          />
         </section>
       )}
 

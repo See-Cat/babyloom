@@ -1,16 +1,17 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { CameraIcon } from '@/components/ui/icons';
+import { CameraIcon, ChevronLeftIcon } from '@/components/ui/icons';
 
 export default function OnboardingBabyPage() {
   const router = useRouter();
+  const canGoBack = useSearchParams().get('back') === '1';
   const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -60,6 +61,16 @@ export default function OnboardingBabyPage() {
   return (
     <main className="min-h-screen bg-[var(--color-bg)]">
       <div className="h-[6px] bg-[linear-gradient(90deg,var(--color-primary),var(--color-avatar-pink),var(--color-warning))] opacity-20" />
+      {canGoBack && (
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="返回"
+          className="absolute left-[var(--space-3)] top-[var(--space-3)] inline-flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[1px] active:shadow-[var(--shadow-press-sm-active)]"
+        >
+          <ChevronLeftIcon />
+        </button>
+      )}
       <form action={onSubmit} className="mx-auto flex w-full max-w-md flex-col px-[var(--space-6)] pt-[var(--space-8)]">
         <div className="mb-[var(--space-5)] flex items-center justify-center gap-[var(--space-2)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.04em] text-[color:var(--color-fg-soft)]">
           <span className="h-2 w-6 rounded-[var(--radius-pill)] bg-[var(--color-primary)]" />
