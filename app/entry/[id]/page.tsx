@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
+import { getDb } from '@/lib/server/db/client';
 import {
   babies,
   babyMemberPermissions,
@@ -13,10 +13,10 @@ import {
   media,
   milestones,
   users
-} from '@/lib/db/schema';
-import type { MediaItem } from '@/lib/media/types';
-import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
-import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
+} from '@/lib/server/db/schema';
+import type { MediaItem } from '@/lib/server/media/types';
+import { ForbiddenError, NotFoundError } from '@/lib/server/permissions/errors';
+import { loadAndAssertTarget } from '@/lib/server/permissions/target-loaders';
 import { EntryDetailView } from '@/components/features/EntryDetailView';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

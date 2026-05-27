@@ -12,7 +12,7 @@ describe('/api/health', () => {
     vi.doMock('@/instrumentation.node', () => ({
       ensureStartup: async () => {}
     }));
-    vi.doMock('@/lib/db/client', () => ({
+    vi.doMock('@/lib/server/db/client', () => ({
       getDb: () => ({
         raw: {
           prepare: () => ({
@@ -25,7 +25,7 @@ describe('/api/health', () => {
 
   afterEach(() => {
     vi.doUnmock('@/instrumentation.node');
-    vi.doUnmock('@/lib/db/client');
+    vi.doUnmock('@/lib/server/db/client');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
     chmodSync(dataDir, 0o700);

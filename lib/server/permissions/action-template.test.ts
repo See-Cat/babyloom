@@ -20,29 +20,29 @@ describe('withAuthorizedAction', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('401 when no session', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => {
-        const { UnauthorizedError } = await import('@/lib/permissions/errors');
+        const { UnauthorizedError } = await import('@/lib/server/permissions/errors');
         throw new UnauthorizedError();
       }
     }));
-    const { withAuthorizedAction } = await import('@/lib/permissions/action-template');
+    const { withAuthorizedAction } = await import('@/lib/server/permissions/action-template');
     const route = withAuthorizedAction({ action: 'baby:read' })(async () => new Response('x'));
     const res = await route(mockReq());
     expect(res.status).toBe(401);
   });
 
   it('200 for owner on baby:write action', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
-    const { withAuthorizedAction } = await import('@/lib/permissions/action-template');
+    const { withAuthorizedAction } = await import('@/lib/server/permissions/action-template');
     const route = withAuthorizedAction({ action: 'baby:write' })(async (_req, userId) =>
       Response.json({ userId })
     );
@@ -53,10 +53,10 @@ describe('withAuthorizedAction', () => {
   });
 
   it('passes trusted userId into resolveResource', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
-    const { withAuthorizedAction } = await import('@/lib/permissions/action-template');
+    const { withAuthorizedAction } = await import('@/lib/server/permissions/action-template');
     const route = withAuthorizedAction({
       action: 'entry:write',
       resolveResource: async (_req, userId) => ({ authorId: userId })
@@ -66,10 +66,10 @@ describe('withAuthorizedAction', () => {
   });
 
   it('404 (not 403) when stranger tries baby:write', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => randomUUID()
     }));
-    const { withAuthorizedAction } = await import('@/lib/permissions/action-template');
+    const { withAuthorizedAction } = await import('@/lib/server/permissions/action-template');
     const route = withAuthorizedAction({ action: 'baby:write' })(async () => new Response('x'));
     const res = await route(mockReq());
     expect(res.status).toBe(404);

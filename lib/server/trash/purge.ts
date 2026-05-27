@@ -1,9 +1,9 @@
 import { rename } from 'node:fs/promises';
 import { join } from 'node:path';
 import { and, eq } from 'drizzle-orm';
-import { getDb } from '@/lib/db/client';
-import { babies, entries, entryMedia, entryMilestones, media } from '@/lib/db/schema';
-import { purgeFinalDir } from '@/lib/media/storage';
+import { getDb } from '@/lib/server/db/client';
+import { babies, entries, entryMedia, entryMilestones, media } from '@/lib/server/db/schema';
+import { purgeFinalDir } from '@/lib/server/media/storage';
 
 export function purgeEntry(dataDir: string, id: string) {
   const { db } = getDb({ dataDir });

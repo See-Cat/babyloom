@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { MediaUnsupportedError, sniffAndValidate } from '@/lib/media/sniff';
+import { MediaUnsupportedError, sniffAndValidate } from '@/lib/server/media/sniff';
 
 const fx = (n: string) => `tests/fixtures/media/${n}`;
 

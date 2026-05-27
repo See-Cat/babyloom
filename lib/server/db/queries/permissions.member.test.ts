@@ -4,14 +4,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { runMigrations } from '@/lib/db/migrate';
-import { getDb, resetDbForTesting } from '@/lib/db/client';
-import { babies, families, familyMembers, users } from '@/lib/db/schema';
+import { runMigrations } from '@/lib/server/db/migrate';
+import { getDb, resetDbForTesting } from '@/lib/server/db/client';
+import { babies, families, familyMembers, users } from '@/lib/server/db/schema';
 import {
   batchUpsertMemberPermissions,
   listMemberBabyPermissions,
   listReadableBabies
-} from '@/lib/db/queries/permissions';
+} from '@/lib/server/db/queries/permissions';
 
 function seed() {
   const dataDir = mkdtempSync(join(tmpdir(), 'babyloom-permissions-q-'));

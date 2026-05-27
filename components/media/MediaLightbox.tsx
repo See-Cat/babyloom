@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { MediaImage } from './MediaImage';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 import { ChevronLeftIcon, XIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/shared/cn';
 

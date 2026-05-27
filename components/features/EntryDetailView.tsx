@@ -4,7 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { MediaCarousel } from '@/components/media/MediaCarousel';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 import { ActionSheet } from '@/components/mobile/ActionSheet';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';

@@ -1,7 +1,7 @@
 'use client';
 
 import { MediaImage } from './MediaImage';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 
 export interface ThumbnailStripProps {
   items: MediaItem[];

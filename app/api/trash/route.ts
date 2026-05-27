@@ -4,9 +4,9 @@ import {
   listTrashed,
   memberHasAnyCanDelete,
   type TrashListType
-} from '@/lib/db/queries/trash';
-import { jsonBadRequest, jsonNotFound } from '@/lib/permissions/responses';
-import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
+} from '@/lib/server/db/queries/trash';
+import { jsonBadRequest, jsonNotFound } from '@/lib/server/permissions/responses';
+import { withAuthorizedActionRoute } from '@/lib/server/permissions/route-template';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)

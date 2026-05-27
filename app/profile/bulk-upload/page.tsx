@@ -3,9 +3,9 @@ import { cookies, headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { babyMemberPermissions, familyMembers } from '@/lib/db/schema';
-import { listReadableBabies } from '@/lib/db/queries/permissions';
+import { getDb } from '@/lib/server/db/client';
+import { babyMemberPermissions, familyMembers } from '@/lib/server/db/schema';
+import { listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { BulkUploadView } from './BulkUploadView';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

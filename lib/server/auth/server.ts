@@ -1,8 +1,8 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { nextCookies } from 'better-auth/next-js';
-import { getDb } from '@/lib/db/client';
-import { users, sessions, accounts, verifications } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { users, sessions, accounts, verifications } from '@/lib/server/db/schema';
 import { hashPassword, verifyPassword } from '@/lib/server/bootstrap/owner';
 import { loadConfig } from '@/lib/server/config/load';
 

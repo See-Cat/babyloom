@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
-import { babies, media } from '@/lib/db/schema';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
+import { getDb } from '@/lib/server/db/client';
+import { babies, media } from '@/lib/server/db/schema';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
 
 export const runtime = 'nodejs';
 

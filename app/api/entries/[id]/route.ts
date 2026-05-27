@@ -3,7 +3,7 @@ import { revalidatePath } from 'next/cache';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
+import { getDb } from '@/lib/server/db/client';
 import {
   babies,
   entries,
@@ -12,9 +12,9 @@ import {
   familyMembers,
   media,
   milestones
-} from '@/lib/db/schema';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
+} from '@/lib/server/db/schema';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
+import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/server/permissions/responses';
 import { purgeEntry } from '@/lib/server/trash/purge';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

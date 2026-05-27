@@ -3,10 +3,10 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, test } from 'vitest';
-import { getDb, resetDbForTesting } from '@/lib/db/client';
-import { runMigrations } from '@/lib/db/migrate';
-import { babies, families, media, users } from '@/lib/db/schema';
-import { runReconcileOnce } from '@/lib/media/reconcile';
+import { getDb, resetDbForTesting } from '@/lib/server/db/client';
+import { runMigrations } from '@/lib/server/db/migrate';
+import { babies, families, media, users } from '@/lib/server/db/schema';
+import { runReconcileOnce } from '@/lib/server/media/reconcile';
 
 let dataDir: string;
 

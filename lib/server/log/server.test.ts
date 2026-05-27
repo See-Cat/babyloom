@@ -11,7 +11,7 @@ describe('createLogger', () => {
   });
 
   it('produces a logger with child() returning a child logger', async () => {
-    const { createLogger } = await import('@/lib/log/server');
+    const { createLogger } = await import('@/lib/server/log/server');
     const logger = createLogger({ dataDir, level: 'info' });
     const child = logger.child({ module: 'test' });
     expect(typeof child.info).toBe('function');
@@ -20,13 +20,13 @@ describe('createLogger', () => {
   });
 
   it('respects the configured log level', async () => {
-    const { createLogger } = await import('@/lib/log/server');
+    const { createLogger } = await import('@/lib/server/log/server');
     const logger = createLogger({ dataDir, level: 'warn' });
     expect(logger.level).toBe('warn');
   });
 
   it('redacts sensitive fields from log payloads', async () => {
-    const { createLogger } = await import('@/lib/log/server');
+    const { createLogger } = await import('@/lib/server/log/server');
     const logger = createLogger({ dataDir, level: 'info' });
     // pino redact paths configured in source
     expect(logger.bindings?.()).toBeDefined();
@@ -35,7 +35,7 @@ describe('createLogger', () => {
   });
 
   it('writes daily log files named app-YYYY-MM-DD.log', async () => {
-    const { createLogger } = await import('@/lib/log/server');
+    const { createLogger } = await import('@/lib/server/log/server');
     const logger = createLogger({ dataDir, level: 'info' });
     logger.info('startup complete');
     await new Promise((resolve) => setTimeout(resolve, 200));

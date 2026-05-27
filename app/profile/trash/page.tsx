@@ -2,8 +2,8 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { babyMemberPermissions, familyMembers } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { babyMemberPermissions, familyMembers } from '@/lib/server/db/schema';
 import { and, eq } from 'drizzle-orm';
 import TrashClient from './TrashClient';
 

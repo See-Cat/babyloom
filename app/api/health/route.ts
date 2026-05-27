@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { constants } from 'node:fs';
 import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { getDb } from '@/lib/db/client';
+import { getDb } from '@/lib/server/db/client';
 import { ensureStartup } from '@/instrumentation.node';
 
 const dataDir = resolve(process.env.BABYLOOM_DATA_DIR ?? './data');

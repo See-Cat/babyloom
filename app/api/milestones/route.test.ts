@@ -22,18 +22,18 @@ app:
   timezone: Asia/Shanghai
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner, hashPassword, ownerInternalEmail } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('@/lib/server/db/client');
   const { db } = getDb({ dataDir });
-  const { users, accounts, families, familyMembers, milestones } = await import('@/lib/db/schema');
+  const { users, accounts, families, familyMembers, milestones } = await import('@/lib/server/db/schema');
   const owner = db.select().from(users).where(eq(users.username, 'owner')).get()!;
 
   const now = new Date();
@@ -105,19 +105,19 @@ describe('/api/milestones/[id] family scoping', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('does not let one family owner delete another family milestone', async () => {
     const ctx = await seedTwoFamilies(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { DELETE } = await import('@/app/api/milestones/[id]/route');
-    const { getDb } = await import('@/lib/db/client');
-    const { milestones } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { milestones } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
 
     const res = await DELETE(req('DELETE'), {

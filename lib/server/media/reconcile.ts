@@ -2,8 +2,8 @@ import { existsSync } from 'fs';
 import { readdir } from 'fs/promises';
 import { join } from 'node:path';
 import { and, eq, inArray, lt } from 'drizzle-orm';
-import { getDb } from '@/lib/db/client';
-import { media } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { media } from '@/lib/server/db/schema';
 import { stagingDir } from './paths';
 import { purgeStagingDir } from './storage';
 

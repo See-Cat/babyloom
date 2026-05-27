@@ -8,8 +8,8 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { babies, entries, familyMembers, media } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { babies, entries, familyMembers, media } from '@/lib/server/db/schema';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)

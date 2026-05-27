@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
-import { getDb } from '@/lib/db/client';
-import { familyMembers, babyMemberPermissions, babies } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { familyMembers, babyMemberPermissions, babies } from '@/lib/server/db/schema';
 import type { Action, PermissionResource } from './actions';
 import { ForbiddenError } from './errors';
 

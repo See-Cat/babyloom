@@ -4,8 +4,8 @@ import { ForbiddenError, NotFoundError, ServiceUnavailableError, UnauthorizedErr
 import { jsonNotFound, jsonServiceUnavailable, jsonUnauthorized, UUID_RE } from './responses';
 import { getSessionUserId } from './session';
 import { assertPermission } from './assert';
-import { getDb } from '@/lib/db/client';
-import { familyMembers } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { familyMembers } from '@/lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 

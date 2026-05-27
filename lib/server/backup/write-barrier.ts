@@ -1,4 +1,4 @@
-import { ServiceUnavailableError } from '@/lib/permissions/errors';
+import { ServiceUnavailableError } from '@/lib/server/permissions/errors';
 
 let backupInProgress = false;
 

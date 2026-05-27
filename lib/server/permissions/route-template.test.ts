@@ -17,17 +17,17 @@ app:
   timezone: Asia/Shanghai
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('@/lib/server/db/client');
   const { db } = getDb({ dataDir });
-  const { users, families, babies } = await import('@/lib/db/schema');
+  const { users, families, babies } = await import('@/lib/server/db/schema');
   const owner = db.select().from(users).all()[0];
   const fam = db.select().from(families).all()[0];
   const babyId = randomUUID();
@@ -56,7 +56,7 @@ describe('withAuthorizedResource', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-route-'));
     ctx = await seed(dataDir);
     process.env.BABYLOOM_DATA_DIR = dataDir;
@@ -66,9 +66,9 @@ describe('withAuthorizedResource', () => {
     action: 'baby:read',
     allowedStatuses: readonly string[] = ['active']
   ) {
-    const { withAuthorizedResource } = await import('@/lib/permissions/route-template');
-    const { getDb } = await import('@/lib/db/client');
-    const { babies } = await import('@/lib/db/schema');
+    const { withAuthorizedResource } = await import('@/lib/server/permissions/route-template');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babies } = await import('@/lib/server/db/schema');
     const { eq } = await import('drizzle-orm');
     const { db } = getDb({ dataDir });
 
@@ -93,20 +93,20 @@ describe('withAuthorizedResource', () => {
   });
 
   it('returns 401 when no session', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => {
-        const { UnauthorizedError } = await import('@/lib/permissions/errors');
+        const { UnauthorizedError } = await import('@/lib/server/permissions/errors');
         throw new UnauthorizedError();
       }
     }));
     const route = await buildWrapped('baby:read');
     const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(401);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('returns 200 when owner reads own baby', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read');
@@ -114,11 +114,11 @@ describe('withAuthorizedResource', () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.id).toBe(ctx.babyId);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('returns 404 (not 403) when permission denied', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => randomUUID()
     }));
     const route = await buildWrapped('baby:read');
@@ -126,22 +126,22 @@ describe('withAuthorizedResource', () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('returns 404 when row missing from DB', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read');
     const res = await route(mockReq(), { params: Promise.resolve({ id: randomUUID() }) });
     expect(res.status).toBe(404);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('Codex round-12: status gate fires BEFORE assertPermission — trashed row returns unified 404 even for owner', async () => {
-    const { getDb } = await import('@/lib/db/client');
-    const { babies } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babies } = await import('@/lib/server/db/schema');
     const { eq } = await import('drizzle-orm');
     const { db } = getDb({ dataDir });
     db.update(babies)
@@ -149,7 +149,7 @@ describe('withAuthorizedResource', () => {
       .where(eq(babies.id, ctx.babyId))
       .run();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read', ['active']);
@@ -157,12 +157,12 @@ describe('withAuthorizedResource', () => {
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body.error).toBe('not_found');
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('Codex round-12: when allowedStatuses includes trashed, the same row IS served', async () => {
-    const { getDb } = await import('@/lib/db/client');
-    const { babies } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babies } = await import('@/lib/server/db/schema');
     const { eq } = await import('drizzle-orm');
     const { db } = getDb({ dataDir });
     db.update(babies)
@@ -170,23 +170,23 @@ describe('withAuthorizedResource', () => {
       .where(eq(babies.id, ctx.babyId))
       .run();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildWrapped('baby:read', ['trashed']);
     const res = await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) });
     expect(res.status).toBe(200);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 
   it('Codex review C3: wrapper threads userId to handler', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     let receivedUserId: string | null = null;
-    const { withAuthorizedResource } = await import('@/lib/permissions/route-template');
-    const { getDb } = await import('@/lib/db/client');
-    const { babies } = await import('@/lib/db/schema');
+    const { withAuthorizedResource } = await import('@/lib/server/permissions/route-template');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babies } = await import('@/lib/server/db/schema');
     const { eq } = await import('drizzle-orm');
     const { db } = getDb({ dataDir });
 
@@ -202,7 +202,7 @@ describe('withAuthorizedResource', () => {
     });
     await route(mockReq(), { params: Promise.resolve({ id: ctx.babyId }) } as any);
     expect(receivedUserId).toBe(ctx.ownerId);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
   });
 });
 
@@ -212,14 +212,14 @@ describe('withAuthorizedActionRoute', () => {
 
   beforeEach(async () => {
     vi.resetModules();
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-route-action-'));
     ctx = await seed(dataDir);
     process.env.BABYLOOM_DATA_DIR = dataDir;
   });
 
   async function buildRoute() {
-    const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
+    const { withAuthorizedActionRoute } = await import('@/lib/server/permissions/route-template');
     return withAuthorizedActionRoute({
       action: 'trash:view',
       allowRoles: ['owner', 'member']
@@ -232,7 +232,7 @@ describe('withAuthorizedActionRoute', () => {
   }
 
   it('allows an owner through a global trash route', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const route = await buildRoute();
@@ -243,9 +243,9 @@ describe('withAuthorizedActionRoute', () => {
   });
 
   it('returns 401 when a global route has no session', async () => {
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => {
-        const { UnauthorizedError } = await import('@/lib/permissions/errors');
+        const { UnauthorizedError } = await import('@/lib/server/permissions/errors');
         throw new UnauthorizedError();
       }
     }));
@@ -255,8 +255,8 @@ describe('withAuthorizedActionRoute', () => {
   });
 
   it('returns 404 for a non-owner member when route restricts to owner only', async () => {
-    const { getDb } = await import('@/lib/db/client');
-    const { users, families, familyMembers } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { users, families, familyMembers } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     const family = db.select().from(families).all()[0];
     const memberId = randomUUID();
@@ -282,10 +282,10 @@ describe('withAuthorizedActionRoute', () => {
         joinedAt: Date.now()
       })
       .run();
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => memberId
     }));
-    const { withAuthorizedActionRoute } = await import('@/lib/permissions/route-template');
+    const { withAuthorizedActionRoute } = await import('@/lib/server/permissions/route-template');
     const route = withAuthorizedActionRoute({
       action: 'trash:view',
       allowRoles: ['owner']

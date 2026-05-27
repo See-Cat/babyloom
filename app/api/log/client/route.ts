@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getAuth } from '@/lib/server/auth/server';
 import { takeClientLogToken } from '@/lib/client/log/client-rate-limit';
-import { createLogger } from '@/lib/log/server';
+import { createLogger } from '@/lib/server/log/server';
 
 const payloadSchema = z.object({
   message: z.string().min(1).max(4000),

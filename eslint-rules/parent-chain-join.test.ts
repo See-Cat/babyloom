@@ -10,7 +10,7 @@ const tester = new RuleTester({
   }
 });
 
-const schemaImport = `import { babies, entries, media, familyMembers } from '@/lib/db/schema';`;
+const schemaImport = `import { babies, entries, media, familyMembers } from '@/lib/server/db/schema';`;
 const filename = '/repo/app/api/example/route.ts';
 
 describe('babyloom/parent-chain-join', () => {

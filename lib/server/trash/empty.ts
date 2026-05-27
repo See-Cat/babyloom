@@ -1,7 +1,7 @@
 import { and, eq, inArray } from 'drizzle-orm';
-import { getDb } from '@/lib/db/client';
-import { babies, entries, media } from '@/lib/db/schema';
-import type { TrashType } from '@/lib/db/queries/trash';
+import { getDb } from '@/lib/server/db/client';
+import { babies, entries, media } from '@/lib/server/db/schema';
+import type { TrashType } from '@/lib/server/db/queries/trash';
 import { purgeBaby, purgeEntry, purgeMedia } from './purge';
 
 export interface EmptyTrashResult {

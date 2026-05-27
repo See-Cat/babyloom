@@ -17,19 +17,19 @@ app:
   timezone: Asia/Shanghai
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('@/lib/server/db/client');
   const { db } = getDb({ dataDir });
   const { users, accounts, families, familyMembers, babies, babyMemberPermissions } =
-    await import('@/lib/db/schema');
+    await import('@/lib/server/db/schema');
   const { hashPassword, ownerInternalEmail } = await import('@/lib/server/bootstrap/owner');
 
   const ownerUser = db.select().from(users).all()[0];
@@ -128,7 +128,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('owner can do anything baby-scoped', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.ownerId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
     ).resolves.toBeUndefined();
@@ -138,14 +138,14 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member without baby_member_permissions row cannot read', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.viewerId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
     ).rejects.toThrow(/no_baby_permission_row/);
   });
 
   it('member with canRead=1 can read but without canWrite row cannot write', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -171,14 +171,14 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member cannot baby:write because baby management is owner only', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.editorId, 'baby:write', { babyId: ctx.babyId }, { dataDir })
     ).rejects.toThrow(/owner_only/);
   });
 
   it('member with canWrite=1 can entry:trash regardless of author (no author restriction)', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -209,7 +209,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member cannot purge anything (owner-only)', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(
         ctx.editorId,
@@ -221,7 +221,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member with canDelete=1 can media:restore regardless of uploader/deleter', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -252,7 +252,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('non-family user is denied for any action', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     const strangerId = randomUUID();
     await expect(
       assertPermission(strangerId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
@@ -260,7 +260,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('cross-family babyId is denied', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     const otherBabyId = randomUUID();
     await expect(
       assertPermission(ctx.ownerId, 'baby:read', { babyId: otherBabyId }, { dataDir })
@@ -268,7 +268,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('baby_member_permissions override DENIES viewer that had role-read', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -287,7 +287,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('baby_member_permissions override does NOT widen — editor with canDelete=1 still cannot purge (Codex round 10 finding #1)', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -325,7 +325,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('baby_member_permissions is the sole authority — member with canWrite=1 can write', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -349,7 +349,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('baby_member_permissions canRead=0 NARROWS editor — denies what role allowed', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -368,7 +368,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('baby_member_permissions canDelete=1 lets member trash entries authored by others', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -392,7 +392,7 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member:manage is owner only', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.ownerId, 'member:manage', undefined, { dataDir })
     ).resolves.toBeUndefined();
@@ -402,14 +402,14 @@ describe('assertPermission §5.4 matrix', () => {
   });
 
   it('member:manage rejects target outside the family even when caller is owner', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.ownerId, 'member:manage', { targetUserId: randomUUID() }, { dataDir })
     ).rejects.toThrow(/target_not_in_family/);
   });
 
   it('trash:empty is owner only', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(assertPermission(ctx.ownerId, 'trash:empty', undefined, { dataDir })).resolves
       .toBeUndefined();
     await expect(assertPermission(ctx.editorId, 'trash:empty', undefined, { dataDir })).rejects
@@ -430,7 +430,7 @@ describe('evaluate', () => {
     'system:backup',
     'system:logs'
   ] as const)('does not widen member permissions for owner-only %s', async (action) => {
-    const { evaluate } = await import('@/lib/permissions/assert');
+    const { evaluate } = await import('@/lib/server/permissions/assert');
 
     expect(
       evaluate({
@@ -443,7 +443,7 @@ describe('evaluate', () => {
   });
 
   it('denies member when override row is missing on baby-scoped action', async () => {
-    const { evaluate } = await import('@/lib/permissions/assert');
+    const { evaluate } = await import('@/lib/server/permissions/assert');
 
     expect(
       evaluate({
@@ -456,7 +456,7 @@ describe('evaluate', () => {
   });
 
   it('uses override bit as the sole gate', async () => {
-    const { evaluate } = await import('@/lib/permissions/assert');
+    const { evaluate } = await import('@/lib/server/permissions/assert');
 
     expect(
       evaluate({
@@ -470,7 +470,7 @@ describe('evaluate', () => {
   });
 
   it('allows member when canWrite=1 regardless of authorId', async () => {
-    const { evaluate } = await import('@/lib/permissions/assert');
+    const { evaluate } = await import('@/lib/server/permissions/assert');
 
     expect(
       evaluate({

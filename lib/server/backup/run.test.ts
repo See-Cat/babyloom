@@ -17,15 +17,15 @@ describe('backup', () => {
   afterEach(async () => {
     const { setBackupInProgress } = await import('@/lib/server/backup/write-barrier');
     setBackupInProgress(false);
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('sanitizes the snapshot and builds a matching manifest', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    const { getDb } = await import('@/lib/db/client');
-    const { media, sessions } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { media, sessions } = await import('@/lib/server/db/schema');
     const { runBackup } = await import('@/lib/server/backup/run');
     const { db } = getDb({ dataDir });
     const now = Date.now();
@@ -127,7 +127,7 @@ describe('backup', () => {
 
   it('returns 503 and Retry-After from a guarded route', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { setBackupInProgress } = await import('@/lib/server/backup/write-barrier');

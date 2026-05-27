@@ -2,9 +2,9 @@ import { createReadStream } from 'node:fs';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { runBackup } from '@/lib/server/backup/run';
-import { ServiceUnavailableError } from '@/lib/permissions/errors';
-import { jsonServiceUnavailable } from '@/lib/permissions/responses';
-import { withAuthorizedAction } from '@/lib/permissions/action-template';
+import { ServiceUnavailableError } from '@/lib/server/permissions/errors';
+import { jsonServiceUnavailable } from '@/lib/server/permissions/responses';
+import { withAuthorizedAction } from '@/lib/server/permissions/action-template';
 
 export const runtime = 'nodejs';
 

@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
-import { babies, entries } from '@/lib/db/schema';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { getSessionUserId } from '@/lib/permissions/session';
+import { getDb } from '@/lib/server/db/client';
+import { babies, entries } from '@/lib/server/db/schema';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
+import { getSessionUserId } from '@/lib/server/permissions/session';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)

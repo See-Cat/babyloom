@@ -2,7 +2,7 @@ import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
 import { MonthCalendar } from './MonthCalendar';
-import type { MonthCell } from '@/lib/db/queries/calendar';
+import type { MonthCell } from '@/lib/server/db/queries/calendar';
 
 describe('MonthCalendar', () => {
   it('keeps day selection inside calendar and marks the selected date', () => {

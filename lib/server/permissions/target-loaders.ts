@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
-import { getDb } from '@/lib/db/client';
-import { babies, entries, media } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { babies, entries, media } from '@/lib/server/db/schema';
 import type { Action, PermissionResource } from './actions';
 import { NotFoundError } from './errors';
 import { assertPermission } from './assert';
@@ -96,14 +96,14 @@ export async function loadAndAssertTarget<R = unknown>(
       }
       break;
     case 'milestones': {
-      const { milestones } = await import('@/lib/db/schema');
+      const { milestones } = await import('@/lib/server/db/schema');
       row = db.select().from(milestones).where(eq(milestones.id, opts.id)).get();
       break;
     }
     case 'users': {
       // This branch is only safe for action='member:manage'. Do not extend it
       // to baby-scoped actions without adding a baby-aware resource mapping.
-      const { users } = await import('@/lib/db/schema');
+      const { users } = await import('@/lib/server/db/schema');
       row = db.select().from(users).where(eq(users.id, opts.id)).get();
       break;
     }

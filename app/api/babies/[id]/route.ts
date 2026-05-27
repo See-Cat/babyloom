@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
-import { babies } from '@/lib/db/schema';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { jsonBadRequest } from '@/lib/permissions/responses';
+import { getDb } from '@/lib/server/db/client';
+import { babies } from '@/lib/server/db/schema';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
+import { jsonBadRequest } from '@/lib/server/permissions/responses';
 import { purgeBaby } from '@/lib/server/trash/purge';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

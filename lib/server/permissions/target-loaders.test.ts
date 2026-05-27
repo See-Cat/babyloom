@@ -15,7 +15,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('returns the active baby for the owner', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     const row = await loadAndAssertTarget<any>({
       id: ctx.activeBabyId,
       table: 'babies',
@@ -27,7 +27,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('NotFoundError on non-UUID id', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: 'not-a-uuid',
@@ -40,7 +40,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('NotFoundError on unknown id', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: randomUUID(),
@@ -53,7 +53,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('NotFoundError on trashed baby when allowedStatuses=[active]', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: ctx.trashedBabyId,
@@ -66,7 +66,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('returns trashed baby when allowedStatuses=[trashed]', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     const row = await loadAndAssertTarget<any>({
       id: ctx.trashedBabyId,
       table: 'babies',
@@ -78,7 +78,7 @@ describe('loadAndAssertTarget — babies', () => {
   });
 
   it('ForbiddenError from assertPermission propagates (cross-user stranger)', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: ctx.activeBabyId,
@@ -101,7 +101,7 @@ describe('loadAndAssertTarget — entries', () => {
   });
 
   it('returns active entry for owner', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     const row = await loadAndAssertTarget<any>({
       id: ctx.activeEntryId,
       table: 'entries',
@@ -113,7 +113,7 @@ describe('loadAndAssertTarget — entries', () => {
   });
 
   it('NotFoundError on trashed entry when allowedStatuses=[active]', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: ctx.trashedEntryId,
@@ -126,7 +126,7 @@ describe('loadAndAssertTarget — entries', () => {
   });
 
   it('returns trashed entry when allowedStatuses=[trashed]', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     const row = await loadAndAssertTarget<any>({
       id: ctx.trashedEntryId,
       table: 'entries',
@@ -138,7 +138,7 @@ describe('loadAndAssertTarget — entries', () => {
   });
 
   it('NotFoundError for active entry under trashed baby', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: ctx.hiddenByParentEntryId,
@@ -158,8 +158,8 @@ describe('loadAndAssertTarget — milestones', () => {
   beforeEach(async () => {
     dataDir = mkdtempSync(join(tmpdir(), 'babyloom-target-milestones-'));
     const seed = await seedOwnerBabyEntries(dataDir);
-    const { getDb } = await import('@/lib/db/client');
-    const { families, milestones } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { families, milestones } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     const familyId = db.select().from(families).all()[0].id;
     const milestoneId = randomUUID();
@@ -177,7 +177,7 @@ describe('loadAndAssertTarget — milestones', () => {
   });
 
   it('owner loads milestone for milestone:manage', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     const row = await loadAndAssertTarget<any>({
       id: ctx.milestoneId,
       table: 'milestones',
@@ -188,7 +188,7 @@ describe('loadAndAssertTarget — milestones', () => {
   });
 
   it('non-uuid id → 404', async () => {
-    const { loadAndAssertTarget } = await import('@/lib/permissions/target-loaders');
+    const { loadAndAssertTarget } = await import('@/lib/server/permissions/target-loaders');
     await expect(
       loadAndAssertTarget({
         id: 'bad',

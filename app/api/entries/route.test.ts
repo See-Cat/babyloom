@@ -22,16 +22,16 @@ describe('POST /api/entries authorization', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('denies editor create when baby canWrite override is disabled', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { users, families, familyMembers, babyMemberPermissions, entries } =
-      await import('@/lib/db/schema');
+      await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
 
     const family = db.select().from(families).all()[0];
@@ -70,7 +70,7 @@ describe('POST /api/entries authorization', () => {
       })
       .run();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => editorId
     }));
     const { POST } = await import('@/app/api/entries/route');

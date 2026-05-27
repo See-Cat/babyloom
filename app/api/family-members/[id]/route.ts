@@ -1,11 +1,11 @@
 import { eq, sql } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
-import { getDb } from '@/lib/db/client';
-import { entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { entries, entryMedia, familyMembers, media, users } from '@/lib/server/db/schema';
 import { resetMemberPassword } from '@/lib/server/members/create';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
-import { jsonBadRequest } from '@/lib/permissions/responses';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
+import { jsonBadRequest } from '@/lib/server/permissions/responses';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -67,7 +67,7 @@ export const DELETE = withAuthorizedResource({
     return Response.json({ error: 'cannot_delete_owner' }, { status: 409 });
   }
   const { db } = getDb({ dataDir });
-  const { accounts, sessions } = await import('@/lib/db/schema');
+  const { accounts, sessions } = await import('@/lib/server/db/schema');
 
   db.transaction((tx) => {
     // 1. Revoke login + drop family membership. accounts has ON DELETE CASCADE

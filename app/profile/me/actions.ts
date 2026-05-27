@@ -7,8 +7,8 @@ import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { users } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { users } from '@/lib/server/db/schema';
 import type { FormActionResult } from '@/components/features/EditMeForm';
 
 const nameSchema = z.string().trim().min(1, '请输入昵称').max(50, '昵称最多 50 个字');

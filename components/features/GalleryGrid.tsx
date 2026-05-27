@@ -7,8 +7,8 @@ import { MediaImage } from '@/components/media/MediaImage';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Button } from '@/components/ui/Button';
 import { PlusIcon } from '@/components/ui/icons';
-import type { GalleryMonthGroup, GalleryMedia } from '@/lib/db/queries/gallery';
-import type { MediaItem } from '@/lib/media/types';
+import type { GalleryMonthGroup, GalleryMedia } from '@/lib/server/db/queries/gallery';
+import type { MediaItem } from '@/lib/server/media/types';
 
 export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<GalleryMonthGroup<GalleryMedia>> }) {
   const router = useRouter();

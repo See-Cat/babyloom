@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { avatarFilePath, type AvatarKind } from '@/lib/server/avatar/paths';
-import { jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
-import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
+import { jsonNotFound, UUID_RE } from '@/lib/server/permissions/responses';
+import { withAuthorizedActionRoute } from '@/lib/server/permissions/route-template';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

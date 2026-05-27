@@ -3,8 +3,8 @@ import { headers } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { familyMembers } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { familyMembers } from '@/lib/server/db/schema';
 import MilestonesAdminPage from './MilestonesAdminClient';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

@@ -21,7 +21,7 @@ describe('PATCH /api/family-members/[id]', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
@@ -40,7 +40,7 @@ describe('PATCH /api/family-members/[id]', () => {
 
   it('rejects role field with 400', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const target = await seedMember('targ01');
@@ -56,7 +56,7 @@ describe('PATCH /api/family-members/[id]', () => {
 
   it('password update: 200, password reset', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const target = await seedMember('targ02');
@@ -74,7 +74,7 @@ describe('PATCH /api/family-members/[id]', () => {
 
   it('empty body: 400', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const target = await seedMember('targ03');

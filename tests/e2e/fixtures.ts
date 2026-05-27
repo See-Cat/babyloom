@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
-import { getDb } from '../../lib/db/client';
-import { users, accounts, families, babies } from '../../lib/db/schema';
+import { getDb } from '../../lib/server/db/client';
+import { users, accounts, families, babies } from '../../lib/server/db/schema';
 import { hashPassword, ownerInternalEmail } from '../../lib/server/bootstrap/owner';
 
 export async function seedE2eExtras() {
@@ -76,11 +76,11 @@ export async function resetE2eDomainData() {
   const dataDir = resolve(process.cwd(), 'test-data/e2e');
   process.env.BABYLOOM_DATA_DIR = dataDir;
 
-  const { resetDbForTesting, getDb } = await import('../../lib/db/client');
+  const { resetDbForTesting, getDb } = await import('../../lib/server/db/client');
   resetDbForTesting();
   const { db } = getDb({ dataDir });
   const { babies, babyMemberPermissions, entries, entryMilestones, entryMedia } =
-    await import('../../lib/db/schema');
+    await import('../../lib/server/db/schema');
 
   db.delete(entryMedia).run();
   db.delete(entryMilestones).run();

@@ -8,7 +8,7 @@ import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
 import { formatRelativeDateTime } from '@/lib/shared/format-time';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 export interface TimelineCardProps {

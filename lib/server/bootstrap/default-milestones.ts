@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
-import type { getDb } from '@/lib/db/client';
-import { milestones } from '@/lib/db/schema';
+import type { getDb } from '@/lib/server/db/client';
+import { milestones } from '@/lib/server/db/schema';
 
 export const DEFAULT_MILESTONES: readonly string[] = [
   '第一次微笑',

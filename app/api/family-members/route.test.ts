@@ -22,7 +22,7 @@ describe('POST /api/family-members', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
@@ -30,7 +30,7 @@ describe('POST /api/family-members', () => {
   it('account-only creation works without babyAssociations: 201', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST, GET } = await import('@/app/api/family-members/route');
@@ -58,7 +58,7 @@ describe('POST /api/family-members', () => {
   it('atomic baby associations on create: 201 with permissions persisted', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST, GET } = await import('@/app/api/family-members/route');
@@ -85,12 +85,12 @@ describe('POST /api/family-members', () => {
   it('non-existent babyId in associations: 400, no user created', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import('@/app/api/family-members/route');
-    const { getDb } = await import('@/lib/db/client');
-    const { users } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { users } = await import('@/lib/server/db/schema');
 
     const beforeCount = getDb({ dataDir }).db.select().from(users).all().length;
 
@@ -111,7 +111,7 @@ describe('POST /api/family-members', () => {
   it('extra role field in body is silently stripped by zod', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import('@/app/api/family-members/route');
@@ -128,8 +128,8 @@ describe('POST /api/family-members', () => {
     expect(res.status).toBe(201);
     const body = await res.json();
 
-    const { getDb } = await import('@/lib/db/client');
-    const { familyMembers } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { familyMembers } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     const row = db.select().from(familyMembers).all().find((r) => r.id === body.memberId);
     expect(row?.role).toBe('member');
@@ -138,7 +138,7 @@ describe('POST /api/family-members', () => {
   it('GET excludes trashed babies from babyPermissions', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST, GET } = await import('@/app/api/family-members/route');
@@ -155,8 +155,8 @@ describe('POST /api/family-members', () => {
     const body = await res.json();
 
     // Insert a row referencing the trashed baby directly.
-    const { getDb } = await import('@/lib/db/client');
-    const { babyMemberPermissions } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babyMemberPermissions } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     db.insert(babyMemberPermissions)
       .values({
@@ -179,7 +179,7 @@ describe('POST /api/family-members', () => {
   it('GET returns empty babyPermissions for owner', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { GET } = await import('@/app/api/family-members/route');

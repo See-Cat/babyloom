@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { MediaImage } from './MediaImage';
 import { cn } from '@/lib/shared/cn';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 
 export interface MediaCarouselProps {
   items: MediaItem[];

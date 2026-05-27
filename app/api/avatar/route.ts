@@ -8,12 +8,12 @@ import {
   AvatarUnsupportedError,
   processAvatar
 } from '@/lib/server/avatar/process';
-import { getDb } from '@/lib/db/client';
-import { babies, users } from '@/lib/db/schema';
-import { assertPermission } from '@/lib/permissions/assert';
-import { ForbiddenError, NotFoundError } from '@/lib/permissions/errors';
-import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
-import { withAuthorizedActionRoute } from '@/lib/permissions/route-template';
+import { getDb } from '@/lib/server/db/client';
+import { babies, users } from '@/lib/server/db/schema';
+import { assertPermission } from '@/lib/server/permissions/assert';
+import { ForbiddenError, NotFoundError } from '@/lib/server/permissions/errors';
+import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/server/permissions/responses';
+import { withAuthorizedActionRoute } from '@/lib/server/permissions/route-template';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

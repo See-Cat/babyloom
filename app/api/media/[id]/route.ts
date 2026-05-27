@@ -4,12 +4,12 @@ import { stat } from 'fs/promises';
 import { resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
-import { babies, media } from '@/lib/db/schema';
-import { OutputBadRequestError, resolveOutputVariant } from '@/lib/media/output';
-import { resolveVariantPath } from '@/lib/media/paths';
-import { jsonBadRequest } from '@/lib/permissions/responses';
-import { withAuthorizedResource } from '@/lib/permissions/route-template';
+import { getDb } from '@/lib/server/db/client';
+import { babies, media } from '@/lib/server/db/schema';
+import { OutputBadRequestError, resolveOutputVariant } from '@/lib/server/media/output';
+import { resolveVariantPath } from '@/lib/server/media/paths';
+import { jsonBadRequest } from '@/lib/server/permissions/responses';
+import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
 import { purgeMedia } from '@/lib/server/trash/purge';
 
 export const runtime = 'nodejs';

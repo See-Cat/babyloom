@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Modal } from '@/components/ui/Modal';
 import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 type TrashItemType = 'entries' | 'media' | 'babies';

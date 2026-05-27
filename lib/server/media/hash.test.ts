@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough } from 'node:stream';
 import { describe, expect, test } from 'vitest';
-import { pipeThroughHasher } from '@/lib/media/hash';
+import { pipeThroughHasher } from '@/lib/server/media/hash';
 
 describe('pipeThroughHasher', () => {
   test('reports server-authoritative sha256 + bytes', async () => {

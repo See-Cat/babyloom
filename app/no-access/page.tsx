@@ -3,9 +3,9 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { listReadableBabies } from '@/lib/db/queries/permissions';
-import { familyMembers } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { listReadableBabies } from '@/lib/server/db/queries/permissions';
+import { familyMembers } from '@/lib/server/db/schema';
 import { LogoutButton } from '@/app/profile/BabySwitcher';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR

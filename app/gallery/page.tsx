@@ -3,10 +3,10 @@ import { cookies, headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
-import { getDb } from '@/lib/db/client';
-import { familyMembers } from '@/lib/db/schema';
-import { groupMediaByMonth, listGalleryMedia } from '@/lib/db/queries/gallery';
-import { listReadableBabies } from '@/lib/db/queries/permissions';
+import { getDb } from '@/lib/server/db/client';
+import { familyMembers } from '@/lib/server/db/schema';
+import { groupMediaByMonth, listGalleryMedia } from '@/lib/server/db/queries/gallery';
+import { listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { GalleryGrid } from '@/components/features/GalleryGrid';
 import { AppShell } from '@/components/mobile/AppShell';
 

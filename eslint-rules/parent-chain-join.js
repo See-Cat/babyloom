@@ -1,7 +1,7 @@
 'use strict';
 
 function isSchemaImport(node) {
-  return node.source && node.source.value === '@/lib/db/schema';
+  return node.source && node.source.value === '@/lib/server/db/schema';
 }
 
 function propertyName(member) {

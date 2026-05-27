@@ -5,10 +5,10 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { runUploadPipeline, UploadValidationError } from '@/lib/media/upload-pipeline';
-import { withAuthorizedAction } from '@/lib/permissions/action-template';
-import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/permissions/responses';
-import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
+import { runUploadPipeline, UploadValidationError } from '@/lib/server/media/upload-pipeline';
+import { withAuthorizedAction } from '@/lib/server/permissions/action-template';
+import { jsonBadRequest, jsonNotFound, UUID_RE } from '@/lib/server/permissions/responses';
+import { loadAndAssertTarget } from '@/lib/server/permissions/target-loaders';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';

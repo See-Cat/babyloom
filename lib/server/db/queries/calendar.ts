@@ -1,7 +1,7 @@
 import { and, eq, gte, lt } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
-import { babies, entries } from '@/lib/db/schema';
-import type * as schema from '@/lib/db/schema';
+import { babies, entries } from '@/lib/server/db/schema';
+import type * as schema from '@/lib/server/db/schema';
 
 export interface MonthCell {
   date: Date;

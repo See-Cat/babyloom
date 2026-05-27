@@ -23,11 +23,11 @@ app:
 log:
   level: info
 `);
-    const { resetDbForTesting } = await import('@/lib/db/client');
+    const { resetDbForTesting } = await import('@/lib/server/db/client');
     const { clearConfigCache } = await import('@/lib/server/config/load');
     resetDbForTesting();
     clearConfigCache();
-    const { runMigrations } = await import('@/lib/db/migrate');
+    const { runMigrations } = await import('@/lib/server/db/migrate');
     runMigrations(dataDir);
   });
 
@@ -35,9 +35,9 @@ log:
     const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { users, accounts } = await import('@/lib/db/schema');
+    const { users, accounts } = await import('@/lib/server/db/schema');
     const userRows = db.select().from(users).all();
     expect(userRows).toHaveLength(1);
     expect(userRows[0].username).toBe('alice');
@@ -62,9 +62,9 @@ log:
     await bootstrapOwner({ dataDir });
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { users, accounts } = await import('@/lib/db/schema');
+    const { users, accounts } = await import('@/lib/server/db/schema');
     expect(db.select().from(users).all()).toHaveLength(1);
     expect(db.select().from(accounts).all()).toHaveLength(1);
   });
@@ -73,9 +73,9 @@ log:
     const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { accounts } = await import('@/lib/db/schema');
+    const { accounts } = await import('@/lib/server/db/schema');
     const firstHash = db.select().from(accounts).all()[0].password;
 
     const { clearConfigCache } = await import('@/lib/server/config/load');
@@ -116,9 +116,9 @@ app:
 `);
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { users, accounts } = await import('@/lib/db/schema');
+    const { users, accounts } = await import('@/lib/server/db/schema');
     const userRows = db.select().from(users).all();
     const accountRows = db.select().from(accounts).all();
     expect(userRows).toHaveLength(1);
@@ -133,9 +133,9 @@ app:
     const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { families, familyMembers, users } = await import('@/lib/db/schema');
+    const { families, familyMembers, users } = await import('@/lib/server/db/schema');
 
     const fams = db.select().from(families).all();
     expect(fams).toHaveLength(1);
@@ -154,9 +154,9 @@ app:
     await bootstrapOwner({ dataDir });
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { families, familyMembers, accounts } = await import('@/lib/db/schema');
+    const { families, familyMembers, accounts } = await import('@/lib/server/db/schema');
 
     expect(db.select().from(families).all()).toHaveLength(1);
     expect(db.select().from(familyMembers).all()).toHaveLength(1);
@@ -185,9 +185,9 @@ app:
 `);
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { families } = await import('@/lib/db/schema');
+    const { families } = await import('@/lib/server/db/schema');
     const fams = db.select().from(families).all();
     expect(fams).toHaveLength(1);
     expect(fams[0].name).toBe('Renamed Family');
@@ -215,10 +215,10 @@ app:
 `);
     await bootstrapOwner({ dataDir });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { eq, and } = await import('drizzle-orm');
     const { db } = getDb({ dataDir });
-    const { users, accounts } = await import('@/lib/db/schema');
+    const { users, accounts } = await import('@/lib/server/db/schema');
 
     const owner = db.select().from(users).all()[0];
     expect(owner.username).toBe('bob');

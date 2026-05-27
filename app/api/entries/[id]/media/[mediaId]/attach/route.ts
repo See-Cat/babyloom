@@ -3,22 +3,22 @@ import { and, eq } from 'drizzle-orm';
 import { type NextRequest } from 'next/server';
 import { resolve } from 'node:path';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
-import { getDb } from '@/lib/db/client';
-import { entryMedia } from '@/lib/db/schema';
+import { getDb } from '@/lib/server/db/client';
+import { entryMedia } from '@/lib/server/db/schema';
 import {
   ForbiddenError,
   NotFoundError,
   ServiceUnavailableError,
   UnauthorizedError
-} from '@/lib/permissions/errors';
+} from '@/lib/server/permissions/errors';
 import {
   jsonNotFound,
   jsonServiceUnavailable,
   jsonUnauthorized,
   UUID_RE
-} from '@/lib/permissions/responses';
-import { getSessionUserId } from '@/lib/permissions/session';
-import { loadAndAssertTarget } from '@/lib/permissions/target-loaders';
+} from '@/lib/server/permissions/responses';
+import { getSessionUserId } from '@/lib/server/permissions/session';
+import { loadAndAssertTarget } from '@/lib/server/permissions/target-loaders';
 
 export const runtime = 'nodejs';
 

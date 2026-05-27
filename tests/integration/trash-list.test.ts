@@ -20,17 +20,17 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `
   );
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
-  const { users, families, familyMembers, babies, babyMemberPermissions, entries, media } = await import('@/lib/db/schema');
+  const { getDb } = await import('@/lib/server/db/client');
+  const { users, families, familyMembers, babies, babyMemberPermissions, entries, media } = await import('@/lib/server/db/schema');
   const { db } = getDb({ dataDir });
   const owner = db.select().from(users).all()[0];
   const family = db.select().from(families).all()[0];
@@ -191,13 +191,13 @@ describe('GET /api/trash', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('owner sees all trashed entries, including rows under a trashed baby', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { GET } = await import('@/app/api/trash/route');
     const res = await GET(req());
     expect(res.status).toBe(200);
@@ -212,7 +212,7 @@ describe('GET /api/trash', () => {
 
   it('member with canDelete sees all trashed entries on that baby (binary model)', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
     const { GET } = await import('@/app/api/trash/route');
     const res = await GET(req());
     expect(res.status).toBe(200);
@@ -227,7 +227,7 @@ describe('GET /api/trash', () => {
 
   it('member without canDelete cannot use the trash endpoint', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.viewerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.viewerId }));
     const { GET } = await import('@/app/api/trash/route');
     const res = await GET(req());
     expect(res.status).toBe(404);
@@ -235,7 +235,7 @@ describe('GET /api/trash', () => {
 
   it('rejects an invalid type', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { GET } = await import('@/app/api/trash/route');
     const res = await GET(req('nope'));
     expect(res.status).toBe(400);

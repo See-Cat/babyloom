@@ -20,8 +20,8 @@ async function seedMember(opts: {
   role?: 'owner' | 'member';
   familyId?: string;
 }) {
-  const { getDb } = await import('@/lib/db/client');
-  const { users, families, familyMembers } = await import('@/lib/db/schema');
+  const { getDb } = await import('@/lib/server/db/client');
+  const { users, families, familyMembers } = await import('@/lib/server/db/schema');
   const { db } = getDb({ dataDir: opts.dataDir });
   const family = opts.familyId
     ? { id: opts.familyId }
@@ -64,7 +64,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
@@ -72,10 +72,10 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
   it('owner happy path: writes rows and returns 201', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
-    const { getDb } = await import('@/lib/db/client');
-    const { babyMemberPermissions } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babyMemberPermissions } = await import('@/lib/server/db/schema');
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
@@ -105,7 +105,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
     const caller = await seedMember({ dataDir });
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => caller.userId
     }));
     const { POST } = await import(
@@ -124,7 +124,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
@@ -141,12 +141,12 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
 
   it('target is owner: 400', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    const { getDb } = await import('@/lib/db/client');
-    const { familyMembers } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { familyMembers } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     const ownerMember = db.select().from(familyMembers).all()[0];
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
@@ -165,7 +165,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
@@ -185,7 +185,7 @@ describe('POST /api/family-members/:memberId/baby-permissions', () => {
     const target = await seedMember({ dataDir });
     const foreignBabyId = randomUUID();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { POST } = await import(
@@ -212,7 +212,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
@@ -220,8 +220,8 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
   it('happy path: updates permission, returns 200', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
-    const { getDb } = await import('@/lib/db/client');
-    const { babyMemberPermissions } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babyMemberPermissions } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     // Seed an existing viewer row.
     db.insert(babyMemberPermissions)
@@ -235,7 +235,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
       })
       .run();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { PATCH } = await import(
@@ -259,7 +259,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { PATCH } = await import(
@@ -276,7 +276,7 @@ describe('PATCH /api/family-members/:memberId/baby-permissions/:babyId', () => {
     const caller = await seedMember({ dataDir });
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => caller.userId
     }));
     const { PATCH } = await import(
@@ -298,7 +298,7 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
     delete process.env.BABYLOOM_DATA_DIR;
   });
@@ -306,8 +306,8 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
   it('happy path: deletes row, returns 200', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
-    const { getDb } = await import('@/lib/db/client');
-    const { babyMemberPermissions } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { babyMemberPermissions } = await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     db.insert(babyMemberPermissions)
       .values({
@@ -320,7 +320,7 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
       })
       .run();
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { DELETE } = await import(
@@ -343,7 +343,7 @@ describe('DELETE /api/family-members/:memberId/baby-permissions/:babyId', () => 
     const ctx = await seedOwnerBabyEntries(dataDir);
     const target = await seedMember({ dataDir });
 
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
     const { DELETE } = await import(

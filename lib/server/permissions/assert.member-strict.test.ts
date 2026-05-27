@@ -20,19 +20,19 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `
   );
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('@/lib/server/db/client');
   const { db } = getDb({ dataDir });
   const { users, families, familyMembers, babies, babyMemberPermissions } = await import(
-    '@/lib/db/schema'
+    '@/lib/server/db/schema'
   );
   const { ownerInternalEmail } = await import('@/lib/server/bootstrap/owner');
 
@@ -101,22 +101,22 @@ describe('assertPermission strict member rule', () => {
   });
 
   it('rejects non-owner without baby_member_permissions row', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
-    const { ForbiddenError } = await import('@/lib/permissions/errors');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
+    const { ForbiddenError } = await import('@/lib/server/permissions/errors');
     await expect(
       assertPermission(ctx.memberUserId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it('allows owner without override row', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     await expect(
       assertPermission(ctx.ownerId, 'baby:read', { babyId: ctx.babyId }, { dataDir })
     ).resolves.toBeUndefined();
   });
 
   it('allows member with canWrite=1 to write entry authored by someone else', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({
@@ -140,7 +140,7 @@ describe('assertPermission strict member rule', () => {
   });
 
   it('denies member with canWrite=0 even though row exists', async () => {
-    const { assertPermission } = await import('@/lib/permissions/assert');
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
     ctx.db
       .insert(ctx.schemas.babyMemberPermissions)
       .values({

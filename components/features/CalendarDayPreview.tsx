@@ -4,7 +4,7 @@ import { TimelineCard } from '@/components/features/TimelineCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PlusIcon } from '@/components/ui/icons';
-import type { MediaItem } from '@/lib/media/types';
+import type { MediaItem } from '@/lib/server/media/types';
 
 export interface CalendarPreviewEntry {
   id: string;

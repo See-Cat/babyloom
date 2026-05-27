@@ -17,20 +17,20 @@ describe('avatar API routes', () => {
   });
 
   afterEach(async () => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     vi.resetModules();
-    const { resetDbForTesting } = await import('@/lib/db/client');
+    const { resetDbForTesting } = await import('@/lib/server/db/client');
     resetDbForTesting();
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('uploads my avatar, writes it to disk, stores a cache-busted URL, and serves it', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => ctx.ownerId
     }));
-    const { getDb } = await import('@/lib/db/client');
-    const { users } = await import('@/lib/db/schema');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { users } = await import('@/lib/server/db/schema');
     const { avatarFilePath } = await import('@/lib/server/avatar/paths');
     const { POST } = await import('@/app/api/avatar/route');
     const { GET } = await import('@/app/api/avatar/[kind]/[id]/route');
@@ -56,9 +56,9 @@ describe('avatar API routes', () => {
 
   it('hides baby avatar upload from non-owner family members', async () => {
     const ctx = await seedOwnerBabyEntries(dataDir);
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { users, families, familyMembers, babies, babyMemberPermissions } =
-      await import('@/lib/db/schema');
+      await import('@/lib/server/db/schema');
     const { db } = getDb({ dataDir });
     const family = db.select().from(families).get()!;
     const editorId = randomUUID();
@@ -95,7 +95,7 @@ describe('avatar API routes', () => {
         canDelete: 1
       })
       .run();
-    vi.doMock('@/lib/permissions/session', () => ({
+    vi.doMock('@/lib/server/permissions/session', () => ({
       getSessionUserId: async () => editorId
     }));
     const { POST } = await import('@/app/api/avatar/route');

@@ -1,10 +1,10 @@
 import { join, resolve } from 'node:path';
 import { loadConfig } from '@/lib/server/config/load';
-import { createLogger } from '@/lib/log/server';
-import { pruneOldLogs } from '@/lib/log/prune';
-import { runMigrations } from '@/lib/db/migrate';
+import { createLogger } from '@/lib/server/log/server';
+import { pruneOldLogs } from '@/lib/server/log/prune';
+import { runMigrations } from '@/lib/server/db/migrate';
 import { bootstrapOwner } from '@/lib/server/bootstrap/owner';
-import { startReconcileWorker } from '@/lib/media/reconcile';
+import { startReconcileWorker } from '@/lib/server/media/reconcile';
 
 let startupPromise: Promise<void> | null = null;
 

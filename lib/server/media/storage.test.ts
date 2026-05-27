@@ -2,8 +2,8 @@ import { existsSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, test } from 'vitest';
-import { finalRelativePath } from '@/lib/media/paths';
-import { commitStaging, prepareStaging, purgeFinalDir, purgeStagingDir } from '@/lib/media/storage';
+import { finalRelativePath } from '@/lib/server/media/paths';
+import { commitStaging, prepareStaging, purgeFinalDir, purgeStagingDir } from '@/lib/server/media/storage';
 
 let dataDir: string;
 

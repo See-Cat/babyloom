@@ -5,7 +5,7 @@ import {
   resolveVariantPath,
   stagingDir,
   variantFilename
-} from '@/lib/media/paths';
+} from '@/lib/server/media/paths';
 
 describe('media paths', () => {
   test('stagingDir joins dataDir + _staging + uploadId', () => {

@@ -18,17 +18,17 @@ app:
   timezone: Asia/Shanghai
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `);
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
-  const { getDb } = await import('@/lib/db/client');
+  const { getDb } = await import('@/lib/server/db/client');
   const { db } = getDb({ dataDir });
-  const { families } = await import('@/lib/db/schema');
+  const { families } = await import('@/lib/server/db/schema');
   return { familyId: db.select().from(families).all()[0].id };
 }
 
@@ -53,9 +53,9 @@ describe('createMember', () => {
     });
     expect(email).toBe('alice@local.babyloom');
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { users, accounts, familyMembers } = await import('@/lib/db/schema');
+    const { users, accounts, familyMembers } = await import('@/lib/server/db/schema');
 
     const u = db.select().from(users).where(eq(users.id, userId)).get();
     expect(u?.username).toBe('alice');
@@ -108,9 +108,9 @@ describe('createMember', () => {
       role: 'member'
     });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { accounts, users } = await import('@/lib/db/schema');
+    const { accounts, users } = await import('@/lib/server/db/schema');
     const u = db.select().from(users).where(eq(users.username, 'bob')).get();
     const cred = db
       .select()
@@ -123,10 +123,10 @@ describe('createMember', () => {
 
   it('atomically writes baby associations when provided', async () => {
     const { createMember } = await import('@/lib/server/members/create');
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { babies } = await import('@/lib/db/schema');
-    const { listMemberBabyPermissions } = await import('@/lib/db/queries/permissions');
+    const { babies } = await import('@/lib/server/db/schema');
+    const { listMemberBabyPermissions } = await import('@/lib/server/db/queries/permissions');
 
     const babyAId = randomUUID();
     const babyBId = randomUUID();
@@ -173,9 +173,9 @@ describe('createMember', () => {
 
   it('rolls back account creation when association write fails', async () => {
     const { createMember } = await import('@/lib/server/members/create');
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { users } = await import('@/lib/db/schema');
+    const { users } = await import('@/lib/server/db/schema');
 
     await expect(
       createMember({
@@ -209,9 +209,9 @@ describe('createMember', () => {
     });
     resetMemberPassword({ dataDir, userId, newPassword: 'newlongenuf' });
 
-    const { getDb } = await import('@/lib/db/client');
+    const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
-    const { accounts, users } = await import('@/lib/db/schema');
+    const { accounts, users } = await import('@/lib/server/db/schema');
     const cred = db
       .select()
       .from(accounts)

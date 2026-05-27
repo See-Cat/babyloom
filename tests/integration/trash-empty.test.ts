@@ -21,17 +21,17 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `
   );
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
-  const { users, families, familyMembers, babies, entries } = await import('@/lib/db/schema');
+  const { getDb } = await import('@/lib/server/db/client');
+  const { users, families, familyMembers, babies, entries } = await import('@/lib/server/db/schema');
   const { db } = getDb({ dataDir });
   const owner = db.select().from(users).all()[0];
   const family = db.select().from(families).all()[0];
@@ -141,13 +141,13 @@ describe('POST /api/trash/empty', () => {
   });
 
   afterEach(() => {
-    vi.doUnmock('@/lib/permissions/session');
+    vi.doUnmock('@/lib/server/permissions/session');
     delete process.env.BABYLOOM_DATA_DIR;
   });
 
   it('owner can empty trashed entries', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { POST } = await import('@/app/api/trash/empty/route');
     const res = await POST(post());
     expect(res.status).toBe(200);
@@ -161,7 +161,7 @@ describe('POST /api/trash/empty', () => {
 
   it('editor cannot empty trash', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.editorId }));
     const { POST } = await import('@/app/api/trash/empty/route');
     const res = await POST(post());
     expect(res.status).toBe(404);
@@ -169,7 +169,7 @@ describe('POST /api/trash/empty', () => {
 
   it('archives babies even when they still have active children', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { POST } = await import('@/app/api/trash/empty/route');
     const res = await POST(post('babies'));
     expect(res.status).toBe(200);
@@ -186,7 +186,7 @@ describe('POST /api/trash/empty', () => {
 
   it('rejects an invalid type', async () => {
     const ctx = await seed(dataDir);
-    vi.doMock('@/lib/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
+    vi.doMock('@/lib/server/permissions/session', () => ({ getSessionUserId: async () => ctx.ownerId }));
     const { POST } = await import('@/app/api/trash/empty/route');
     const res = await POST(post('bad'));
     expect(res.status).toBe(400);

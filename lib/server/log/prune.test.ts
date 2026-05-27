@@ -15,7 +15,7 @@ describe('pruneOldLogs', () => {
     const recentFile = touchLog('app-2026-02-01.log', 2);
     const unrelatedFile = touchLog('debug-2026-01-01.log', 40);
 
-    const { pruneOldLogs } = await import('@/lib/log/prune');
+    const { pruneOldLogs } = await import('@/lib/server/log/prune');
     const summary = await pruneOldLogs({ logsDir, keepDays: 30 });
 
     expect(summary.deleted).toBe(1);

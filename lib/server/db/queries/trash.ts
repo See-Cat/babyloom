@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, notInArray, sql } from 'drizzle-orm';
-import { getDb } from '@/lib/db/client';
-import { babies, babyMemberPermissions, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/db/schema';
-import type { MediaItem } from '@/lib/media/types';
+import { getDb } from '@/lib/server/db/client';
+import { babies, babyMemberPermissions, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/server/db/schema';
+import type { MediaItem } from '@/lib/server/media/types';
 
 export type TrashType = 'entries' | 'media' | 'babies';
 export type TrashListType = TrashType | 'all';

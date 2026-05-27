@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { OutputBadRequestError, resolveOutputVariant } from '@/lib/media/output';
+import { OutputBadRequestError, resolveOutputVariant } from '@/lib/server/media/output';
 
 const photoRow = {
   id: 'm1',

@@ -18,17 +18,17 @@ app:
   secret: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcd
 `
   );
-  const { resetDbForTesting } = await import('@/lib/db/client');
+  const { resetDbForTesting } = await import('@/lib/server/db/client');
   const { clearConfigCache } = await import('@/lib/server/config/load');
   resetDbForTesting();
   clearConfigCache();
-  const { runMigrations } = await import('@/lib/db/migrate');
+  const { runMigrations } = await import('@/lib/server/db/migrate');
   runMigrations(dataDir);
   const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
   await bootstrapOwner({ dataDir });
 
-  const { getDb } = await import('@/lib/db/client');
-  const { users, families, babies, entries } = await import('@/lib/db/schema');
+  const { getDb } = await import('@/lib/server/db/client');
+  const { users, families, babies, entries } = await import('@/lib/server/db/schema');
   const { db } = getDb({ dataDir });
 
   const owner = db.select().from(users).all()[0];
