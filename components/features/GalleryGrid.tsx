@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { MediaImage } from '@/components/media/MediaImage';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Button } from '@/components/ui/Button';
@@ -10,8 +11,23 @@ import type { GalleryMonthGroup, GalleryMedia } from '@/lib/db/queries/gallery';
 import type { MediaItem } from '@/lib/media/types';
 
 export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<GalleryMonthGroup<GalleryMedia>> }) {
+  const router = useRouter();
   const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+
+  async function deleteMedia(media: GalleryMedia) {
+    if (deletingId) return;
+    setDeletingId(media.id);
+    try {
+      const res = await fetch(`/api/media/${media.id}/trash`, { method: 'POST' });
+      if (!res.ok) throw new Error('trash failed');
+      setViewerIndex(null);
+      router.refresh();
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   if (groups.length === 0) {
     return (
@@ -63,13 +79,24 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
             const media = flatItems[i];
             if (!media) return null;
             return media.entryId === null ? (
-              <Link
-                href={buildComposerHref(babyId, media)}
-                className="flex w-full items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
-              >
-                <PlusIcon className="h-4 w-4" />
-                为这张照片写一则记录
-              </Link>
+              <div className="flex w-full items-center gap-[var(--space-2)]">
+                <Link
+                  href={buildComposerHref(babyId, media)}
+                  className="flex flex-1 items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  为这张照片写一则记录
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => deleteMedia(media)}
+                  disabled={deletingId === media.id}
+                  aria-label="删除照片"
+                  className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-pill)] bg-white/12 text-white backdrop-blur-[8px] active:bg-white/20 disabled:opacity-50"
+                >
+                  <TrashGlyph />
+                </button>
+              </div>
             ) : (
               <Link
                 href={`/entry/${media.entryId}`}
@@ -82,6 +109,27 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
         />
       )}
     </>
+  );
+}
+
+function TrashGlyph() {
+  return (
+    <svg
+      className="h-5 w-5"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
   );
 }
 
