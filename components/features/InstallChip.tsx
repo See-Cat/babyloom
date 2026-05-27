@@ -7,30 +7,48 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
-const DISMISSED_KEY = 'babyloom_install_dismissed';
+const INSTALLED_KEY = 'babyloom_installed';
+
+function detectInstalled() {
+  if (typeof window === 'undefined') return false;
+  if (localStorage.getItem(INSTALLED_KEY) === '1') return true;
+  return window.matchMedia?.('(display-mode: standalone)').matches ?? false;
+}
 
 export function InstallChip() {
   const [promptEvent, setPromptEvent] = React.useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = React.useState(false);
 
   React.useEffect(() => {
-    if (localStorage.getItem(DISMISSED_KEY) === '1') return;
+    setInstalled(detectInstalled());
 
     function onBeforeInstallPrompt(event: Event) {
       event.preventDefault();
       setPromptEvent(event as BeforeInstallPromptEvent);
     }
 
+    function onAppInstalled() {
+      localStorage.setItem(INSTALLED_KEY, '1');
+      setInstalled(true);
+      setPromptEvent(null);
+    }
+
     window.addEventListener('beforeinstallprompt', onBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+    window.addEventListener('appinstalled', onAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', onAppInstalled);
+    };
   }, []);
 
-  if (!promptEvent) return null;
+  if (installed || !promptEvent) return null;
 
   async function install() {
     if (!promptEvent) return;
     await promptEvent.prompt();
+    // accepted -> appinstalled 事件会接管隐藏;
+    // dismissed -> 仅清掉本次 prompt event,浏览器下次再发 beforeinstallprompt 时按钮会回来.
     await promptEvent.userChoice.catch(() => ({ outcome: 'dismissed' as const }));
-    localStorage.setItem(DISMISSED_KEY, '1');
     setPromptEvent(null);
   }
 
