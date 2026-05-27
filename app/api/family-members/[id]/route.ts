@@ -1,8 +1,8 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/db/client';
-import { familyMembers, users } from '@/lib/db/schema';
+import { entries, entryMedia, familyMembers, media, users } from '@/lib/db/schema';
 import { resetMemberPassword } from '@/lib/members/create';
 import { withAuthorizedResource } from '@/lib/permissions/route-template';
 import { jsonBadRequest } from '@/lib/permissions/responses';
@@ -67,10 +67,53 @@ export const DELETE = withAuthorizedResource({
     return Response.json({ error: 'cannot_delete_owner' }, { status: 409 });
   }
   const { db } = getDb({ dataDir });
-  const { sessions } = await import('@/lib/db/schema');
+  const { accounts, sessions } = await import('@/lib/db/schema');
+
   db.transaction((tx) => {
+    // 1. Revoke login + drop family membership. accounts has ON DELETE CASCADE
+    //    on users.id, but we delete it explicitly so the user can no longer
+    //    authenticate even before we decide users-row fate below.
     tx.delete(sessions).where(eq(sessions.userId, row.userId)).run();
+    tx.delete(accounts).where(eq(accounts.userId, row.userId)).run();
     tx.delete(familyMembers).where(eq(familyMembers.id, row.memberId)).run();
+
+    // 2. users.id is referenced as NOT NULL FK by entries.authorId /
+    //    media.uploadedBy / entryMedia.attachedBy (no cascade). Hard-delete
+    //    only when there are no such references.
+    const refCount =
+      (tx
+        .select({ c: sql<number>`count(*)`.as('c') })
+        .from(entries)
+        .where(eq(entries.authorId, row.userId))
+        .get()?.c ?? 0) +
+      (tx
+        .select({ c: sql<number>`count(*)`.as('c') })
+        .from(media)
+        .where(eq(media.uploadedBy, row.userId))
+        .get()?.c ?? 0) +
+      (tx
+        .select({ c: sql<number>`count(*)`.as('c') })
+        .from(entryMedia)
+        .where(eq(entryMedia.attachedBy, row.userId))
+        .get()?.c ?? 0);
+
+    if (refCount === 0) {
+      tx.delete(users).where(eq(users.id, row.userId)).run();
+    } else {
+      // Keep the user row for FK integrity, but free up the username slot
+      // and scrub the email so a fresh signup can reuse them. Nullable
+      // deletedBy refs on babies/entries/media still point here for audit.
+      const tombstone = `__removed_${row.userId}__`;
+      tx.update(users)
+        .set({
+          username: tombstone,
+          email: `${tombstone}@removed.local`,
+          updatedAt: new Date()
+        })
+        .where(eq(users.id, row.userId))
+        .run();
+    }
   });
+
   return Response.json({ removed: row.userId });
 });
