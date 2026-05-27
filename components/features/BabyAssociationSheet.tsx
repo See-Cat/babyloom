@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
-import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { CheckIcon } from '@/components/ui/icons';
 
 export interface BabyOption {
   id: string;
@@ -27,89 +26,41 @@ export function BabyAssociationSheet({
   defaultPermission = 'editor',
   onConfirm
 }: BabyAssociationSheetProps) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [permission, setPermission] = useState<'viewer' | 'editor'>(defaultPermission);
-
-  useEffect(() => {
-    if (open) {
-      setSelected(availableBabies.length === 1 ? new Set([availableBabies[0].id]) : new Set());
-      setPermission(defaultPermission);
-    }
-  }, [open, availableBabies, defaultPermission]);
-
-  function toggle(id: string) {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
-  }
-
-  function handleConfirm() {
-    onConfirm({ babyIds: Array.from(selected), permission });
+  function handlePick(babyId: string) {
+    onConfirm({ babyIds: [babyId], permission: defaultPermission });
     onOpenChange(false);
   }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title="关联宝宝"
-      footer={
-        <>
-          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-            取消
-          </Button>
-          <Button type="button" onClick={handleConfirm} disabled={selected.size === 0}>
-            确认
-          </Button>
-        </>
-      }
-    >
+    <Dialog open={open} onOpenChange={onOpenChange} title="关联宝宝">
       <div className="flex flex-col gap-[var(--space-3)]">
         {availableBabies.length === 0 ? (
           <p className="text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">
             已关联全部宝宝
           </p>
         ) : (
-          <ul className="flex flex-col gap-[var(--space-2)]">
+          <div className="flex flex-col">
             {availableBabies.map((baby) => (
-              <li key={baby.id}>
-                <label className="flex items-center gap-[var(--space-2)]">
-                  <input
-                    type="checkbox"
-                    aria-label={baby.name}
-                    checked={selected.has(baby.id)}
-                    onChange={() => toggle(baby.id)}
-                  />
-                  <Avatar
-                    src={baby.avatarUrl ?? undefined}
-                    name={baby.name}
-                    colorKey={baby.id}
-                    size="sm"
-                  />
-                  <span className="text-[length:var(--text-sm)] text-[color:var(--color-fg)]">
-                    {baby.name}
-                  </span>
-                </label>
-              </li>
+              <button
+                type="button"
+                key={baby.id}
+                aria-label={baby.name}
+                onClick={() => handlePick(baby.id)}
+                className={cn(
+                  'flex items-center gap-[var(--space-3)] rounded-[14px] px-[6px] py-[10px] text-left transition-colors active:bg-[var(--color-surface)]'
+                )}
+              >
+                <Avatar
+                  src={baby.avatarUrl ?? undefined}
+                  name={baby.name}
+                  colorKey={baby.id}
+                  size="sm"
+                />
+                <span className="flex-1 truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+                  {baby.name}
+                </span>
+              </button>
             ))}
-          </ul>
-        )}
-        {availableBabies.length > 0 && (
-          <div>
-            <p className="mb-[var(--space-1)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg)]">
-              权限
-            </p>
-            <SegmentedControl
-              ariaLabel="权限"
-              value={permission}
-              onChange={(v) => setPermission(v as 'viewer' | 'editor')}
-              className="grid-cols-2"
-              options={[
-                { value: 'editor', label: '可编辑' },
-                { value: 'viewer', label: '仅查看' }
-              ]}
-            />
           </div>
         )}
       </div>
