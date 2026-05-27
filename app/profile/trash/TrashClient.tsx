@@ -104,7 +104,6 @@ export default function TrashClient({
     }
     setRows(rows.filter((item) => item.id !== row.id));
     setCount(Math.max(0, count - 1));
-    setMessage('已还原');
   }
 
   async function purge(row: TrashRow) {
@@ -115,7 +114,6 @@ export default function TrashClient({
     }
     setRows(rows.filter((item) => item.id !== row.id));
     setCount(Math.max(0, count - 1));
-    setMessage('已永久删除');
   }
 
   async function purgeSelected() {
@@ -137,7 +135,6 @@ export default function TrashClient({
     setCount(Math.max(0, count - purgedIds.size));
     setSelectedIds(new Set());
     setSelecting(false);
-    setMessage(`已永久删除 ${purgedIds.size} 项`);
   }
 
   async function confirmPending() {
