@@ -119,7 +119,7 @@ export function BottomSheet({
           </p>
         )}
         {children && <div>{children}</div>}
-        {footer && <div className="mt-[var(--space-6)] flex flex-col gap-[var(--space-2)]">{footer}</div>}
+        {footer && <div className="mt-[var(--space-6)] flex flex-col gap-[var(--space-3)]">{footer}</div>}
       </div>
     </div>
   );

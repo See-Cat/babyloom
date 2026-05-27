@@ -19,7 +19,8 @@ body {
 
 .input:focus-visible,
 .textarea:focus-visible,
-.date-row:focus-visible {
+.date-row:focus-visible,
+.tag-bare-input:focus-visible {
   outline: none;
 }
 

@@ -3,6 +3,7 @@ import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from 'node:crypt
 import { getDb } from '@/lib/db/client';
 import { users, accounts, families, familyMembers } from '@/lib/db/schema';
 import { loadConfig } from '@/lib/config/load';
+import { seedDefaultMilestones } from './default-milestones';
 
 export interface BootstrapOwnerOptions {
   dataDir: string;
@@ -153,4 +154,6 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
       .where(eq(familyMembers.id, existingMember[0].id))
       .run();
   }
+
+  seedDefaultMilestones(db, familyId);
 }

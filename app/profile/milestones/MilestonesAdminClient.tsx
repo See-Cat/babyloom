@@ -1,14 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/mobile/AppShell';
-import { MilestoneRow } from '@/components/features/MilestoneRow';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
+import { Tag } from '@/components/ui/Tag';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
+import { cn } from '@/lib/cn';
 
 interface Milestone {
   id: string;
@@ -20,10 +19,8 @@ interface Milestone {
 
 export default function MilestonesAdminPage() {
   const [items, setItems] = useState<Milestone[]>([]);
-  const [creating, setCreating] = useState(false);
-  const [draft, setDraft] = useState({ name: '' });
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState({ name: '' });
+  const [creating, setCreating] = useState(false);
   const [removeFor, setRemoveFor] = useState<Milestone | null>(null);
 
   async function reload() {
@@ -37,15 +34,15 @@ export default function MilestonesAdminPage() {
     reload();
   }, []);
 
-  async function create() {
-    if (!draft.name) return;
+  async function create(name: string) {
+    const trimmed = name.trim();
+    setCreating(false);
+    if (!trimmed) return;
     await fetch('/api/milestones', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ ...draft, icon: 'custom' })
+      body: JSON.stringify({ name: trimmed, icon: 'custom' })
     });
-    setCreating(false);
-    setDraft({ name: '' });
     reload();
   }
 
@@ -55,14 +52,16 @@ export default function MilestonesAdminPage() {
     reload();
   }
 
-  async function saveEdit(id: string) {
+  async function saveEdit(id: string, name: string) {
+    const trimmed = name.trim();
+    setEditingId(null);
+    const original = items.find((m) => m.id === id)?.name ?? '';
+    if (!trimmed || trimmed === original) return;
     await fetch(`/api/milestones/${id}`, {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(editDraft)
+      body: JSON.stringify({ name: trimmed })
     });
-    setEditingId(null);
-    setEditDraft({ name: '' });
     reload();
   }
 
@@ -79,43 +78,54 @@ export default function MilestonesAdminPage() {
         </Link>
       }
     >
-      <ul className="mb-[var(--space-6)] grid gap-[var(--space-2)] sm:grid-cols-2">
-        {items.map((m) => (
-          <li key={m.id}>
-            <MilestoneRow
-              milestone={m}
-              editing={editingId === m.id}
-              editDraft={editDraft}
-              onEditDraftChange={setEditDraft}
-              onSave={() => saveEdit(m.id)}
-              onCancelEdit={() => setEditingId(null)}
-              onEdit={() => {
-                setEditingId(m.id);
-                setEditDraft({ name: m.name });
-              }}
-              onRemove={() => setRemoveFor(m)}
+      <p className="mb-[var(--space-3)] px-[var(--space-1)] text-[length:var(--text-xs)] text-[color:var(--color-fg-soft)]">
+        点击标签可编辑名称,点击 × 可删除。
+      </p>
+      <div className="flex flex-wrap items-center gap-[var(--space-2)]">
+        {items.map((m) =>
+          editingId === m.id ? (
+            <InlineTagInput
+              key={m.id}
+              initialValue={m.name}
+              variant="accent"
+              onCommit={(value) => saveEdit(m.id, value)}
+              onCancel={() => setEditingId(null)}
             />
-          </li>
-        ))}
-      </ul>
+          ) : (
+            <Tag
+              key={m.id}
+              variant="accent"
+              removable
+              onRemove={(event) => {
+                event.stopPropagation();
+                setRemoveFor(m);
+              }}
+              onClick={() => setEditingId(m.id)}
+              className="cursor-pointer select-none"
+            >
+              {m.name}
+            </Tag>
+          )
+        )}
+        {creating ? (
+          <InlineTagInput
+            initialValue=""
+            placeholder="新里程碑"
+            variant="dashed"
+            onCommit={create}
+            onCancel={() => setCreating(false)}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            className="inline-flex items-center gap-[4px] rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-border)] px-[10px] py-[4px] text-[length:var(--text-sm)] font-semibold text-[color:var(--color-fg-soft)] active:translate-y-[1px]"
+          >
+            <PlusIcon className="h-3 w-3" /> 添加
+          </button>
+        )}
+      </div>
 
-      {creating ? (
-        <Card className="flex flex-col gap-[var(--space-3)]">
-          <Input label="名称" placeholder="名称 (如 第一次叫妈妈)" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />
-          <div className="mt-[var(--space-1)] grid grid-cols-2 gap-[var(--space-2)]">
-            <Button type="button" size="md" onClick={create} fullWidth>
-              创建
-            </Button>
-            <Button type="button" size="md" variant="default" onClick={() => setCreating(false)} fullWidth>
-              取消
-            </Button>
-          </div>
-        </Card>
-      ) : (
-        <Button type="button" variant="secondary" leadingIcon={<PlusIcon />} onClick={() => setCreating(true)} fullWidth>
-          添加里程碑
-        </Button>
-      )}
       <Dialog
         open={Boolean(removeFor)}
         onOpenChange={(open) => {
@@ -139,5 +149,62 @@ export default function MilestonesAdminPage() {
         </p>
       </Dialog>
     </AppShell>
+  );
+}
+
+interface InlineTagInputProps {
+  initialValue: string;
+  placeholder?: string;
+  variant: 'accent' | 'dashed';
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}
+
+function InlineTagInput({ initialValue, placeholder, variant, onCommit, onCancel }: InlineTagInputProps) {
+  const [value, setValue] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const committedRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  function commit() {
+    if (committedRef.current) return;
+    committedRef.current = true;
+    onCommit(value);
+  }
+
+  return (
+    <span
+      className={cn(
+        'inline-flex items-center transition-shadow focus-within:[box-shadow:var(--shadow-focus)]',
+        variant === 'dashed'
+          ? 'rounded-[var(--radius-sm)] border border-dashed border-[color:var(--color-border)] bg-transparent px-[10px] py-[4px]'
+          : 'tag accent'
+      )}
+      data-variant={variant}
+    >
+      <input
+        ref={inputRef}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => setValue(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+          } else if (event.key === 'Escape') {
+            event.preventDefault();
+            committedRef.current = true;
+            onCancel();
+          }
+        }}
+        onBlur={commit}
+        className="tag-bare-input appearance-none border-0 bg-transparent p-0 text-[length:var(--text-sm)] font-semibold leading-none outline-none ring-0 focus:outline-none focus:ring-0 focus-visible:outline-none placeholder:text-[color:var(--color-fg-soft)]"
+        style={{ color: 'inherit', fieldSizing: 'content', minWidth: '4ch', boxShadow: 'none' } as CSSProperties}
+      />
+    </span>
   );
 }
