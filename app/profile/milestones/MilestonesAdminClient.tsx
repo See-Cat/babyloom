@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import Link from 'next/link';
 import { AppShell } from '@/components/mobile/AppShell';
 import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
+import { Modal } from '@/components/ui/Modal';
 import { Tag } from '@/components/ui/Tag';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/cn';
@@ -126,7 +126,7 @@ export default function MilestonesAdminPage() {
         )}
       </div>
 
-      <Dialog
+      <Modal
         open={Boolean(removeFor)}
         onOpenChange={(open) => {
           if (!open) setRemoveFor(null);
@@ -135,7 +135,7 @@ export default function MilestonesAdminPage() {
         dismissible={false}
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={() => setRemoveFor(null)}>
+            <Button type="button" variant="default" onClick={() => setRemoveFor(null)}>
               取消
             </Button>
             <Button type="button" variant="error" onClick={() => removeFor && remove(removeFor.id)}>
@@ -147,7 +147,7 @@ export default function MilestonesAdminPage() {
         <p className="text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           确认删除 {removeFor?.name ?? '该里程碑'}? 已挂在记录上的会断开关联,不会删除记录。
         </p>
-      </Dialog>
+      </Modal>
     </AppShell>
   );
 }

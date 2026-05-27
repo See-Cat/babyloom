@@ -8,7 +8,7 @@ import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Dialog } from '@/components/ui/Dialog';
+import { Modal } from '@/components/ui/Modal';
 import { CheckIcon, ChevronLeftIcon } from '@/components/ui/icons';
 import type { MediaItem } from '@/lib/media/types';
 import { milestoneTagStyle } from '@/lib/milestone-tint';
@@ -239,7 +239,7 @@ export default function TrashClient({
         </Button>
       )}
 
-      <Dialog
+      <Modal
         open={Boolean(pending)}
         onOpenChange={(open) => {
           if (!open) setPending(null);
@@ -248,7 +248,7 @@ export default function TrashClient({
         title={pending?.action === 'batch' ? `永久删除 ${selectedIds.size} 条记录?` : '永久删除'}
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={() => setPending(null)}>
+            <Button type="button" variant="default" onClick={() => setPending(null)}>
               取消
             </Button>
             <Button type="button" variant="error" onClick={confirmPending}>
@@ -262,7 +262,7 @@ export default function TrashClient({
             ? '此操作不可撤销。删除后将无法恢复,包括所附的图片与视频。'
             : `此操作不可撤销。“${pending?.row?.label ?? '该项目'}” 将从回收站中移除。`}
         </p>
-      </Dialog>
+      </Modal>
     </AppShell>
   );
 }

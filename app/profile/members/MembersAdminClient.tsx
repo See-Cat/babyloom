@@ -17,7 +17,7 @@ import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Dialog } from '@/components/ui/Dialog';
+import { Modal } from '@/components/ui/Modal';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
@@ -432,7 +432,7 @@ export default function MembersAdminPage({
         />
       )}
 
-      <Dialog
+      <Modal
         open={Boolean(resetFor)}
         onOpenChange={(o) => {
           if (!o) {
@@ -443,7 +443,7 @@ export default function MembersAdminPage({
         title="重置密码"
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={() => setResetFor(null)}>
+            <Button type="button" variant="default" onClick={() => setResetFor(null)}>
               取消
             </Button>
             <Button type="button" onClick={() => resetFor && resetPwd(resetFor.userId)}>
@@ -458,9 +458,9 @@ export default function MembersAdminPage({
           placeholder="新密码 (至少 8 位)"
           label="新密码"
         />
-      </Dialog>
+      </Modal>
 
-      <Dialog
+      <Modal
         open={Boolean(removeFor)}
         onOpenChange={(o) => {
           if (!o) setRemoveFor(null);
@@ -468,7 +468,7 @@ export default function MembersAdminPage({
         title="移除成员"
         footer={
           <>
-            <Button type="button" variant="ghost" onClick={() => setRemoveFor(null)}>
+            <Button type="button" variant="default" onClick={() => setRemoveFor(null)}>
               取消
             </Button>
             <Button
@@ -484,7 +484,7 @@ export default function MembersAdminPage({
         <p className="text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-fg)]">
           确认移除 {removeFor?.nickname ?? '该成员'}? 该成员将无法登录,但他们已记录的内容会保留。
         </p>
-      </Dialog>
+      </Modal>
     </AppShell>
   );
 }
