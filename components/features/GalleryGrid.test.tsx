@@ -1,7 +1,13 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { GalleryGrid } from './GalleryGrid';
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/gallery',
+  useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams()
+}));
 
 describe('GalleryGrid', () => {
   it('renders sticky month headings with per-month media counts', () => {

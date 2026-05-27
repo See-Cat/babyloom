@@ -10,6 +10,6 @@ describe('Milestones admin UI', () => {
     );
 
     expect(source).not.toContain('confirm(');
-    expect(source).toContain('<Dialog');
+    expect(source).toContain('<Modal');
   });
 });

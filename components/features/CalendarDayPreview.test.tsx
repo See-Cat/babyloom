@@ -1,7 +1,13 @@
 import * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CalendarDayPreview } from './CalendarDayPreview';
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/calendar',
+  useRouter: () => ({ push: vi.fn(), back: vi.fn(), replace: vi.fn() }),
+  useSearchParams: () => new URLSearchParams()
+}));
 
 describe('CalendarDayPreview', () => {
   it('renders selected-day age, entries, and an add-record CTA', () => {
