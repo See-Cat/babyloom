@@ -138,17 +138,7 @@ owner 在 `/profile/data` 导出 zip。当前没有自动恢复 UI；手动恢�
 
 ## 配置
 
-至少修改 owner 密码和 `app.secret`，其它字段可保留默认。完整字段说明、环境变量与安全建议见 [docs/configuration.md](./docs/configuration.md)。
-
-```yaml
-owner:
-  username: babyloom
-  password: change-me-on-first-login
-  nickname: 家长
-app:
-  baseUrl: http://localhost:3000
-  secret: change-me-to-at-least-32-random-characters
-```
+上面快速开始展示了最小配置。完整字段说明、环境变量与安全建议见 [docs/configuration.md](./docs/configuration.md)。
 
 ## 项目结构
 
