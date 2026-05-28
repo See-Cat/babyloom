@@ -149,8 +149,8 @@ lib/                 数据库、权限、媒体处理、日志、配置、备�
 styles/              设计 token 和字体样式
 public/              字体、manifest、PWA 图标
 tests/               Vitest 与 Playwright 测试
-docs/                项目文档和历史设计资料
-lib/db/migrations/   Drizzle 数据库迁移
+docs/                项目文档（架构、部署、配置、数据库、API、设计系统）
+lib/server/db/migrations/   Drizzle 数据库迁移
 ```
 
 ## 📖 文档
