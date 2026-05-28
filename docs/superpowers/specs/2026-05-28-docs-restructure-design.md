@@ -28,14 +28,17 @@ docs/
 ├── configuration.md      # config.yaml + 环境变量逐项说明
 ├── database.md           # Drizzle schema 总览 + 迁移流程 + ER 图
 ├── api.md                # 认证模型 + 权限矩阵 + 路由分区索引
-├── design-system.md      # 由 DESIGN.md 改名（保留并补充用法示例）
-└── archive/              # 旧文档归档
-    ├── README.md         # 简短说明：以下文档描述已废弃的三层架构，仅作历史参考
-    ├── features.legacy.md
-    ├── api.legacy.md
-    ├── database.legacy.md
-    └── deployment.legacy.md
+└── design-system.md      # 由 DESIGN.md 改名（保留并补充用法示例）
 ```
+
+**旧文档处理**：`docs/{api,database,deployment,features}.md` **直接 `git rm` 删除**。理由：
+
+- 它们描述的是从未被实现的旧设想（NestJS + PostgreSQL + 三端分离），不是已落地后重构的旧版本，连"历史快照"价值都没有
+- Git 已经是档案库；任何时刻 `git log` / `git show` 都能取回任意历史版本
+- 留在仓库里会被代码搜索、LLM 索引、新贡献者目录浏览持续误读，警示文字挡不住
+- 合计约 1850 行错误信息是长期负资产；项目无外部 URL 锚点，删除不破坏任何引用
+
+删除 commit 的 message 中注明被本次重构取代，便于未来追溯。
 
 **不保留 `features.md`**：产品功能列表已在根 `README.md`，重复维护无意义。
 
@@ -160,20 +163,14 @@ docs/
 - 补充 **用法示例**（≤30 行）：如何在新组件中正确使用 token、如何避免被 `babyloom/no-raw-color` lint 拦截
 - 不复述根 README 的"技术栈"
 
-### 5.9 `docs/archive/`
-
-- `archive/README.md`：一段警示语，明确这些文档描述已废弃的 NestJS + PostgreSQL 三层架构，仅作历史参考；并指向 `docs/README.md`
-- 将旧 `features.md`、`api.md`、`database.md`、`deployment.md` 整体重命名为 `*.legacy.md` 移入
-- 旧 `docs/README.md` 直接被新版覆盖（不进 archive，避免读者误入）
-
 ## 6. 落地次序（实施时）
 
-1. 新建 `docs/archive/`，移入旧文档并加 README 警示
+1. `git rm` 旧文档：`docs/{api,database,deployment,features,README}.md`；commit message 注明被本次重构取代
 2. 写 `docs/architecture.md`（其它文档要链它）
 3. 写 `docs/database.md`、`docs/configuration.md`（被其它文档引用）
 4. 写 `docs/api.md`、`docs/deployment.md`
-5. 改名 `DESIGN.md` → `docs/design-system.md` 并补用法示例
-6. 重写 `docs/README.md`（最后写，因为要链所有兄弟文档）
+5. 改名 `docs/DESIGN.md` → `docs/design-system.md` 并补用法示例
+6. 写新 `docs/README.md`（最后写，因为要链所有兄弟文档）
 7. 修订根 `README.md`（最后改，避免链断）
 8. 全量检查：跨文档主题是否违反 SSoT 表；所有相对链接是否可点
 
@@ -188,8 +185,8 @@ docs/
 
 ## 8. 验收标准
 
-- `docs/` 中所有非 `archive/` 的文档不出现 "NestJS"、"PostgreSQL"、"JWT"、"client/"、"admin/"、"server/" 这类与现实不符的术语
+- `docs/` 中所有文档不出现 "NestJS"、"PostgreSQL"、"JWT"、"client/"、"admin/"、"server/" 这类与现实不符的术语
 - SSoT 表中每个主题在非权威文档中只以链接形式出现
 - 根 README 不再含 `config.yaml` 全字段表和 NAS 部署长段
-- 旧文档在 `archive/` 中且有警示 README
+- 旧 `docs/{api,database,deployment,features,README}.md` 已删除，仅通过 git 历史访问
 - 所有相对链接可解析
