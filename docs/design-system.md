@@ -90,3 +90,49 @@ pnpm test:e2e
 ```
 
 Visual baselines are defined in `tests/e2e/visual-regression.spec.ts`. Generate or update snapshots only when a human can review the files before commit.
+
+## 用法示例
+
+### 颜色：必须用 token，不能写 hex
+
+```css
+/* ✅ */
+.card {
+  background: var(--color-surface);
+  color: var(--color-fg);
+}
+
+/* ❌ ESLint 规则 babyloom/no-raw-color 会拦截 */
+.card {
+  background: #ffffff;
+  color: rgb(24, 24, 24);
+}
+```
+
+需要新颜色时，先在 `styles/tokens.css` 中加入 token，再在组件里引用。
+
+### 字号：用 `--text-*` 阶梯而不是字面值
+
+```css
+/* ✅ */
+.heading {
+  font-size: var(--text-xl);
+}
+
+/* ❌ */
+.heading {
+  font-size: 24px;
+}
+```
+
+### 间距：优先 `--space-*`
+
+间距阶梯是 `--space-1` 到 `--space-12` 加 `--space-section`。短距用相邻阶梯组合，超出范围再考虑加 token。
+
+### 圆角与阴影
+
+按用途选择：`--radius-card` 给卡片、`--radius-pill` 给按钮、`--radius-xs/sm` 给小型控件。阴影 `--shadow-card` 用于平铺面板，`--shadow-press` 系列用于可按压控件。
+
+### 图层（z-index）
+
+不要写字面 `z-index`，用 `--z-tabbar` / `--z-sticky` / `--z-sheet` / `--z-modal` / `--z-toast`，保证视觉层级一致。
