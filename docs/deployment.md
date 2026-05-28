@@ -1,6 +1,6 @@
 # 部署
 
-BabyLoom 是一个 Next.js 单体应用 + SQLite + 本地媒体目录，没有外部依赖服务。生产部署推荐 Docker。
+Babyloom 是一个 Next.js 单体应用 + SQLite + 本地媒体目录，没有外部依赖服务。生产部署推荐 Docker。
 
 整体架构与运行时模型见 [architecture.md](./architecture.md)。所有运行参数来自 [`data/config.yaml`](./configuration.md)。
 
@@ -57,7 +57,7 @@ pnpm docker:logs    # 跟随日志
 
 ## HTTPS / 反向代理
 
-BabyLoom 本身不做 TLS 终止。建议把它放在反向代理后面：
+Babyloom 本身不做 TLS 终止。建议把它放在反向代理后面：
 
 - NAS 自带反向代理（QNAP / 群晖控制面板）
 - 独立的 Caddy / Traefik / Nginx

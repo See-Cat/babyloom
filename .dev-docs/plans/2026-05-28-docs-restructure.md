@@ -175,7 +175,7 @@ git commit -m "docs(design-system): rename from DESIGN.md and add usage examples
 ````markdown
 # 架构
 
-BabyLoom 是一个 Next.js 单体应用：页面、API、PWA、Service Worker 都在同一个 Next.js 进程里。数据落在本地 SQLite，媒体文件落在本地数据目录。没有独立后端服务，也没有 PostgreSQL 或外部消息队列。
+Babyloom 是一个 Next.js 单体应用：页面、API、PWA、Service Worker 都在同一个 Next.js 进程里。数据落在本地 SQLite，媒体文件落在本地数据目录。没有独立后端服务，也没有 PostgreSQL 或外部消息队列。
 
 ## 运行时拓扑
 
@@ -316,7 +316,7 @@ git commit -m "docs(architecture): describe Next.js monolith runtime topology an
 ````markdown
 # 数据库
 
-BabyLoom 使用 SQLite + [Drizzle ORM](https://orm.drizzle.team/)。schema 定义和迁移文件是事实来源，本文档只描述概念关系与运维流程。
+Babyloom 使用 SQLite + [Drizzle ORM](https://orm.drizzle.team/)。schema 定义和迁移文件是事实来源，本文档只描述概念关系与运维流程。
 
 - **Schema 源**：[`lib/server/db/schema.ts`](../lib/server/db/schema.ts)
 - **迁移目录**：[`lib/server/db/migrations/`](../lib/server/db/migrations/)
@@ -421,7 +421,7 @@ git commit -m "docs(database): describe Drizzle/SQLite schema, ER, soft-delete, 
 ````markdown
 # 配置
 
-BabyLoom 在启动时读取 `data/config.yaml`。本文档描述每个字段的语义、默认值和修改影响。
+Babyloom 在启动时读取 `data/config.yaml`。本文档描述每个字段的语义、默认值和修改影响。
 
 - **示例**：[`config.yaml.example`](../config.yaml.example)
 - **校验源**：[`lib/server/config/schema.ts`](../lib/server/config/schema.ts)
@@ -535,7 +535,7 @@ git commit -m "docs(configuration): document config.yaml fields and env vars"
 ````markdown
 # API
 
-BabyLoom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，定义在 [`app/api/`](../app/api/) 下，与页面共享同一个进程和数据库连接。
+Babyloom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，定义在 [`app/api/`](../app/api/) 下，与页面共享同一个进程和数据库连接。
 
 本文档不枚举每条路由的入参和出参——源码就是事实来源。它只描述：认证模型、权限矩阵、路由分区索引、错误规范。
 
@@ -644,7 +644,7 @@ git commit -m "docs(api): auth model, permission matrix, route index"
 ````markdown
 # 部署
 
-BabyLoom 是一个 Next.js 单体应用 + SQLite + 本地媒体目录，没有外部依赖服务。生产部署推荐 Docker。
+Babyloom 是一个 Next.js 单体应用 + SQLite + 本地媒体目录，没有外部依赖服务。生产部署推荐 Docker。
 
 整体架构与运行时模型见 [architecture.md](./architecture.md)。所有运行参数来自 [`data/config.yaml`](./configuration.md)。
 
@@ -701,7 +701,7 @@ pnpm docker:logs    # 跟随日志
 
 ## HTTPS / 反向代理
 
-BabyLoom 本身不做 TLS 终止。建议把它放在反向代理后面：
+Babyloom 本身不做 TLS 终止。建议把它放在反向代理后面：
 
 - NAS 自带反向代理（QNAP / 群晖控制面板）
 - 独立的 Caddy / Traefik / Nginx
@@ -795,7 +795,7 @@ git commit -m "docs(deployment): Docker, NAS, reverse proxy, upgrade, backup/res
 - [ ] **Step 1: 创建 docs/README.md**
 
 ````markdown
-# BabyLoom 文档
+# Babyloom 文档
 
 项目说明、功能列表与技术栈在仓库根 [`README.md`](../README.md)。本目录是面向部署用户和代码贡献者的参考文档。
 

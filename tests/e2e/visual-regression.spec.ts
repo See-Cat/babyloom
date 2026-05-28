@@ -27,7 +27,7 @@ test.describe('P5 visual regression', () => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
       await page.goto('/login');
-      await expect(page.getByRole('heading', { name: 'BabyLoom' })).toBeVisible();
+      await expect(page.getByRole('heading', { name: 'Babyloom' })).toBeVisible();
       await expect(page).toHaveScreenshot(`login-${viewport.name}.png`, { fullPage: true });
 
       await page.goto('/components');

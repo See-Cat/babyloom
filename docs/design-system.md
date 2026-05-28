@@ -1,4 +1,4 @@
-# BabyLoom Design System
+# Babyloom Design System
 
 P5 turns the spec §7 visual language into reusable code. The system is intentionally small: tokenized CSS, single-file React components, and no runtime UI dependency.
 

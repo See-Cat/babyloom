@@ -5,7 +5,7 @@ test('manifest is reachable and installable', async ({ request }) => {
   expect(res.status()).toBe(200);
 
   const manifest = await res.json();
-  expect(manifest.name).toBe('小日子 BabyLoom');
+  expect(manifest.name).toBe('小日子 Babyloom');
   expect(manifest.short_name).toBe('小日子');
   expect(manifest.display).toBe('standalone');
   expect(manifest.start_url).toBe('/timeline');

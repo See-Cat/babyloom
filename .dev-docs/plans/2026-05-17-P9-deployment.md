@@ -1,6 +1,6 @@
 # P9 — Deployment: Dockerfile + docker-compose + nginx + First-Run
 
-**Goal:** Make BabyLoom actually deployable on the target QNAP NAS per spec §10. Produces a single-container app + nginx sidecar + `data/` volume layout. After P9 a user can `docker compose up -d` on a clean NAS and reach the app.
+**Goal:** Make Babyloom actually deployable on the target QNAP NAS per spec §10. Produces a single-container app + nginx sidecar + `data/` volume layout. After P9 a user can `docker compose up -d` on a clean NAS and reach the app.
 
 ## State of the world (recon already done by reading code, 2026-05-17)
 **Already shipped, do NOT re-implement:**
@@ -249,7 +249,7 @@ app/api/health/route.ts                     — keep as-is (verify only)
 ## Phase 5 — Docs + verification
 
 - [ ] **5.1** README "Deploy on QNAP" quickstart (5 steps): clone, copy `config.yaml.example` → edit, `docker compose up -d`, browse `http://<nas-ip>`, log in. **Explicitly call out**: set `app.baseUrl` to the actual NAS-accessible URL (e.g. `http://192.168.1.10` or `https://baby.mynas.local`) — better-auth uses this to validate cookies and build callback URLs, so leaving the default `http://localhost:3000` will break login from any device that isn't the NAS itself.
-- [ ] **5.2** README note: "BabyLoom does not handle HTTPS. Front it with your NAS's reverse proxy or a Caddy/Traefik sidecar." Provide a Caddy snippet for reference.
+- [ ] **5.2** README note: "Babyloom does not handle HTTPS. Front it with your NAS's reverse proxy or a Caddy/Traefik sidecar." Provide a Caddy snippet for reference.
 - [ ] **5.3** README note: "Daily logs live at `data/logs/`. Backups are produced via `/profile/data` (owner only)."
 - [ ] **5.4** Manual deploy onto the actual NAS (or a Linux VM) end-to-end. Capture any drift from the planned commands and fix here, not in a follow-up.
 - [ ] **5.5** Commit `chore(P9): deploy docs + manual smoke complete`.

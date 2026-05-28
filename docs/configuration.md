@@ -1,6 +1,6 @@
 # 配置
 
-BabyLoom 在启动时读取 `data/config.yaml`。本文档描述每个字段的语义、默认值和修改影响。
+Babyloom 在启动时读取 `data/config.yaml`。本文档描述每个字段的语义、默认值和修改影响。
 
 - **示例**：[`config.yaml.example`](../config.yaml.example)
 - **校验源**：[`lib/server/config/schema.ts`](../lib/server/config/schema.ts)

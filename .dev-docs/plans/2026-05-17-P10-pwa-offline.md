@@ -11,7 +11,7 @@
   - exclude all `POST`/`PUT`/`DELETE` from caching
   - exclude `/api/auth/*`, `/api/backup`, `/api/log/client`
 - `public/manifest.webmanifest`:
-  - `name: '小日子 BabyLoom'`, `short_name: '小日子'`
+  - `name: '小日子 Babyloom'`, `short_name: '小日子'`
   - `display: 'standalone'`, `start_url: '/timeline'`, `theme_color` and `background_color` from `tokens.css`
   - icon set (192, 512, maskable 512) — placeholder SVG → PNG export pipeline in `scripts/build-icons.ts`
 - `<link rel="manifest">` + `<meta name="theme-color">` in `app/layout.tsx`
@@ -167,7 +167,7 @@ scripts/
   - Trash actions (restore/purge/empty)
   - **Allow offline (do not gate):** `/api/auth/*` (login attempts must reach the server to fail cleanly), `/api/log/client` (silently drop on `navigator.onLine === false` from the reporter itself — already handled in P7 client error helper)
   - Single helper: `lib/client/require-online.ts` `requireOnline(toast): boolean`. Returns `false` + emits toast "当前离线,无法保存。请检查网络后重试。" when offline.
-- [ ] **5.2** Document in README: "BabyLoom 离线时只读。新增/编辑需在线。"
+- [ ] **5.2** Document in README: "Babyloom 离线时只读。新增/编辑需在线。"
 - [ ] **5.2b** **HEVC user-facing warning** (spec §1770 risk): in `components/media/UploadButton.tsx` (or wherever client-side file selection happens), detect `file.type === 'video/quicktime'` or `.mov` / `.hevc` / `.h265` extension and show a non-blocking toast: "iOS 拍摄的 HEVC 视频在部分浏览器无法播放。如需在所有设备上观看,建议先转码为 H.264。" Upload still proceeds — this is information, not a gate. Server-side sniffing already produces a correct `mimeType`; this is purely a UX nudge.
 - [ ] **5.3** Playwright e2e:
   - load `/timeline`, install SW, go offline, reload → cached timeline

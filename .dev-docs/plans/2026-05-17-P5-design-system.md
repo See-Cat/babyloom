@@ -435,7 +435,7 @@ For **each** page below:
 5. Replace `text-red-600 text-sm` → conditional `useToast().show({ variant: 'error', ... })` for transient errors, or `<p role="alert">` with token classes for inline.
 6. **Grep verify**: after the page is done, no `bg-black|bg-white|text-red-|text-blue-|rounded |border ` matches in that file (allow `border-` token classes if any sneak in via component).
 
-- [ ] **9.1** `app/login/page.tsx`: wrap form in `<Card>`, replace button + inputs. Add brand hero (cream background + h1 "BabyLoom").
+- [ ] **9.1** `app/login/page.tsx`: wrap form in `<Card>`, replace button + inputs. Add brand hero (cream background + h1 "Babyloom").
 - [ ] **9.2** `app/onboarding/baby/page.tsx`: same treatment; large display-style title using `--text-hero`.
 - [ ] **9.3** `app/timeline/page.tsx`: wrap in `<AppShell title="时光">`, render list of `<TimelineCard>`. Baby switcher using `<Tag variant="accent">` chips at top.
 - [ ] **9.4** `app/entry/new/page.tsx`: render `<EntryComposer>` inside `<AppShell title="新建">` on mobile, inside `<Dialog>` on desktop (use existing route; the modal-on-desktop is a UX upgrade left optional in this pass — pick AppShell-only for first cut to keep diff small; document trade-off in plan note).

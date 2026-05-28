@@ -1,6 +1,6 @@
 # 数据库
 
-BabyLoom 使用 SQLite + [Drizzle ORM](https://orm.drizzle.team/)。schema 定义和迁移文件是事实来源，本文档只描述概念关系与运维流程。
+Babyloom 使用 SQLite + [Drizzle ORM](https://orm.drizzle.team/)。schema 定义和迁移文件是事实来源，本文档只描述概念关系与运维流程。
 
 - **Schema 源**：[`lib/server/db/schema.ts`](../lib/server/db/schema.ts)
 - **迁移目录**：[`lib/server/db/migrations/`](../lib/server/db/migrations/)

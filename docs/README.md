@@ -1,4 +1,4 @@
-# BabyLoom 文档
+# Babyloom 文档
 
 项目说明、功能列表与技术栈在仓库根 [`README.md`](../README.md)。本目录是面向部署用户和代码贡献者的参考文档。
 

@@ -1,6 +1,6 @@
 # API
 
-BabyLoom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，定义在 [`app/api/`](../app/api/) 下，与页面共享同一个进程和数据库连接。
+Babyloom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，定义在 [`app/api/`](../app/api/) 下，与页面共享同一个进程和数据库连接。
 
 本文档不枚举每条路由的入参和出参——源码就是事实来源。它只描述：认证模型、权限矩阵、路由分区索引、错误规范。
 
