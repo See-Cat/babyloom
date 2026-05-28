@@ -143,10 +143,10 @@ owner 在 `/profile/data` 导出 zip。当前没有自动恢复 UI；手动恢�
 ## 项目结构
 
 ```text
-app/                 Next.js 页面、API Route、PWA service worker
+app/                 Next.js 页面、API Route、PWA service worker、全局样式
+app/styles/          设计 token 和字体样式（由 app/globals.css 引入）
 components/          UI、移动端壳、业务组件
 lib/                 数据库、权限、媒体处理、日志、配置、备份等服务代码
-styles/              设计 token 和字体样式
 public/              字体、manifest、PWA 图标
 tests/               Vitest 与 Playwright 测试
 docs/                项目文档（架构、部署、配置、数据库、API、设计系统）

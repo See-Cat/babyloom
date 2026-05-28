@@ -4,7 +4,7 @@ P5 turns the spec §7 visual language into reusable code. The system is intentio
 
 ## Tokens
 
-Tokens live in `styles/tokens.css` and are imported by `app/globals.css`.
+Tokens live in `app/styles/tokens.css` and are imported by `app/globals.css`.
 
 | Group | Tokens |
 | --- | --- |
@@ -15,11 +15,11 @@ Tokens live in `styles/tokens.css` and are imported by `app/globals.css`.
 | Space | `--space-1`, `--space-2`, `--space-3`, `--space-4`, `--space-6`, `--space-8`, `--space-12`, `--space-section` |
 | Layer | `--z-tabbar`, `--z-sticky`, `--z-sheet`, `--z-modal`, `--z-toast` |
 
-Raw hex/rgb colors are blocked in `app/` and `components/` by `babyloom/no-raw-color`. New color work belongs in `styles/tokens.css`.
+Raw hex/rgb colors are blocked in `app/` and `components/` by `babyloom/no-raw-color`. New color work belongs in `app/styles/tokens.css`.
 
 ## Typography
 
-Fonts are self-hosted under `public/fonts/` and declared in `styles/typography.css`.
+Fonts are self-hosted under `public/fonts/` and declared in `app/styles/typography.css`.
 
 The display stack is:
 
@@ -109,7 +109,7 @@ Visual baselines are defined in `tests/e2e/visual-regression.spec.ts`. Generate 
 }
 ```
 
-需要新颜色时，先在 `styles/tokens.css` 中加入 token，再在组件里引用。
+需要新颜色时，先在 `app/styles/tokens.css` 中加入 token，再在组件里引用。
 
 ### 字号：用 `--text-*` 阶梯而不是字面值
 

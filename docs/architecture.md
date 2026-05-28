@@ -24,6 +24,8 @@ flowchart LR
 
 ```text
 app/                       Next.js 页面 + Route Handlers + service worker 入口
+├── globals.css            全局样式入口（引入下面 styles/）
+└── styles/                设计 token、字体（tokens.css、typography.css）
 components/                UI、移动端壳、业务组件
 lib/
 ├── client/                浏览器侧工具（hooks、错误上报、在线检测）
@@ -39,7 +41,6 @@ lib/
     ├── members/           家庭成员管理
     ├── permissions/       per-baby 权限判定
     └── trash/             软删除与垃圾桶
-styles/                    设计 token、字体
 public/                    字体、PWA manifest 与图标
 tests/                     Vitest + Playwright
 ```
