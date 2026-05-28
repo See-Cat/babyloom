@@ -1,6 +1,6 @@
-# BabyLoom
+# Babyloom
 
-BabyLoom 是一个自托管的家庭宝宝成长记录 PWA。它把时间线、照片/视频、日历、里程碑、家庭成员和权限管理放在一个 Next.js 应用里，适合部署在家用服务器或 NAS 上。
+Babyloom 是一个自托管的家庭宝宝成长记录 PWA。它把时间线、照片/视频、日历、里程碑、家庭成员和权限管理放在一个 Next.js 应用里，适合部署在家用服务器或 NAS 上。
 
 当前实现是单体应用：Next.js App Router 提供页面和 API，SQLite 存储业务数据，媒体文件保存在本地数据目录。没有独立后端服务，也不依赖 PostgreSQL。
 
