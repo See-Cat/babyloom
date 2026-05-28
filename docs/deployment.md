@@ -91,7 +91,7 @@ owner 在 `/profile/data` 触发导出，浏览器下载一个 zip。包含 SQLi
 
 ```bash
 # 停止应用以确保 SQLite 一致
-pnpm docker:down
+docker compose down
 tar -czf babyloom-backup-$(date +%F).tar.gz data/
 pnpm docker:up
 ```
@@ -100,7 +100,7 @@ pnpm docker:up
 
 当前没有自动恢复 UI。恢复流程是手动的：
 
-1. 停止应用（`pnpm docker:down`）
+1. 停止应用（`docker compose down`）
 2. 把**当前**数据目录改名留底，例如 `mv data data.before-restore`
 3. 准备一个空 `data/`
 4. 解压备份到 `data/`：
