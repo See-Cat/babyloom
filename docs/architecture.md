@@ -48,9 +48,9 @@ UI 设计 token 与字体策略见 [design-system.md](./design-system.md)。表�
 
 ## 启动初始化
 
-应用启动时（`lib/server/bootstrap/`）按顺序执行：
+启动相关逻辑分布在 `lib/server/bootstrap/`（owner 注入）与 `lib/server/db/migrate.ts`（迁移），大致顺序为：
 
-1. 读取 `data/config.yaml`，按 schema 校验
+1. 读取 `data/config.yaml`，按 schema 校验（`lib/server/config/`）
 2. 打开 SQLite 数据库（路径来自 `BABYLOOM_DATA_DIR` 或默认 `data/`）
 3. 应用待执行的 Drizzle 迁移
 4. 根据 `config.yaml` 注入或更新 owner 账号（owner 密码以配置文件为准）
@@ -66,7 +66,7 @@ sequenceDiagram
   participant U as 浏览器
   participant N as Next.js
   participant DB as SQLite
-  U->>N: POST /api/auth/sign-in（用户名 + 密码）
+  U->>N: POST /api/auth/...（better-auth catch-all，用户名 + 密码）
   N->>DB: 校验凭据（users / accounts）
   DB-->>N: 用户记录
   N->>DB: 写入 session

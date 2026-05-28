@@ -57,7 +57,9 @@ erDiagram
 
 ## 时间戳约定
 
-所有业务表都有 `createdAt` / `updatedAt`（毫秒精度的 INTEGER）。时区由 `app.timezone` 控制；存储统一使用 UTC 毫秒戳。
+业务表（babies / entries / media 等）的 `createdAt` / `updatedAt` 是毫秒精度的 INTEGER（`Date.now()`）。时区由 `app.timezone` 控制展示，存储统一为 UTC。
+
+> 注意：better-auth 自带的 `user` / `session` / `account` 表使用 Drizzle 的 `mode: 'timestamp'`，按**秒**存储，与业务表的毫秒不同。
 
 ## 迁移工作流
 

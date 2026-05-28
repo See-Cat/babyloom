@@ -8,6 +8,7 @@ BabyLoom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，�
 
 使用 [better-auth](https://better-auth.com/)，cookie session。
 
+- 认证端点是 better-auth 的 catch-all：[`app/api/auth/[...all]/route.ts`](../app/api/auth/)，具体子路径（如登录、登出）由 better-auth 约定
 - 登录后 `Set-Cookie` 写入 session token，后续请求自动携带
 - session 与凭据记录在 `session` / `account` 表（见 [database.md](./database.md)）
 - 签名密钥来自 `app.secret`（[configuration.md](./configuration.md)）
@@ -60,10 +61,11 @@ BabyLoom 没有独立 API 服务。所有接口都是 Next.js Route Handlers，�
 
 ## 错误响应
 
-服务端错误统一返回 JSON：
+服务端错误返回 JSON，`error` 是一个字符串错误码，必要时附 `detail`：
 
 ```json
-{ "error": { "code": "string", "message": "string" } }
+{ "error": "not_found" }
+{ "error": "bad_request", "detail": "..." }
 ```
 
 常见 HTTP 状态码：
