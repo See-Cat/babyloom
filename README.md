@@ -122,37 +122,33 @@ pnpm docker:logs
 
 `docker-compose.yml` 会把本地 `./data` 挂载到容器 `/app/data`，Nginx 默认监听宿主机 80 端口并转发到应用容器。
 
-## NAS / QNAP 部署要点
+## NAS / 家用服务器部署
 
-1. 在 NAS 上克隆仓库。
-2. 创建 `data/config.yaml`，可从 `config.yaml.example` 复制。
-3. 设置强密码和至少 32 字符的 `app.secret`。
-4. 把 `app.baseUrl` 改成局域网或域名可访问的地址，例如 `http://192.168.1.10` 或 `https://baby.example.local`。不要保留成 `localhost`，否则其他设备登录会出问题。
-5. 执行 `pnpm docker:build` 和 `pnpm docker:up`。
-6. 访问 NAS 地址并用 owner 账号登录。
+简版（详细流程见 [docs/deployment.md](./docs/deployment.md)）：
 
-BabyLoom 本身不负责 HTTPS 证书终止。需要 HTTPS 时，放在 NAS 反向代理、Caddy、Traefik 或其他 TLS 入口后面。
+1. 克隆仓库到 NAS，复制 `config.yaml.example` 到 `data/config.yaml`
+2. 改强密码、≥ 32 字符的 `app.secret`、把 `app.baseUrl` 设为其它设备能访问的地址（不能是 `localhost`）
+3. `pnpm docker:build && pnpm docker:up`
+
+HTTPS 由外层反向代理（Nginx / Caddy / Traefik / NAS 自带）承担。
 
 ## 备份与恢复
 
-owner 可以在 `/profile/data` 导出备份。备份用于手动恢复：停止应用后，将备份内容恢复到新的空数据目录，确保数据库文件和 `media/` 目录放回对应位置，再用该数据目录启动服务。
+owner 在 `/profile/data` 导出 zip。当前没有自动恢复 UI；手动恢复流程见 [docs/deployment.md#恢复](./docs/deployment.md#恢复)。
 
-当前没有自动恢复 UI。恢复前建议先保留原数据目录副本。
+## 配置
 
-## 配置说明
+至少修改 owner 密码和 `app.secret`，其它字段可保留默认。完整字段说明、环境变量与安全建议见 [docs/configuration.md](./docs/configuration.md)。
 
-`data/config.yaml` 支持这些主要配置：
-
-- `owner.username`：owner 登录用户名，只能包含字母、数字、下划线和短横线。
-- `owner.password`：owner 密码，至少 6 位。
-- `owner.nickname`：owner 昵称。
-- `family.name`：家庭名称。
-- `app.baseUrl`：应用对外访问地址。
-- `app.secret`：认证密钥，至少 32 字符。
-- `app.timezone`：应用时区，默认 `Asia/Shanghai`。
-- `log.level`：日志级别，默认 `info`。
-- `media.maxPhotoBytes`：单张照片大小上限，默认 50MB。
-- `media.maxVideoBytes`：单个视频大小上限，默认 500MB。
+```yaml
+owner:
+  username: babyloom
+  password: change-me-on-first-login
+  nickname: 家长
+app:
+  baseUrl: http://localhost:3000
+  secret: change-me-to-at-least-32-random-characters
+```
 
 ## 项目结构
 
@@ -167,9 +163,33 @@ docs/                项目文档和历史设计资料
 lib/db/migrations/   Drizzle 数据库迁移
 ```
 
+## 📖 文档
+
+**自托管用户**
+
+- [部署指南](./docs/deployment.md) —— Docker / NAS / 反向代理 / 升级 / 备份恢复
+- [配置说明](./docs/configuration.md) —— `config.yaml` 与环境变量
+
+**开发者**
+
+- [架构](./docs/architecture.md) —— 系统架构与关键流程
+- [数据库](./docs/database.md) —— 表结构与迁移
+- [API](./docs/api.md) —— 认证模型、权限矩阵、路由索引
+- [设计系统](./docs/design-system.md) —— 设计 token 与用法
+
+文档入口：[docs/README.md](./docs/README.md)
+
 ## 注意事项
 
 - `public/sw.js` 是构建生成物，可重新生成，不需要手写。
 - `test-data/` 是 Playwright 测试数据目录，不应作为生产数据使用。
 - 上传、删除、备份导出等写操作需要在线。
 - 生产部署前务必更换 `owner.password` 和 `app.secret`。
+
+## License
+
+MIT
+
+## 反馈
+
+问题与建议请通过 GitHub Issues 提交。
