@@ -20,11 +20,12 @@ export interface TimelineHeroProps {
   entry?: TimelineHeroEntry;
   authorName?: string | null;
   mediaItems?: MediaItem[];
+  canWrite?: boolean;
   /** @deprecated use mediaItems */
   mediaIds?: string[];
 }
 
-export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems, mediaIds }: TimelineHeroProps) {
+export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems, mediaIds, canWrite = true }: TimelineHeroProps) {
   const items: MediaItem[] = mediaItems ?? (mediaIds ?? []).map((id) => ({ id, type: 'photo' }));
   const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
 
@@ -33,9 +34,11 @@ export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems,
       <section className="bl-timeline-hero bl-rise-hero rounded-[var(--radius-hero)] border-2 border-dashed border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-6)] text-center">
         <p className="text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">今天还没有记录</p>
         <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">写下一个小瞬间,以后会很珍贵。</p>
-        <Link href={`/entry/new?babyId=${babyId}`} className="mt-[var(--space-4)] inline-flex">
-          <Button type="button" size="sm">现在写</Button>
-        </Link>
+        {canWrite && (
+          <Link href={`/entry/new?babyId=${babyId}`} className="mt-[var(--space-4)] inline-flex">
+            <Button type="button" size="sm">现在写</Button>
+          </Link>
+        )}
       </section>
     );
   }

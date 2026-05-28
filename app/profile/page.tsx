@@ -129,10 +129,8 @@ export default async function ProfilePage() {
           <h2 className="mb-[var(--space-2)] px-[var(--space-1)] text-[length:var(--text-xs)] font-bold uppercase tracking-[0.06em] text-[color:var(--color-fg)]">
             正在记录
           </h2>
-          <BabySwitcher
-            activeBabyId={activeBaby.id}
-            babies={switcherBabies}
-            trigger={
+          {(() => {
+            const card = (
               <div
                 className="relative flex w-full items-center gap-[var(--space-3)] rounded-[var(--radius-card)] border-[1.5px] px-[var(--space-4)] py-[var(--space-3)] text-left active:bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)]"
                 style={{
@@ -153,12 +151,17 @@ export default async function ProfilePage() {
                   <span className="inline-flex items-center gap-[4px] rounded-[var(--radius-pill)] bg-[var(--color-bg)] px-[var(--space-3)] py-[6px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)] shadow-[var(--shadow-press-sm)]">
                     切换 <ChevronRightIcon className="h-3 w-3" />
                   </span>
-                ) : (
+                ) : isOwner ? (
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-[color:var(--color-primary-active)]" />
-                )}
+                ) : null}
               </div>
-            }
-          />
+            );
+            return familyBabies.length > 1 || isOwner ? (
+              <BabySwitcher activeBabyId={activeBaby.id} babies={switcherBabies} trigger={card} />
+            ) : (
+              card
+            );
+          })()}
         </section>
       )}
 

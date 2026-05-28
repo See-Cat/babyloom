@@ -10,13 +10,17 @@ export function MonthCalendar({
   grid,
   daySet,
   todayIso,
-  selectedIso
+  selectedIso,
+  minYm,
+  maxYm
 }: {
   babyId: string;
   grid: MonthCell[][];
   daySet: Set<string>;
   todayIso: string;
   selectedIso?: string;
+  minYm?: string;
+  maxYm?: string;
 }) {
   return (
     <div role="grid" aria-label="月份日历" className="grid gap-[var(--space-1)]">
@@ -46,6 +50,8 @@ export function MonthCalendar({
               hasEntry={daySet.has(cell.iso)}
               isToday={cell.iso === todayIso}
               selected={cell.iso === selectedIso}
+              minYm={minYm}
+              maxYm={maxYm}
             />
           ))}
         </div>
@@ -59,16 +65,23 @@ function CalendarCell({
   cell,
   hasEntry,
   isToday,
-  selected
+  selected,
+  minYm,
+  maxYm
 }: {
   babyId: string;
   cell: MonthCell;
   hasEntry: boolean;
   isToday: boolean;
   selected: boolean;
+  minYm?: string;
+  maxYm?: string;
 }) {
+  const targetYm = cell.iso.slice(0, 7);
+  const outOfRange = (minYm !== undefined && targetYm < minYm) || (maxYm !== undefined && targetYm > maxYm);
   const className = cn(
-    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-semibold transition-colors active:bg-black/[0.04]',
+    'relative flex aspect-square min-h-10 items-center justify-center rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-semibold transition-colors',
+    !outOfRange && 'active:bg-black/[0.04]',
     selected
       ? 'bg-[var(--color-primary)] font-bold text-[color:var(--color-fg-inverse)]'
       : cell.inMonth
@@ -76,11 +89,13 @@ function CalendarCell({
             'bg-transparent text-[color:var(--color-fg)]',
             isToday && 'font-bold text-[color:var(--color-primary-active)]'
           )
-        : 'bg-transparent text-[color:var(--color-fg-disabled)] opacity-40'
+        : cn(
+            'bg-transparent text-[color:var(--color-fg-disabled)] opacity-40',
+            outOfRange && 'cursor-not-allowed opacity-20'
+          )
   );
   const day = cell.date.getUTCDate();
   const label = `${cell.date.getUTCFullYear()} 年 ${cell.date.getUTCMonth() + 1} 月 ${day} 日`;
-  const targetYm = cell.iso.slice(0, 7);
 
   const inner = (
     <>
@@ -105,13 +120,19 @@ function CalendarCell({
 
   return (
     <div role="gridcell" aria-label={label}>
-      <Link
-        className={className}
-        href={`/calendar?babyId=${babyId}&ym=${targetYm}&date=${cell.iso}`}
-        aria-current={selected ? 'date' : undefined}
-      >
-        {inner}
-      </Link>
+      {outOfRange ? (
+        <span className={className} aria-disabled="true">
+          {inner}
+        </span>
+      ) : (
+        <Link
+          className={className}
+          href={`/calendar?babyId=${babyId}&ym=${targetYm}&date=${cell.iso}`}
+          aria-current={selected ? 'date' : undefined}
+        >
+          {inner}
+        </Link>
+      )}
     </div>
   );
 }

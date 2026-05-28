@@ -6,7 +6,7 @@ import { getAuth } from '@/lib/server/auth/server';
 import { loadConfig } from '@/lib/server/config/load';
 import { getDb } from '@/lib/server/db/client';
 import { buildMonthGrid, formatDateInTimezone, getDayUtcRange, listEntryDays } from '@/lib/server/db/queries/calendar';
-import { listReadableBabies } from '@/lib/server/db/queries/permissions';
+import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { babies, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/server/db/schema';
 import type { MediaItem } from '@/lib/server/media/types';
 import { CalendarDayPreview } from '@/components/features/CalendarDayPreview';
@@ -58,9 +58,14 @@ export default async function CalendarPage({
       ? sp.babyId
       : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
+  const canWrite = canWriteToBaby({ db, familyMemberId: member.id, role, babyId: selectedBabyId });
   const grid = buildMonthGrid(ym, timezone);
   const daySet = listEntryDays({ db, babyId: selectedBabyId, ym, timezone });
   const todayIso = formatDateInTimezone(Date.now(), timezone);
+  const maxYm = todayIso.slice(0, 7);
+  const birthdayYm = selectedBaby.birthday?.slice(0, 7);
+  const minYm = birthdayYm ?? `${Number(maxYm.slice(0, 4)) - 10}-01`;
   const selectedIso = isIsoDate(sp.date) && sp.date.startsWith(`${ym}-`) ? sp.date : todayIso.startsWith(`${ym}-`) ? todayIso : `${ym}-01`;
   const selectedRange = getDayUtcRange(selectedIso, timezone) ?? getDayUtcRange(`${ym}-01`, timezone);
   const selectedRows = db
@@ -141,13 +146,22 @@ export default async function CalendarPage({
         todayYm={todayIso.slice(0, 7)}
         birthdayYm={selectedBaby.birthday?.slice(0, 7)}
       />
-      <MonthCalendar babyId={selectedBabyId} grid={grid} daySet={daySet} todayIso={todayIso} selectedIso={selectedIso} />
+      <MonthCalendar
+        babyId={selectedBabyId}
+        grid={grid}
+        daySet={daySet}
+        todayIso={todayIso}
+        selectedIso={selectedIso}
+        minYm={minYm}
+        maxYm={maxYm}
+      />
       <CalendarDayPreview
         babyId={selectedBabyId}
         selectedIso={selectedIso}
         todayIso={todayIso}
         babyAge={formatBabyAge(selectedBaby.birthday, selectedIso)}
         entries={previewEntries}
+        canWrite={canWrite}
       />
     </AppShell>
   );

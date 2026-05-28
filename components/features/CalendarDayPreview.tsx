@@ -21,13 +21,15 @@ export function CalendarDayPreview({
   babyId,
   entries,
   selectedIso,
-  todayIso
+  todayIso,
+  canWrite = true
 }: {
   babyAge: string;
   babyId: string;
   entries: CalendarPreviewEntry[];
   selectedIso: string;
   todayIso?: string;
+  canWrite?: boolean;
 }) {
   const isToday = todayIso ? selectedIso === todayIso : false;
   return (
@@ -74,9 +76,11 @@ export function CalendarDayPreview({
         <Card className="flex flex-col items-center gap-[var(--space-2)] py-[var(--space-6)] text-center">
           <span aria-hidden="true" className="text-[36px] leading-none">🌱</span>
           <p className="m-0 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">这一天还没有记录</p>
-          <Link href={`/entry/new?babyId=${babyId}&date=${selectedIso}`}>
-            <Button size="sm" leadingIcon={<PlusIcon />}>给这一天写一条</Button>
-          </Link>
+          {canWrite && (
+            <Link href={`/entry/new?babyId=${babyId}&date=${selectedIso}`}>
+              <Button size="sm" leadingIcon={<PlusIcon />}>给这一天写一条</Button>
+            </Link>
+          )}
         </Card>
       )}
     </section>

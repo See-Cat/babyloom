@@ -6,7 +6,7 @@ import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/server/db/client';
 import { familyMembers } from '@/lib/server/db/schema';
 import { groupMediaByMonth, listGalleryMedia } from '@/lib/server/db/queries/gallery';
-import { listReadableBabies } from '@/lib/server/db/queries/permissions';
+import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { GalleryGrid } from '@/components/features/GalleryGrid';
 import { AppShell } from '@/components/mobile/AppShell';
 
@@ -51,12 +51,14 @@ export default async function GalleryPage({
       ? sp.babyId
       : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
+  const canWrite = canWriteToBaby({ db, familyMemberId: member.id, role, babyId: selectedBabyId });
   const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId }));
   const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);
 
   return (
     <AppShell title="画廊" subtitle={`${selectedBaby.name} · ${mediaCount > 0 ? `共 ${mediaCount} 张` : '还没有照片'}`}>
-      <GalleryGrid babyId={selectedBabyId} groups={groups} />
+      <GalleryGrid babyId={selectedBabyId} groups={groups} canWrite={canWrite} />
     </AppShell>
   );
 }

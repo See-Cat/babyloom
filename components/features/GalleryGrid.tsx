@@ -10,7 +10,15 @@ import { PlusIcon } from '@/components/ui/icons';
 import type { GalleryMonthGroup, GalleryMedia } from '@/lib/server/db/queries/gallery';
 import type { MediaItem } from '@/lib/server/media/types';
 
-export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<GalleryMonthGroup<GalleryMedia>> }) {
+export function GalleryGrid({
+  babyId,
+  groups,
+  canWrite = true
+}: {
+  babyId: string;
+  groups: Array<GalleryMonthGroup<GalleryMedia>>;
+  canWrite?: boolean;
+}) {
   const router = useRouter();
   const flatItems = React.useMemo(() => groups.flatMap((g) => g.items), [groups]);
   const [viewerIndex, setViewerIndex] = React.useState<number | null>(null);
@@ -37,9 +45,11 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
         <p className="m-0 mb-[var(--space-3)] text-[length:var(--text-base)] font-medium leading-[var(--leading-base)] text-[color:var(--color-fg-soft)]">
           在记录里上传图片或视频,这里就会出现
         </p>
-        <Link href={`/entry/new?babyId=${babyId}`}>
-          <Button size="lg" leadingIcon={<PlusIcon />}>新建一条记录</Button>
-        </Link>
+        {canWrite && (
+          <Link href={`/entry/new?babyId=${babyId}`}>
+            <Button size="lg" leadingIcon={<PlusIcon />}>新建一条记录</Button>
+          </Link>
+        )}
       </div>
     );
   }
@@ -80,13 +90,15 @@ export function GalleryGrid({ babyId, groups }: { babyId: string; groups: Array<
             if (!media) return null;
             return media.entryId === null ? (
               <div className="flex w-full items-center gap-[var(--space-2)]">
-                <Link
-                  href={buildComposerHref(babyId, media)}
-                  className="flex flex-1 items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
-                >
-                  <PlusIcon className="h-4 w-4" />
-                  为这张照片写一则记录
-                </Link>
+                {canWrite && (
+                  <Link
+                    href={buildComposerHref(babyId, media)}
+                    className="flex flex-1 items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-white/12 px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] font-bold text-white backdrop-blur-[8px] active:bg-white/20"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    为这张照片写一则记录
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => deleteMedia(media)}

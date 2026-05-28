@@ -7,7 +7,7 @@ import { getAuth } from '@/lib/server/auth/server';
 import { loadConfig } from '@/lib/server/config/load';
 import { getDb } from '@/lib/server/db/client';
 import { getDayUtcRange } from '@/lib/server/db/queries/calendar';
-import { listReadableBabies } from '@/lib/server/db/queries/permissions';
+import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { babies, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/server/db/schema';
 import type { MediaItem } from '@/lib/server/media/types';
 import { AppShell } from '@/components/mobile/AppShell';
@@ -59,6 +59,8 @@ export default async function TimelinePage({
       ? sp.babyId
       : fallbackBabyId;
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
+  const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
+  const canWrite = canWriteToBaby({ db, familyMemberId: member.id, role, babyId: selectedBabyId });
   const timezone = loadConfig({ dataDir }).app.timezone;
   const dayRange = sp.date ? getDayUtcRange(sp.date, timezone) : null;
 
@@ -142,6 +144,7 @@ export default async function TimelinePage({
           entry={heroRow?.entries}
           authorName={heroRow?.user.name}
           mediaItems={heroRow ? mediaItemsByEntry.get(heroRow.entries.id) ?? [] : []}
+          canWrite={canWrite}
         />
       </div>
 
@@ -162,7 +165,7 @@ export default async function TimelinePage({
         </ul>
       )}
       <p className="py-[var(--space-6)] text-center text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">到这里啦</p>
-      <Fab href={`/entry/new?babyId=${selectedBabyId}`} icon={<PlusIcon />} label="新记录" />
+      {canWrite && <Fab href={`/entry/new?babyId=${selectedBabyId}`} icon={<PlusIcon />} label="新记录" />}
     </AppShell>
   );
 }

@@ -222,6 +222,26 @@ export function resetMember(opts: { db: Db; familyMemberId: string }) {
     .run();
 }
 
+export function canWriteToBaby(opts: {
+  db: Db;
+  familyMemberId: string;
+  role: 'owner' | 'member';
+  babyId: string;
+}): boolean {
+  if (opts.role === 'owner') return true;
+  const row = opts.db
+    .select({ canWrite: babyMemberPermissions.canWrite })
+    .from(babyMemberPermissions)
+    .where(
+      and(
+        eq(babyMemberPermissions.familyMemberId, opts.familyMemberId),
+        eq(babyMemberPermissions.babyId, opts.babyId)
+      )
+    )
+    .get();
+  return row?.canWrite === 1;
+}
+
 export function listReadableBabies(opts: {
   db: Db;
   familyId: string;
