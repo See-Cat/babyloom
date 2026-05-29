@@ -1,6 +1,5 @@
 'use client';
 
-import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/shared/cn';
@@ -8,7 +7,8 @@ import { cn } from '@/lib/shared/cn';
 interface TabItem {
   label: string;
   href: string;
-  icon: React.ReactNode;
+  iconSrc: string;
+  activeIconSrc: string;
   disabled?: boolean;
 }
 
@@ -18,10 +18,30 @@ interface TabbarProps {
 }
 
 const items: TabItem[] = [
-  { label: '时光', href: '/timeline', icon: <PathIcon path="M4 6h16M7 12h10M9 18h6" /> },
-  { label: '画廊', href: '/gallery', icon: <PathIcon path="M5 6h14v12H5zM8 15l3-3 2 2 2-3 3 4" /> },
-  { label: '日历', href: '/calendar', icon: <PathIcon path="M6 5h12v14H6zM9 3v4M15 3v4M6 10h12" /> },
-  { label: '我的', href: '/profile', icon: <PathIcon path="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0" /> }
+  {
+    label: '时光',
+    href: '/timeline',
+    iconSrc: '/icons/tabbar/timeline.png',
+    activeIconSrc: '/icons/tabbar/timeline-active.png'
+  },
+  {
+    label: '画廊',
+    href: '/gallery',
+    iconSrc: '/icons/tabbar/gallery.png',
+    activeIconSrc: '/icons/tabbar/gallery-active.png'
+  },
+  {
+    label: '日历',
+    href: '/calendar',
+    iconSrc: '/icons/tabbar/calendar.png',
+    activeIconSrc: '/icons/tabbar/calendar-active.png'
+  },
+  {
+    label: '我的',
+    href: '/profile',
+    iconSrc: '/icons/tabbar/profile.png',
+    activeIconSrc: '/icons/tabbar/profile-active.png'
+  }
 ];
 
 export function Tabbar({ activeHref, fixed = true }: TabbarProps = {}) {
@@ -43,7 +63,9 @@ export function Tabbar({ activeHref, fixed = true }: TabbarProps = {}) {
         if (item.disabled) {
           return (
             <span key={item.href} className={className} aria-disabled="true">
-              <span className="dot">{item.icon}</span>
+              <span className="dot">
+                <TabIconImage src={item.iconSrc} />
+              </span>
               {item.label}
             </span>
           );
@@ -56,7 +78,9 @@ export function Tabbar({ activeHref, fixed = true }: TabbarProps = {}) {
             className={className}
             aria-current={active ? 'page' : undefined}
           >
-            <span className="dot">{item.icon}</span>
+            <span className="dot">
+              <TabIconImage src={active ? item.activeIconSrc : item.iconSrc} />
+            </span>
             {item.label}
           </Link>
         );
@@ -65,10 +89,14 @@ export function Tabbar({ activeHref, fixed = true }: TabbarProps = {}) {
   );
 }
 
-function PathIcon({ path }: { path: string }) {
+function TabIconImage({ src }: { src: string }) {
   return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2">
-      <path d={path} />
-    </svg>
+    <img
+      aria-hidden="true"
+      alt=""
+      className="tab-icon"
+      draggable={false}
+      src={src}
+    />
   );
 }

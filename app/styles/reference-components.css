@@ -625,9 +625,9 @@ label.field {
 }
 
 .tab .dot {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  border-radius: 0;
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -638,11 +638,19 @@ label.field {
     color var(--duration-base);
 }
 
+.tab-icon {
+  display: block;
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .tab.active .dot {
-  background: var(--color-primary);
-  color: var(--color-fg-inverse);
-  transform: translateY(-6px);
-  box-shadow: var(--shadow-press-md);
+  background: transparent;
+  color: inherit;
+  transform: translateY(-6px) scale(1.08);
+  box-shadow: none;
 }
 
 .fab {
