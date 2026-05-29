@@ -653,6 +653,31 @@ label.field {
   box-shadow: none;
 }
 
+.tab.active .tab-icon {
+  animation: tab-icon-pop 220ms var(--ease-out-back);
+}
+
+@keyframes tab-icon-pop {
+  0% {
+    opacity: .78;
+    transform: translateY(3px) scale(.86);
+  }
+  68% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tab.active .tab-icon {
+    animation: none;
+  }
+}
+
 .fab {
   width: 56px;
   height: 56px;
