@@ -33,6 +33,15 @@ describe('Tabbar', () => {
     expect(html).toContain('tabbar');
   });
 
+  it('uses fixed-size WebP icon assets', () => {
+    const html = renderToStaticMarkup(<Tabbar />);
+
+    expect(html).toContain('src="/icons/tabbar/timeline-active.webp"');
+    expect(html).toContain('src="/icons/tabbar/gallery.webp"');
+    expect(html).toContain('width="42"');
+    expect(html).toContain('height="42"');
+  });
+
   it('can render as an inline acceptance demo with an explicit active item', () => {
     usePathname.mockReturnValue('/components');
 

@@ -21,26 +21,26 @@ const items: TabItem[] = [
   {
     label: '时光',
     href: '/timeline',
-    iconSrc: '/icons/tabbar/timeline.png',
-    activeIconSrc: '/icons/tabbar/timeline-active.png'
+    iconSrc: '/icons/tabbar/timeline.webp',
+    activeIconSrc: '/icons/tabbar/timeline-active.webp'
   },
   {
     label: '画廊',
     href: '/gallery',
-    iconSrc: '/icons/tabbar/gallery.png',
-    activeIconSrc: '/icons/tabbar/gallery-active.png'
+    iconSrc: '/icons/tabbar/gallery.webp',
+    activeIconSrc: '/icons/tabbar/gallery-active.webp'
   },
   {
     label: '日历',
     href: '/calendar',
-    iconSrc: '/icons/tabbar/calendar.png',
-    activeIconSrc: '/icons/tabbar/calendar-active.png'
+    iconSrc: '/icons/tabbar/calendar.webp',
+    activeIconSrc: '/icons/tabbar/calendar-active.webp'
   },
   {
     label: '我的',
     href: '/profile',
-    iconSrc: '/icons/tabbar/profile.png',
-    activeIconSrc: '/icons/tabbar/profile-active.png'
+    iconSrc: '/icons/tabbar/profile.webp',
+    activeIconSrc: '/icons/tabbar/profile-active.webp'
   }
 ];
 
@@ -96,7 +96,9 @@ function TabIconImage({ src }: { src: string }) {
       alt=""
       className="tab-icon"
       draggable={false}
+      height={42}
       src={src}
+      width={42}
     />
   );
 }
