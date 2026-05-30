@@ -131,6 +131,30 @@ NAS 上（Container Station）：
 
 回滚：停止容器 → 恢复数据备份 → 容器改回旧 tag（如 `babyloom:1.0`）→ 启动。若新版已跑过迁移，旧代码可能不认新 schema，因此回滚**必须**配合数据备份还原。
 
+### 方式 C：推镜像仓库，NAS 拉取（推荐，免 tar / 免 skopeo）
+
+镜像不含 secret（`.dockerignore` 排除 `data`、`.env*`；最终镜像只有 standalone 应用代码），推公开或私有仓库均可。registry 走标准 distribution 协议，**不存在方式 B 的 tar 格式问题**。
+
+```bash
+# 本机：登录后构建并直接推送（一步到位，不需要 docker save / skopeo）。
+# 镜像名固定为 cccat5207/babyloom；tag 取 package.json 的 version。
+docker login
+pnpm docker:push
+# 等价于：
+# docker buildx build --platform linux/amd64 --provenance=false \
+#   -t cccat5207/babyloom:<ver> -t cccat5207/babyloom:latest --push .
+```
+
+NAS 上（Container Station）：
+
+1. **备份数据卷/目录**。
+2. 私有仓库：偏好设置 → Registry 添加 Docker Hub 账号（用户名 + Access Token）；公开仓库免登录。
+3. 镜像 → 拉取 `cccat5207/babyloom:<ver>`。
+4. 让容器换用新镜像、**数据卷映射保持不变**（同方式 B 第 4 步，把 `image:` 指向 `cccat5207/babyloom:<ver>`）。
+5. 启动时自动跑迁移。
+
+回滚同方式 B：改回旧 tag + 还原数据备份。
+
 ## 备份
 
 owner 在 `/profile/data` 触发导出，浏览器下载一个 zip。包含 SQLite 快照（`snapshot.db`）和 `media/` 目录。
