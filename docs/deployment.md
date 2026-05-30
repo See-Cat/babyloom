@@ -65,7 +65,17 @@ Babyloom 本身不做 TLS 终止。建议把它放在反向代理后面：
 
 无论哪种，**对外用 HTTPS 的话需要把 `app.baseUrl` 改成 `https://...`**，否则 cookie 不会在 secure 上下文生效。
 
+**`app.baseUrl` 等于浏览器实际打开的那个地址**（反向代理对外暴露的 scheme + 域名 + 端口），而**不是** NAS 上的 Docker 宿主端口。`app.baseUrl` 被用作 better-auth 的 `baseURL`（见 `lib/server/auth/server.ts`），它据此校验请求 `Origin` 并决定 cookie 的 `Secure` 标志。因此在「外网域名 → 路由器 → 反向代理 → NAS 端口 → 容器」这种多层链路里：
+
+- `app.baseUrl` 写公网地址，例如 `https://baby.example.com`（标准端口 443/80 可省略端口）；
+- NAS 的 Docker 宿主端口只需与反向代理的 `proxy_pass` 目标一致，**与 `app.baseUrl` 无关**，两者端口可以不同；
+- 未配置 `trustedOrigins`，better-auth 默认只信任 `app.baseUrl` 本身。若同时用公网域名和局域网 IP 两个入口访问，只有与 `app.baseUrl` 匹配的那个能正常登录，另一个会被 Origin 校验拒绝——建议固定一个入口。
+
 ## 升级
+
+数据库迁移在容器启动时自动应用（见 [architecture.md](./architecture.md#启动初始化)）。无论哪种方式，**升级前先备份数据目录**——迁移是单向的。DB / media / `config.yaml` 都在数据卷里、不在镜像里，所以升级只替换应用代码，数据卷原封不动，也无需重新放置 `config.yaml`。
+
+### 方式 A：源码重建（NAS 上有仓库）
 
 ```bash
 # 1. 备份数据目录（强烈建议）
@@ -79,9 +89,29 @@ pnpm docker:build
 pnpm docker:up
 ```
 
-数据库迁移在容器启动时自动应用（见 [architecture.md](./architecture.md#启动初始化)）。
-
 回滚：停止容器 → 用备份恢复 `data/` → 切回旧 git 版本 → 重新 `docker:up`。
+
+### 方式 B：导入镜像 tar 更新（NAS 上无源码）
+
+适用于用 `docker save` 导出的镜像包部署的场景（见 `docker-compose.qnap.yml`）。在本机构建新版本、传到 NAS 导入，再让容器换用新镜像。
+
+```bash
+# 本机：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）
+docker buildx build --platform linux/amd64 -t babyloom:1.1 --load .
+docker save babyloom:1.1 -o babyloom-1.1.tar
+```
+
+NAS 上（Container Station）：
+
+1. **备份数据卷/目录**。
+2. 镜像 → 导入 `babyloom-1.1.tar` → 得到 `babyloom:1.1`。
+3. 停止当前容器。
+4. 让容器换用新镜像、**数据卷映射保持不变**：
+   - compose：把 compose 文件里的 `image: babyloom:1.0` 改成 `babyloom:1.1`，再 `docker compose -f docker-compose.qnap.yml up -d`（用新镜像重建，旧卷照挂）。
+   - UI：编辑该应用/容器的镜像为 `babyloom:1.1`，重建时指向同一个卷。
+5. 启动时自动跑迁移，升级现有库。
+
+回滚：停止容器 → 恢复数据备份 → 容器改回旧 tag（如 `babyloom:1.0`）→ 启动。若新版已跑过迁移，旧代码可能不认新 schema，因此回滚**必须**配合数据备份还原。
 
 ## 备份
 

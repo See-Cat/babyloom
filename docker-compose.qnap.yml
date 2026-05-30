@@ -1,0 +1,35 @@
+# QNAP Container Station 部署用 compose（变体 A：不含 nginx，app 直接暴露端口）。
+# 配合导入的镜像 babyloom:1.0 使用，无需 NAS 上有源码。
+#
+# 卷不写死宿主路径：默认用命名卷 babyloom-data，由 Container Station 托管，
+# 可在「存储空间 / Volume」里查看与管理。想绑定自己的 NAS 目录时，改用下方
+# 注释里的 bind 挂载即可。
+#
+# ⚠️ 该 app 启动时必须已有 data/config.yaml，否则会启动失败。放置方式见每种卷下面的说明。
+
+services:
+  app:
+    image: babyloom:1.0
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      BABYLOOM_DATA_DIR: /app/data
+    ports:
+      - "3000:3000"          # 改左边宿主端口即可（避开 QNAP 的 80/8080），容器内固定 3000
+    volumes:
+      - babyloom-data:/app/data
+      # 命名卷里放 config.yaml：先 `up -d` 让卷生成，再
+      #   docker cp ./config.yaml <容器名>:/app/data/config.yaml
+      # 然后 `docker restart <容器名>`。
+
+      # —— 备选：想用自己的 NAS 目录（方便直接放 config.yaml），把上面一行换成下面，
+      #    并删除文件末尾的 volumes: 段：
+      # - /share/Container/babyloom/data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  babyloom-data:
