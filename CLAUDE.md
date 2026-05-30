@@ -71,4 +71,14 @@ Two-tier: a single **owner** (from config) with full rights over everything and 
 
 ## Gotcha: packaging an image tar for QNAP Container Station
 
-When the user asks to build/export a `.tar` image (e.g. for QNAP Container Station), **first remind them to disable Docker Desktop's containerd image store** — Settings → General → uncheck "Use containerd for pulling and storing images" (or set `"features": { "containerd-snapshotter": false }` in `~/.docker/daemon.json`), then restart Docker. With the containerd store enabled, `docker save` / `docker buildx` export **OCI format** (`blobs/sha256/` layout), which Container Station rejects with "文件格式无效 / file format invalid". Container Station needs the **legacy Docker format** (top-level `manifest.json` + `<hash>/layer.tar` + `repositories`). If they don't want to change Docker settings, convert per-build with skopeo: `skopeo --insecure-policy copy oci-archive:<oci>.tar docker-archive:<legacy>.tar:<repo>:<tag>`. Also cross-build for the NAS arch (`--platform linux/amd64` for Intel/AMD models) and use `--provenance=false` to avoid attestation manifest lists. See [docs/deployment.md](docs/deployment.md) (升级 → 方式 B).
+Container Station only accepts the **legacy Docker format** (top-level `manifest.json` + `<hash>/layer.tar` + `repositories`, docker mediaTypes). Anything else — typically **OCI format** (`blobs/sha256/` layout + `application/vnd.oci.image.layer.v1.tar`) — is rejected with "文件格式无效 / file format invalid".
+
+**Don't rely on toggling Docker Desktop's containerd image store** — on modern Docker (verified 29.x) that's *not sufficient*: `docker save` emits the OCI-blob layout regardless, even with the containerd store off (`overlay2`) and even via `DOCKER_BUILDKIT=0 docker build`. (`docker buildx`'s default `docker-container` builder is a second, independent OCI source.) The reliable, setting-independent path is to **convert with skopeo**:
+
+```bash
+docker buildx build --platform linux/amd64 --provenance=false -t babyloom:<ver> --load .
+docker save babyloom:<ver> -o babyloom-<ver>.tar
+skopeo --insecure-policy copy oci-archive:babyloom-<ver>.tar docker-archive:babyloom-<ver>-qnap.tar:babyloom:<ver>
+```
+
+Use `oci-archive:` as the skopeo source — it yields the `<hash>/layer.tar` subdirectory layout Container Station expects. (`docker-daemon:babyloom:<ver>` as the source skips `docker save` but produces a flat `<hash>.tar` layout — also blob-free and `docker load`-able, but prefer the `oci-archive` path.) Cross-build for the NAS arch (`--platform linux/amd64` for Intel/AMD) and keep `--provenance=false` to avoid attestation manifest lists. Verify with `tar tf <tar> | head`: expect `<hash>/layer.tar` + top-level `manifest.json`/`repositories`, **never** `blobs/sha256/`. See [docs/deployment.md](docs/deployment.md) (升级 → 方式 B).

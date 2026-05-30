@@ -95,22 +95,34 @@ pnpm docker:up
 
 适用于用 `docker save` 导出的镜像包部署的场景（见 `docker-compose.qnap.yml`）。在本机构建新版本、传到 NAS 导入，再让容器换用新镜像。
 
-> **QNAP Container Station 只认传统 Docker 镜像格式**（tar 顶层是 `manifest.json` + `<hash>/layer.tar` + `repositories`）。若 Docker Desktop 启用了 **containerd 镜像存储**，`docker save` 会导出 **OCI 格式**（`blobs/sha256/` 布局），导入时报「文件格式无效」。给 QNAP 打包前，先在 **Docker Desktop → Settings → General 取消勾选 "Use containerd for pulling and storing images"** 并重启（或等价地在 `~/.docker/daemon.json` 里设 `"features": { "containerd-snapshotter": false }`）。
+> **QNAP Container Station 只认传统 Docker 镜像格式**（tar 顶层是 `manifest.json` + `<hash>/layer.tar` + `repositories`，layer 用 docker mediaType）。其它布局——典型是 OCI 格式（`blobs/sha256/` 布局 + `application/vnd.oci.image.layer.v1.tar`）——导入时报「文件格式无效 / file format invalid」。
+>
+> OCI 来源有两个，且**都与 Docker Desktop 的"containerd 镜像存储"设置无关**：
+> 1. **`docker buildx build` 默认走 `docker-container` builder**，产出的 layer 一律是 OCI mediaType（`--load` 回守护进程也保留）。
+> 2. **新版 Docker（实测 29.x）的 `docker save` 本身就输出 OCI-blob 布局**——即便关掉 containerd 存储（`overlay2`）、甚至用 `DOCKER_BUILDKIT=0 docker build` 经典构建，`docker save` 仍是 `blobs/sha256/` + OCI mediaType。
+>
+> 所以**关闭 containerd 镜像存储这一招在新版 Docker 上已不足以拿到传统格式**。可靠且与任何 Docker 设置无关的做法是：构建后用 **skopeo** 把 tar 转成传统 `docker-archive` 格式（见下方第 2 步）。
 
 ```bash
-# 本机：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）。
-# 目标架构按 NAS 的 CPU 选 linux/amd64（Intel/AMD）或 linux/arm64（ARM 机型）。
+# 1) 本机构建：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）。
+#    目标架构按 NAS 的 CPU 选 linux/amd64（Intel/AMD）或 linux/arm64（ARM 机型）。
 docker buildx build --platform linux/amd64 --provenance=false -t babyloom:1.1 --load .
+
+# 2) docker save 出 OCI tar（新版 Docker 必然是 OCI 布局，下一步再转）。
 docker save babyloom:1.1 -o babyloom-1.1.tar
+
+# 3) skopeo 转成 QNAP 能导入的传统格式（没装 skopeo：brew install skopeo）。
+skopeo --insecure-policy copy oci-archive:babyloom-1.1.tar docker-archive:babyloom-1.1-qnap.tar:babyloom:1.1
 ```
 
-> 若不想改 Docker 存储设置，可保留 containerd 存储、用 skopeo 把 OCI tar 转成传统格式（每次打包都要做一次）：
-> `skopeo --insecure-policy copy oci-archive:babyloom-1.1.tar docker-archive:babyloom-1.1-qnap.tar:babyloom:1.1`
+> 用 `oci-archive:` 作源（如上）转出的产物是 `<hash>/layer.tar` 子目录布局，正是 Container Station 要的形态；导入用 **`babyloom-1.1-qnap.tar`**。
+> 验证：`tar tf babyloom-1.1-qnap.tar | head` 应看到 `<hash>/layer.tar` 与顶层 `manifest.json`、`repositories`，**绝不应**出现 `blobs/sha256/`。
+> （`skopeo copy docker-daemon:babyloom:1.1 docker-archive:...` 也能转、且省掉 `docker save`，但产出的是扁平 `<hash>.tar` 布局——同样无 `blobs/`、`docker load` 能读，但与 Container Station 期望的子目录布局不同，稳妥起见优先用上面的 `oci-archive` 路径。）
 
 NAS 上（Container Station）：
 
 1. **备份数据卷/目录**。
-2. 镜像 → 导入 `babyloom-1.1.tar` → 得到 `babyloom:1.1`。
+2. 镜像 → 导入 `babyloom-1.1-qnap.tar` → 得到 `babyloom:1.1`。
 3. 停止当前容器。
 4. 让容器换用新镜像、**数据卷映射保持不变**：
    - compose：把 compose 文件里的 `image: babyloom:1.0` 改成 `babyloom:1.1`，再 `docker compose -f docker-compose.qnap.yml up -d`（用新镜像重建，旧卷照挂）。
