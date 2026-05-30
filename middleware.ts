@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { getSessionCookie } from 'better-auth/cookies';
 
 const PUBLIC_PATHS = [
   '/login',
@@ -40,8 +41,8 @@ export function middleware(req: NextRequest) {
     return withSecurityHeaders(NextResponse.next());
   }
 
-  // better-auth stores session token in cookie 'better-auth.session_token'
-  const hasSession = req.cookies.has('better-auth.session_token');
+  // Reads 'better-auth.session_token', incl. the '__Secure-' prefix added over HTTPS.
+  const hasSession = getSessionCookie(req) !== null;
   if (!hasSession) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
