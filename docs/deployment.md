@@ -95,11 +95,17 @@ pnpm docker:up
 
 适用于用 `docker save` 导出的镜像包部署的场景（见 `docker-compose.qnap.yml`）。在本机构建新版本、传到 NAS 导入，再让容器换用新镜像。
 
+> **QNAP Container Station 只认传统 Docker 镜像格式**（tar 顶层是 `manifest.json` + `<hash>/layer.tar` + `repositories`）。若 Docker Desktop 启用了 **containerd 镜像存储**，`docker save` 会导出 **OCI 格式**（`blobs/sha256/` 布局），导入时报「文件格式无效」。给 QNAP 打包前，先在 **Docker Desktop → Settings → General 取消勾选 "Use containerd for pulling and storing images"** 并重启（或等价地在 `~/.docker/daemon.json` 里设 `"features": { "containerd-snapshotter": false }`）。
+
 ```bash
-# 本机：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）
-docker buildx build --platform linux/amd64 -t babyloom:1.1 --load .
+# 本机：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）。
+# 目标架构按 NAS 的 CPU 选 linux/amd64（Intel/AMD）或 linux/arm64（ARM 机型）。
+docker buildx build --platform linux/amd64 --provenance=false -t babyloom:1.1 --load .
 docker save babyloom:1.1 -o babyloom-1.1.tar
 ```
+
+> 若不想改 Docker 存储设置，可保留 containerd 存储、用 skopeo 把 OCI tar 转成传统格式（每次打包都要做一次）：
+> `skopeo --insecure-policy copy oci-archive:babyloom-1.1.tar docker-archive:babyloom-1.1-qnap.tar:babyloom:1.1`
 
 NAS 上（Container Station）：
 
