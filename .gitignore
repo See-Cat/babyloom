@@ -21,3 +21,6 @@ components-full.png
 .pnpm-store/
 public/sw*
 public/swe-worker*
+
+# Exported container image tarballs
+*.tar

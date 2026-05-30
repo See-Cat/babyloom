@@ -81,12 +81,16 @@ export const DELETE = withAuthorizedResource({
     //    media.uploadedBy / entryMedia.attachedBy (no cascade). Hard-delete
     //    only when there are no such references.
     const refCount =
-      (tx
+      (
+        // PARENT-CHAIN-EXEMPT: FK reference count by userId before hard-deleting the user row; not a per-baby read
+        tx
         .select({ c: sql<number>`count(*)`.as('c') })
         .from(entries)
         .where(eq(entries.authorId, row.userId))
         .get()?.c ?? 0) +
-      (tx
+      (
+        // PARENT-CHAIN-EXEMPT: FK reference count by userId before hard-deleting the user row; not a per-baby read
+        tx
         .select({ c: sql<number>`count(*)`.as('c') })
         .from(media)
         .where(eq(media.uploadedBy, row.userId))

@@ -20,44 +20,44 @@ describe('babyloom/no-raw-color', () => {
     tester.run('no-raw-color', rule as any, {
       valid: [
         {
-          filename: '/repo/app/login/page.tsx',
+          filename: 'app/login/page.tsx',
           code: `export function Login(){ return <div className="bg-[var(--color-bg)] text-[color:var(--color-fg)]" />; }`
         },
         {
-          filename: '/repo/components/ui/Button.tsx',
+          filename: 'components/ui/Button.tsx',
           code: `const style = { color: 'var(--color-accent)' };`
         },
         {
-          filename: '/repo/scripts/example.ts',
+          filename: 'scripts/example.ts',
           code: `const fixture = '#f8f8f0';`
         },
         {
-          filename: '/repo/tests/unit/example.test.ts',
+          filename: 'tests/unit/example.test.ts',
           code: `const fixture = '#ffcc00';`
         },
         {
-          filename: '/repo/app/layout.tsx',
+          filename: 'app/layout.tsx',
           code: `export function Layout(){ return <meta name="theme-color" content="#19c8b9" />; }`
         }
       ],
       invalid: [
         {
-          filename: '/repo/app/login/page.tsx',
+          filename: 'app/login/page.tsx',
           code: `const color = '#ffcc00';`,
           errors: [{ messageId: 'rawColor' }]
         },
         {
-          filename: '/repo/components/ui/Card.tsx',
+          filename: 'components/ui/Card.tsx',
           code: `const shadow = '0 4px 10px rgba(107, 92, 67, 0.42)';`,
           errors: [{ messageId: 'rawColor' }]
         },
         {
-          filename: '/repo/components/ui/Tag.tsx',
+          filename: 'components/ui/Tag.tsx',
           code: 'const color = `rgb(25, 200, 185)`;',
           errors: [{ messageId: 'rawColor' }]
         },
         {
-          filename: '/repo/app/page.tsx',
+          filename: 'app/page.tsx',
           code: `export function Page(){ return <div style={{ background: '#fff' }} />; }`,
           errors: [{ messageId: 'rawColor' }]
         }

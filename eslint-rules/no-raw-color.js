@@ -1,9 +1,22 @@
 'use strict';
 
+const path = require('node:path');
+
 const RAW_COLOR_PATTERN = /#[0-9a-fA-F]{3,8}\b|rgba?\s*\(/;
 
-function isCheckedFile(filename) {
-  return /\/(app|components)\//.test(filename) && /\.(ts|tsx|js|jsx)$/.test(filename);
+// Resolve the file path relative to the ESLint working directory so the
+// source-dir check matches real project layout (e.g. "app/...") instead of
+// coincidental segments in the absolute path such as a "/app" container WORKDIR.
+function relativeSourcePath(context) {
+  const filename = context.filename || context.getFilename();
+  if (!filename || filename[0] === '<') return '';
+  const cwd = context.cwd || (context.getCwd && context.getCwd()) || process.cwd();
+  const rel = path.isAbsolute(filename) ? path.relative(cwd, filename) : filename;
+  return rel.split(path.sep).join('/');
+}
+
+function isCheckedFile(rel) {
+  return /^(app|components)\//.test(rel) && /\.(ts|tsx|js|jsx)$/.test(rel);
 }
 
 function checkText(context, node, text) {
@@ -42,8 +55,7 @@ module.exports = {
     schema: []
   },
   create(context) {
-    const filename = context.getFilename();
-    if (!isCheckedFile(filename)) return {};
+    if (!isCheckedFile(relativeSourcePath(context))) return {};
 
     return {
       Literal(node) {

@@ -7,6 +7,12 @@ export const metadata = {
   description: 'Family baby memories'
 };
 
+// This app renders per request: cookie auth + local SQLite + runtime config.yaml
+// (absent at build time). Opt the whole tree out of static prerendering. The PWA
+// offline fallback (/offline) is precached by the service worker at install, so
+// it still works offline even though it is rendered dynamically.
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh" suppressHydrationWarning>

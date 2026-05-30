@@ -10,7 +10,7 @@ const withSerwist = withSerwistInit({
 const nextConfig = {
   output: 'standalone',
   outputFileTracingIncludes: {
-    '/*': ['./lib/db/migrations/**/*']
+    '/*': ['./lib/server/db/migrations/**/*']
   },
   serverExternalPackages: [
     'better-sqlite3',

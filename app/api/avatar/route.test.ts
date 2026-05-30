@@ -114,7 +114,7 @@ async function avatarRequest(target: string) {
       width: 16,
       height: 16,
       channels: 3,
-      background: '#224466'
+      background: { r: 34, g: 68, b: 102 }
     }
   })
     .png()

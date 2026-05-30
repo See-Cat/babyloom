@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { CameraIcon, ChevronLeftIcon } from '@/components/ui/icons';
 
-export default function OnboardingBabyPage() {
+function OnboardingBabyForm() {
   const router = useRouter();
   const canGoBack = useSearchParams().get('back') === '1';
   const fileRef = useRef<HTMLInputElement>(null);
@@ -154,5 +154,13 @@ export default function OnboardingBabyPage() {
         </div>
       </form>
     </main>
+  );
+}
+
+export default function OnboardingBabyPage() {
+  return (
+    <Suspense>
+      <OnboardingBabyForm />
+    </Suspense>
   );
 }

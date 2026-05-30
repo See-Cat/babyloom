@@ -11,7 +11,7 @@ const tester = new RuleTester({
 });
 
 const schemaImport = `import { babies, entries, media, familyMembers } from '@/lib/server/db/schema';`;
-const filename = '/repo/app/api/example/route.ts';
+const filename = 'app/api/example/route.ts';
 
 describe('babyloom/parent-chain-join', () => {
   it('requires entries/media queries to join babies', () => {
@@ -37,9 +37,21 @@ db.select({ count: sql\`count(*)\` }).from(media);`
           filename,
           code: `${schemaImport}
 db.select().from(babies);`
+        },
+        {
+          // Shared query helpers under lib/server/db/queries are also guarded.
+          filename: 'lib/server/db/queries/gallery.ts',
+          code: `${schemaImport}
+db.select().from(media).innerJoin(babies, eq(babies.id, media.babyId));`
         }
       ],
       invalid: [
+        {
+          filename: 'lib/server/db/queries/calendar.ts',
+          code: `${schemaImport}
+db.select().from(entries).where(eq(entries.status, 'active'));`,
+          errors: [{ messageId: 'missingParentChainJoin' }]
+        },
         {
           filename,
           code: `${schemaImport}

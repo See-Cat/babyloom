@@ -1,5 +1,18 @@
 'use strict';
 
+const path = require('node:path');
+
+// Resolve the file path relative to the ESLint working directory so the
+// source-dir checks below match real project layout (e.g. "app/...") instead of
+// coincidental segments in the absolute path such as a "/app" container WORKDIR.
+function relativeSourcePath(context) {
+  const filename = context.filename || context.getFilename();
+  if (!filename || filename[0] === '<') return '';
+  const cwd = context.cwd || (context.getCwd && context.getCwd()) || process.cwd();
+  const rel = path.isAbsolute(filename) ? path.relative(cwd, filename) : filename;
+  return rel.split(path.sep).join('/');
+}
+
 function isSchemaImport(node) {
   return node.source && node.source.value === '@/lib/server/db/schema';
 }
@@ -65,9 +78,9 @@ module.exports = {
     schema: []
   },
   create(context) {
-    const filename = context.getFilename();
-    if (/\/tests\//.test(filename)) return {};
-    if (!/\/app\//.test(filename) && !/\/lib\/db\/queries\//.test(filename)) return {};
+    const rel = relativeSourcePath(context);
+    if (/(^|\/)tests\//.test(rel)) return {};
+    if (!/^app\//.test(rel) && !/^lib\/server\/db\/queries\//.test(rel)) return {};
 
     const tableNames = new Set();
     const babiesNames = new Set();
