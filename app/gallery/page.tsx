@@ -57,7 +57,7 @@ export default async function GalleryPage({
   const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);
 
   return (
-    <AppShell title="画廊" subtitle={`${selectedBaby.name} · ${mediaCount > 0 ? `共 ${mediaCount} 张` : '还没有照片'}`}>
+    <AppShell title="画廊" subtitle={`${selectedBaby.name} · ${mediaCount > 0 ? `共 ${mediaCount} 张` : '还没有照片'}`} stickyHeader={false}>
       <GalleryGrid babyId={selectedBabyId} groups={groups} canWrite={canWrite} />
     </AppShell>
   );

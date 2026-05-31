@@ -15,11 +15,12 @@ export interface AppShellProps {
   className?: string;
   align?: 'left' | 'center';
   transparentHeader?: boolean;
+  stickyHeader?: boolean;
   hideHeader?: boolean;
   hideTabbar?: boolean;
 }
 
-export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className, align = 'left', transparentHeader = false, hideHeader = false, hideTabbar = false }: AppShellProps) {
+export function AppShell({ title, subtitle, leftSlot, rightSlot, children, className, align = 'left', transparentHeader = false, stickyHeader = true, hideHeader = false, hideTabbar = false }: AppShellProps) {
   const pathname = usePathname();
   const showTabbar = !hideTabbar && !(pathname.startsWith('/login') || pathname.startsWith('/onboarding'));
   const titleBlockClass = align === 'center' ? 'min-w-0 flex-1 text-center' : 'min-w-0 flex-1 text-left';
@@ -39,9 +40,10 @@ export function AppShell({ title, subtitle, leftSlot, rightSlot, children, class
       {!hideHeader && (
         <header
           className={cn(
-            'sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))] border-b border-transparent transition-[box-shadow,border-color] duration-200',
+            'flex min-h-14 items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))] border-b border-transparent transition-[box-shadow,border-color] duration-200',
+            stickyHeader && 'sticky top-0 z-[var(--z-sticky)]',
             transparentHeader ? 'bg-transparent' : 'bg-[var(--color-bg)]',
-            !transparentHeader && scrolled && 'border-[color:var(--color-border-light)] shadow-[var(--shadow-soft-sm)]'
+            !transparentHeader && stickyHeader && scrolled && 'border-[color:var(--color-border-light)] shadow-[var(--shadow-soft-sm)]'
           )}
         >
           {leftSlot && <div className="min-w-10">{leftSlot}</div>}
