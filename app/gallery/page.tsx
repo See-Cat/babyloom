@@ -55,7 +55,7 @@ export default async function GalleryPage({
   const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
   const canWrite = canWriteToBaby({ db, familyMemberId: member.id, role, babyId: selectedBabyId });
   const timezone = loadConfig({ dataDir }).app.timezone;
-  const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId, timeZone: timezone }));
+  const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId, timeZone: timezone }), timezone);
   const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);
 
   return (

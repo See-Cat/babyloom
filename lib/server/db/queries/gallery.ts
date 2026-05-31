@@ -2,7 +2,7 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 import type { BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import { babies, entryMedia, media } from '@/lib/server/db/schema';
 import type * as schema from '@/lib/server/db/schema';
-import { parseBirthdayToMillis } from '@/lib/shared/format-time';
+import { parseBirthdayToMillis, zonedParts } from '@/lib/shared/format-time';
 
 export interface GalleryMedia {
   id: string;
@@ -79,14 +79,15 @@ export function listGalleryMedia({
 }
 
 export function groupMediaByMonth<T extends { takenAt: number | null; createdAt: number }>(
-  rows: T[]
+  rows: T[],
+  timeZone: string
 ): Array<GalleryMonthGroup<T>> {
   const groups = new Map<string, GalleryMonthGroup<T>>();
 
   for (const row of [...rows].sort((a, b) => (b.takenAt ?? b.createdAt) - (a.takenAt ?? a.createdAt))) {
-    const effective = new Date(row.takenAt ?? row.createdAt);
-    const year = effective.getUTCFullYear();
-    const month = effective.getUTCMonth() + 1;
+    // Bucket by the month in the configured timezone, so a shot near local midnight
+    // files under the day the family experienced it (not the UTC month).
+    const { year, month } = zonedParts(row.takenAt ?? row.createdAt, timeZone);
     const ym = `${year}-${String(month).padStart(2, '0')}`;
     let group = groups.get(ym);
     if (!group) {
