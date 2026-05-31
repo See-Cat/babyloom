@@ -55,7 +55,7 @@ export default function EditEntryPage() {
 
   const originalContent = entry?.content ?? '';
   const originalOccurredAt = entry?.occurredAt ?? 0;
-  const currentMediaIds = new Set(uploadedMedia.filter((m) => m.status === 'ready').map((m) => m.mediaId));
+  const currentMediaIds = new Set(uploadedMedia.filter((m) => m.status === 'ready' && m.mediaId).map((m) => m.mediaId!));
   const dirty =
     content !== originalContent ||
     occurredAt !== originalOccurredAt ||
@@ -85,14 +85,15 @@ export default function EditEntryPage() {
       const selectedIds = new Set((e.milestones ?? []).map((x) => x.id));
       setSelectedMilestoneIds(selectedIds);
       setOriginalMilestoneIds(new Set(selectedIds));
-      const initialMedia = (e.media ?? []).map((item) => ({
+      const initialMedia: UploadedMedia[] = (e.media ?? []).map((item) => ({
+        uploadId: item.mediaId,
         mediaId: item.mediaId,
         filename: item.filename,
         status: item.status,
         type: item.type
       }));
       setUploadedMedia(initialMedia);
-      setOriginalMediaIds(new Set(initialMedia.filter((x) => x.status === 'ready').map((x) => x.mediaId)));
+      setOriginalMediaIds(new Set(initialMedia.filter((x) => x.status === 'ready' && x.mediaId).map((x) => x.mediaId!)));
       setAllMilestones(m.milestones);
 
       const babyRes = await fetch(`/api/babies/${e.babyId}`).catch(() => null);
@@ -119,7 +120,7 @@ export default function EditEntryPage() {
 
   function onUploaded(media: UploadedMedia) {
     setUploadedMedia((prev) => {
-      const index = prev.findIndex((item) => item.mediaId === media.mediaId);
+      const index = prev.findIndex((item) => item.uploadId === media.uploadId);
       if (index === -1) return [...prev, media];
       const next = prev.slice();
       next[index] = media;
@@ -199,10 +200,11 @@ export default function EditEntryPage() {
           size="sm"
           disabled={
             pending ||
+            uploadedMedia.some((m) => m.status === 'pending') ||
             (content.trim().length === 0 && currentMediaIds.size === 0)
           }
         >
-          {pending ? '保存中…' : '保存'}
+          {uploadedMedia.some((m) => m.status === 'pending') ? '上传中…' : pending ? '保存中…' : '保存'}
         </Button>
       }
     >
@@ -223,7 +225,7 @@ export default function EditEntryPage() {
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}
-        onRemoveMedia={(mediaId) => setUploadedMedia((prev) => prev.filter((item) => item.mediaId !== mediaId))}
+        onRemoveMedia={(uploadId) => setUploadedMedia((prev) => prev.filter((item) => item.uploadId !== uploadId))}
         onSubmitClick={onSubmit}
       />
       <ActionSheet

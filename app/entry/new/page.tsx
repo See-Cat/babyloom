@@ -32,7 +32,7 @@ function NewEntryForm() {
   const [selectedMilestoneIds, setSelectedMilestoneIds] = useState<Set<string>>(new Set());
   const [uploadedMedia, setUploadedMedia] = useState<UploadedMedia[]>(() =>
     prefillMediaId
-      ? [{ mediaId: prefillMediaId, filename: prefillFilename, status: 'ready', type: prefillMediaType }]
+      ? [{ uploadId: prefillMediaId, mediaId: prefillMediaId, filename: prefillFilename, status: 'ready', type: prefillMediaType }]
       : []
   );
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +80,7 @@ function NewEntryForm() {
 
   function onUploaded(media: UploadedMedia) {
     setUploadedMedia((prev) => {
-      const index = prev.findIndex((item) => item.mediaId === media.mediaId);
+      const index = prev.findIndex((item) => item.uploadId === media.uploadId);
       if (index === -1) return [...prev, media];
       const next = prev.slice();
       next[index] = media;
@@ -113,8 +113,9 @@ function NewEntryForm() {
     }
 
     const data = await res.json();
-    for (const media of uploadedMedia.filter((item) => item.status === 'ready')) {
-      const attach = await fetch(`/api/entries/${data.id}/media/${media.mediaId}/attach`, {
+    const readyMediaIds = uploadedMedia.filter((item) => item.status === 'ready' && item.mediaId).map((item) => item.mediaId!);
+    for (const mediaId of readyMediaIds) {
+      const attach = await fetch(`/api/entries/${data.id}/media/${mediaId}/attach`, {
         method: 'POST'
       });
       if (!attach.ok) {
@@ -150,10 +151,11 @@ function NewEntryForm() {
           size="sm"
           disabled={
             submitting ||
+            uploadedMedia.some((m) => m.status === 'pending') ||
             (content.trim().length === 0 && uploadedMedia.filter((m) => m.status === 'ready').length === 0)
           }
         >
-          {submitting ? '保存中…' : '保存'}
+          {uploadedMedia.some((m) => m.status === 'pending') ? '上传中…' : submitting ? '保存中…' : '保存'}
         </Button>
       }
     >
@@ -175,7 +177,7 @@ function NewEntryForm() {
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}
-        onRemoveMedia={(mediaId) => setUploadedMedia((prev) => prev.filter((item) => item.mediaId !== mediaId))}
+        onRemoveMedia={(uploadId) => setUploadedMedia((prev) => prev.filter((item) => item.uploadId !== uploadId))}
       />
       <ActionSheet
         open={leaveOpen}

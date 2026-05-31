@@ -21,7 +21,7 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
 
   function onUploaded(media: UploadedMedia) {
     setItems((prev) => {
-      const i = prev.findIndex((m) => m.mediaId === media.mediaId);
+      const i = prev.findIndex((m) => m.uploadId === media.uploadId);
       if (i === -1) return [...prev, media];
       const next = prev.slice();
       next[i] = media;
@@ -31,6 +31,8 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
 
   const readyCount = items.filter((m) => m.status === 'ready').length;
   const pendingCount = items.filter((m) => m.status === 'pending').length;
+  const failedCount = items.filter((m) => m.status === 'failed').length;
+  const doneCount = readyCount + failedCount;
 
   return (
     <AppShell
@@ -103,14 +105,27 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
                   className={
                     m.status === 'ready'
                       ? 'inline-block h-2 w-2 rounded-full bg-[var(--color-primary)]'
-                      : 'inline-block h-2 w-2 rounded-full bg-[var(--color-fg-soft)]'
+                      : m.status === 'failed'
+                        ? 'inline-block h-2 w-2 rounded-full bg-[var(--color-error)]'
+                        : 'inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-fg-soft)]'
                   }
                 />
                 <span className="truncate">{m.filename}</span>
+                {m.status === 'failed' && <span className="ml-auto shrink-0 text-[length:var(--text-xs)] font-semibold text-[color:var(--color-error-active)]">失败</span>}
               </li>
             ))}
           </ul>
         </Card>
+      )}
+
+      {pendingCount > 0 && (
+        <div
+          aria-live="polite"
+          className="fixed right-[var(--space-4)] bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[var(--z-sticky)] inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-[var(--color-fg-strong)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-soft-md)]"
+        >
+          <Spinner />
+          上传中 {doneCount}/{items.length}
+        </div>
       )}
 
       {readyCount > 0 && (

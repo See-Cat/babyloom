@@ -6,11 +6,18 @@ import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/client/hooks/useToast';
 
 export interface UploadedMedia {
-  mediaId: string;
+  /** Stable client-side id; also sent as clientUploadId. Survives pending→ready/failed. */
+  uploadId: string;
+  /** Server media id, present once the upload is ready. */
+  mediaId?: string;
   filename: string;
-  status: 'ready' | 'pending';
+  status: 'pending' | 'ready' | 'failed';
   type?: 'photo' | 'video';
 }
+
+// How many files upload in parallel. Each one drives server-side sharp/ffmpeg
+// work on the (often modest) host, so keep this small to avoid thrashing.
+const UPLOAD_CONCURRENCY = 4;
 
 export interface UploadButtonProps {
   babyId: string;
@@ -25,34 +32,47 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
   const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+
+  async function uploadOne(file: File) {
+    const uploadId = crypto.randomUUID();
+    const type: 'photo' | 'video' = file.type.startsWith('video/') ? 'video' : 'photo';
+    warnIfHevc(file, toast);
+    // Emit a placeholder immediately so the UI shows this file as "in progress".
+    onUploaded({ uploadId, filename: file.name, status: 'pending', type });
+    try {
+      const form = new FormData();
+      form.append('babyId', babyId);
+      form.append('clientUploadId', uploadId);
+      form.append('file', file);
+      const res = await fetch('/api/media/upload', { method: 'POST', body: form });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || `upload_failed_${res.status}`);
+      }
+      const body = await res.json();
+      if (body.status === 'pending' || body.status === 'processing') {
+        await pollUntilReady(body.mediaId);
+      }
+      onUploaded({ uploadId, mediaId: body.mediaId, filename: file.name, status: 'ready', type });
+    } catch {
+      onUploaded({ uploadId, filename: file.name, status: 'failed', type });
+    }
+  }
 
   async function handleFiles(files: FileList) {
     if (!requireOnline(toast)) return;
     setBusy(true);
-    setError(null);
-    try {
-      for (const file of Array.from(files)) {
-        warnIfHevc(file, toast);
-        const type: 'photo' | 'video' = file.type.startsWith('video/') ? 'video' : 'photo';
-        const form = new FormData();
-        form.append('babyId', babyId);
-        form.append('clientUploadId', crypto.randomUUID());
-        form.append('file', file);
-        const res = await fetch('/api/media/upload', { method: 'POST', body: form });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || `upload_failed_${res.status}`);
-        }
-        const body = await res.json();
-        if (body.status === 'pending' || body.status === 'processing') {
-          onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'pending', type });
-          await pollUntilReady(body.mediaId);
-        }
-        onUploaded({ mediaId: body.mediaId, filename: file.name, status: 'ready', type });
+    const list = Array.from(files);
+    let cursor = 0;
+    const workers = Array.from({ length: Math.min(UPLOAD_CONCURRENCY, list.length) }, async () => {
+      while (cursor < list.length) {
+        const file = list[cursor];
+        cursor += 1;
+        await uploadOne(file);
       }
-    } catch (e: any) {
-      setError(e.message || '上传失败');
+    });
+    try {
+      await Promise.all(workers);
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -79,11 +99,6 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         <Button type="button" size="sm" variant="secondary" disabled={disabled || busy} onClick={click}>
           {busy ? '上传中…' : '添加照片 / 视频'}
         </Button>
-      )}
-      {error && (
-        <p role="alert" className="text-[length:var(--text-sm)] text-[color:var(--color-error)]">
-          {error}
-        </p>
       )}
     </div>
   );

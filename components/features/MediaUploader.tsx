@@ -10,7 +10,7 @@ export interface MediaUploaderProps {
   uploadedMedia: UploadedMedia[];
   disabled?: boolean;
   onUploaded: (media: UploadedMedia) => void;
-  onRemove: (mediaId: string) => void;
+  onRemove: (uploadId: string) => void;
 }
 
 export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploadedMedia }: MediaUploaderProps) {
@@ -23,8 +23,8 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
       </p>
       <ul className="grid grid-cols-3 gap-[var(--space-2)]">
         {uploadedMedia.map((media) => (
-          <li key={media.mediaId} className="relative aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)]">
-            {media.status === 'ready' ? (
+          <li key={media.uploadId} className="relative aspect-square overflow-hidden rounded-[var(--radius-sm)] bg-[var(--color-surface)]">
+            {media.status === 'ready' && media.mediaId ? (
               <>
                 <MediaImage
                   mediaId={media.mediaId}
@@ -43,6 +43,11 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
                   </span>
                 )}
               </>
+            ) : media.status === 'failed' ? (
+              <div className="flex h-full w-full flex-col items-center justify-center gap-1 bg-[var(--color-error-bg)] text-[color:var(--color-error-active)]">
+                <span aria-hidden="true" className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-error)] text-[length:var(--text-sm)] font-bold text-white">!</span>
+                <span className="text-[length:var(--text-xs)] font-bold">上传失败</span>
+              </div>
             ) : (
               <div className="flex h-full w-full items-center justify-center">
                 <Spinner />
@@ -53,7 +58,7 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
             )}
             <button
               type="button"
-              onClick={() => onRemove(media.mediaId)}
+              onClick={() => onRemove(media.uploadId)}
               aria-label="移除"
               className="absolute right-1.5 top-1.5 inline-flex items-center justify-center rounded-full bg-black/50 text-white"
               style={{ width: 22, height: 22 }}

@@ -33,7 +33,7 @@ export interface EntryComposerProps {
   onContentChange?: (value: string) => void;
   onToggleMilestone: (id: string) => void;
   onUploaded?: (media: UploadedMedia) => void;
-  onRemoveMedia?: (mediaId: string) => void;
+  onRemoveMedia?: (uploadId: string) => void;
   action?: (formData: FormData) => void | Promise<void>;
   onSubmitClick?: () => void;
 }
