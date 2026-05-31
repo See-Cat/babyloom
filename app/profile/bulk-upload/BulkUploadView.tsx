@@ -97,7 +97,7 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
           <ul className="mt-[var(--space-3)] grid gap-[var(--space-2)]">
             {items.map((m) => (
               <li
-                key={m.mediaId}
+                key={m.uploadId}
                 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] text-[color:var(--color-fg)]"
               >
                 <span
