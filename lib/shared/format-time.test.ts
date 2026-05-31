@@ -3,7 +3,9 @@ import {
   formatLongDateTime,
   formatRelativeDateTime,
   isValidTimeZone,
-  msUntilNextZonedMidnight
+  msUntilNextZonedMidnight,
+  zonedParts,
+  zonedWallTimeToMillis
 } from './format-time';
 
 // 2026-05-31T10:00:00Z → Shanghai 18:00, New York (EDT) 06:00
@@ -48,6 +50,25 @@ describe('isValidTimeZone', () => {
     expect(isValidTimeZone('GMT+8')).toBe(false);
     expect(isValidTimeZone('Not/AZone')).toBe(false);
     expect(isValidTimeZone('')).toBe(false);
+  });
+});
+
+describe('zonedWallTimeToMillis', () => {
+  it('interprets wall-clock parts as the given timezone (not the ambient one)', () => {
+    // 08:00 in Shanghai (UTC+8) is 00:00 UTC the same day.
+    expect(zonedWallTimeToMillis({ year: 2026, month: 5, day: 31, hour: 8, minute: 0 }, 'Asia/Shanghai')).toBe(
+      Date.UTC(2026, 4, 31, 0, 0)
+    );
+    // 08:00 in New York (EDT, UTC-4) is 12:00 UTC.
+    expect(zonedWallTimeToMillis({ year: 2026, month: 5, day: 31, hour: 8, minute: 0 }, 'America/New_York')).toBe(
+      Date.UTC(2026, 4, 31, 12, 0)
+    );
+  });
+
+  it('round-trips with zonedParts', () => {
+    const wall = { year: 2026, month: 1, day: 1, hour: 0, minute: 30 };
+    const ms = zonedWallTimeToMillis(wall, 'Asia/Shanghai');
+    expect(zonedParts(ms, 'Asia/Shanghai')).toEqual(wall);
   });
 });
 

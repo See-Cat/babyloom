@@ -3,11 +3,13 @@
 import * as React from 'react';
 import { Textarea } from '@/components/ui/Textarea';
 import { Avatar } from '@/components/ui/Avatar';
-import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
+import { DatePicker } from '@/components/ui/DatePicker';
 import { ClockIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/client/hooks/useToast';
+import { useTimezone, useRenderNow } from '@/components/system/TimezoneProvider';
+import { zonedParts, zonedWallTimeToMillis, type ZonedParts } from '@/lib/shared/format-time';
 import { MediaUploader } from './MediaUploader';
 import { MilestonePicker, type MilestonePickerItem } from './MilestonePicker';
 
@@ -63,6 +65,8 @@ export function EntryComposer({
   uploadedMedia = []
 }: EntryComposerProps) {
   const toast = useToast();
+  const timeZone = useTimezone();
+  const renderNow = useRenderNow();
   const charCount = content.length;
   const showCounter = charCount >= MAX_CHARS / 2;
   const placeholder = contentPlaceholder ?? `今天${babyName ?? '宝宝'}做了什么呢…也可以直接放张照片`;
@@ -93,11 +97,11 @@ export function EntryComposer({
               label="发生时间"
               mode="datetime"
               hideLabel
-              value={millisToString(occurredAt)}
-              minValue={minOccurredAt ? millisToString(minOccurredAt) : undefined}
-              maxValue={nowDatePickerValue('datetime')}
+              value={millisToString(occurredAt, timeZone)}
+              minValue={minOccurredAt ? millisToString(minOccurredAt, timeZone) : undefined}
+              maxValue={millisToString(Date.now(), timeZone)}
               onChange={(next) => {
-                const ms = stringToMillis(next);
+                const ms = stringToMillis(next, timeZone);
                 if (ms !== null) onOccurredAtChange(ms);
               }}
               renderTrigger={({ open, label, hasValue }) => (
@@ -108,7 +112,7 @@ export function EntryComposer({
                   className="inline-flex items-center gap-[var(--space-2)] h-8 px-3 rounded-[var(--radius-pill)] bg-[var(--color-surface-2)] text-[length:var(--text-xs)] font-bold text-[color:var(--color-fg)] shadow-[var(--shadow-press-sm)] active:translate-y-[2px] active:shadow-[var(--shadow-press-sm-active)]"
                 >
                   <ClockIcon className="h-4 w-4" />
-                  <span>{hasValue ? formatPillLabel(label, occurredAt) : '现在'}</span>
+                  <span>{hasValue ? formatPillLabel(label, timeZone, renderNow || Date.now(), occurredAt) : '现在'}</span>
                 </button>
               )}
             />
@@ -148,16 +152,28 @@ export function EntryComposer({
   );
 }
 
-function millisToString(ms: number | undefined): string {
+// The picker edits wall-clock parts; we interpret/produce them in the configured
+// timezone so a saved occurredAt is the instant that timezone implies — matching
+// how the timeline/detail later display it, regardless of the device timezone.
+function millisToString(ms: number | undefined, timeZone: string): string {
   if (!ms) return '';
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const p = zonedParts(ms, timeZone);
+  return `${p.year}-${pad(p.month)}-${pad(p.day)} ${pad(p.hour)}:${pad(p.minute)}`;
 }
 
-function stringToMillis(value: string): number | null {
+function stringToMillis(value: string, timeZone: string): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/.exec(value);
   if (!match) return null;
-  const ms = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), match[4] ? Number(match[4]) : 0, match[5] ? Number(match[5]) : 0).getTime();
+  const ms = zonedWallTimeToMillis(
+    {
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+      hour: match[4] ? Number(match[4]) : 0,
+      minute: match[5] ? Number(match[5]) : 0
+    },
+    timeZone
+  );
   return Number.isNaN(ms) ? null : ms;
 }
 
@@ -165,16 +181,17 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-function formatPillLabel(fallback: string, ms?: number): string {
+function dayOrdinal(p: ZonedParts): number {
+  return Date.UTC(p.year, p.month - 1, p.day);
+}
+
+function formatPillLabel(fallback: string, timeZone: string, nowMs: number, ms?: number): string {
   if (!ms) return fallback;
-  const d = new Date(ms);
-  const now = new Date();
-  const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-  const time = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (sameDay) return `今天 ${time}`;
-  const yest = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
-  if (d.getFullYear() === yest.getFullYear() && d.getMonth() === yest.getMonth() && d.getDate() === yest.getDate()) {
-    return `昨天 ${time}`;
-  }
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${time}`;
+  const p = zonedParts(ms, timeZone);
+  const now = zonedParts(nowMs, timeZone);
+  const time = `${pad(p.hour)}:${pad(p.minute)}`;
+  const dayDiff = Math.round((dayOrdinal(now) - dayOrdinal(p)) / 86_400_000);
+  if (dayDiff === 0) return `今天 ${time}`;
+  if (dayDiff === 1) return `昨天 ${time}`;
+  return `${p.month}月${p.day}日 ${time}`;
 }

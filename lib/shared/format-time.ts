@@ -1,6 +1,6 @@
 const MS_PER_DAY = 86_400_000;
 
-interface ZonedParts {
+export interface ZonedParts {
   year: number;
   month: number;
   day: number;
@@ -12,7 +12,7 @@ interface ZonedParts {
 // Intl with a fixed `timeZone` makes the result independent of the ambient
 // timezone, so server (often UTC) and client (the viewer's device) agree — which
 // is what prevents the relative-time hydration mismatch (React error #418).
-function zonedParts(ms: number, timeZone: string): ZonedParts {
+export function zonedParts(ms: number, timeZone: string): ZonedParts {
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone,
     year: 'numeric',
@@ -35,6 +35,21 @@ function zonedParts(ms: number, timeZone: string): ZonedParts {
 
 function hm(parts: ZonedParts): string {
   return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
+}
+
+// Inverse of zonedParts: interpret wall-clock parts AS `timeZone` and return the
+// absolute instant (epoch ms). Used so a picked "occurred at" is saved as the
+// instant the configured timezone implies, matching how it's later displayed —
+// not the device-local instant. Iterates to settle the zone offset (incl. DST).
+export function zonedWallTimeToMillis(parts: ZonedParts, timeZone: string): number {
+  const wanted = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
+  let utc = wanted;
+  for (let i = 0; i < 3; i += 1) {
+    const z = zonedParts(utc, timeZone);
+    const asUtc = Date.UTC(z.year, z.month - 1, z.day, z.hour, z.minute);
+    utc += wanted - asUtc;
+  }
+  return utc;
 }
 
 // Midnight (in `timeZone`) of the given instant, expressed as a UTC ordinal so

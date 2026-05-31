@@ -11,7 +11,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ChevronLeftIcon, DotsIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/client/hooks/useToast';
 import { useTimezone } from '@/components/system/TimezoneProvider';
-import { formatLongDateTime } from '@/lib/shared/format-time';
+import { formatLongDateTime, zonedParts } from '@/lib/shared/format-time';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 interface EntryDetailViewProps {
@@ -124,7 +124,7 @@ export function EntryDetailView({
           </p>
           {babyBirthday && (
             <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-primary-bg)] px-[var(--space-2)] py-[2px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
-              {formatAge(babyBirthday, entry.occurredAt)}
+              {formatAge(babyBirthday, entry.occurredAt, timeZone)}
             </span>
           )}
         </div>
@@ -178,12 +178,18 @@ export function EntryDetailView({
   );
 }
 
-function formatAge(birthday: string, atMs: number) {
-  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
-  const at = new Date(atMs);
-  if (Number.isNaN(birth.getTime())) return '';
-  let months = (at.getUTCFullYear() - birth.getUTCFullYear()) * 12 + at.getUTCMonth() - birth.getUTCMonth();
-  if (at.getUTCDate() < birth.getUTCDate()) months -= 1;
+function formatAge(birthday: string, atMs: number, timeZone: string) {
+  // Birthday is a calendar date; derive the occurrence's calendar date in the
+  // configured timezone so the age matches the date shown next to it (instead of
+  // drifting a day/month for entries in the UTC-vs-zone midnight window).
+  const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  const birthYear = Number(match[1]);
+  const birthMonth = Number(match[2]);
+  const birthDay = Number(match[3]);
+  const at = zonedParts(atMs, timeZone);
+  let months = (at.year - birthYear) * 12 + (at.month - birthMonth);
+  if (at.day < birthDay) months -= 1;
   months = Math.max(0, months);
   const years = Math.floor(months / 12);
   const rest = months % 12;
