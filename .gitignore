@@ -18,6 +18,7 @@ components-full.png
 .superpowers/
 .sisyphus/
 .claude/
+.omo/
 .pnpm-store/
 public/sw*
 public/swe-worker*
