@@ -17,7 +17,32 @@ export interface UploadedMedia {
 
 // How many files upload in parallel. Each one drives server-side sharp/ffmpeg
 // work on the (often modest) host, so keep this small to avoid thrashing.
+// The limiter is module-global: no matter how many batches/components are
+// uploading at once, at most this many requests are in flight together.
 const UPLOAD_CONCURRENCY = 4;
+
+let activeUploads = 0;
+const uploadWaiters: Array<() => void> = [];
+
+function acquireUploadSlot(): Promise<void> {
+  return new Promise((resolve) => {
+    if (activeUploads < UPLOAD_CONCURRENCY) {
+      activeUploads += 1;
+      resolve();
+    } else {
+      uploadWaiters.push(resolve);
+    }
+  });
+}
+
+function releaseUploadSlot(): void {
+  const next = uploadWaiters.shift();
+  if (next) {
+    next(); // hand the slot to the next waiter (active count unchanged)
+  } else {
+    activeUploads -= 1;
+  }
+}
 
 export interface UploadButtonProps {
   babyId: string;
@@ -31,7 +56,10 @@ export interface UploadButtonProps {
 export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className, renderTrigger }: UploadButtonProps) {
   const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = React.useState(false);
+  // Count overlapping batches so "busy" stays true while any are in flight,
+  // even when the user keeps adding more files mid-upload.
+  const [activeBatches, setActiveBatches] = React.useState(0);
+  const busy = activeBatches > 0;
 
   async function uploadOne(file: File) {
     const uploadId = crypto.randomUUID();
@@ -61,21 +89,22 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
 
   async function handleFiles(files: FileList) {
     if (!requireOnline(toast)) return;
-    setBusy(true);
     const list = Array.from(files);
-    let cursor = 0;
-    const workers = Array.from({ length: Math.min(UPLOAD_CONCURRENCY, list.length) }, async () => {
-      while (cursor < list.length) {
-        const file = list[cursor];
-        cursor += 1;
-        await uploadOne(file);
-      }
-    });
+    if (inputRef.current) inputRef.current.value = ''; // allow re-selecting while this batch runs
+    setActiveBatches((n) => n + 1);
     try {
-      await Promise.all(workers);
+      await Promise.all(
+        list.map(async (file) => {
+          await acquireUploadSlot();
+          try {
+            await uploadOne(file);
+          } finally {
+            releaseUploadSlot();
+          }
+        })
+      );
     } finally {
-      setBusy(false);
-      if (inputRef.current) inputRef.current.value = '';
+      setActiveBatches((n) => n - 1);
     }
   }
 

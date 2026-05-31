@@ -8,7 +8,6 @@ import { UploadButton, type UploadedMedia } from '@/components/media/UploadButto
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
-import { Spinner } from '@/components/ui/Spinner';
 
 export interface BulkUploadViewProps {
   babyId: string;
@@ -63,18 +62,15 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
           babyId={babyId}
           multiple
           onUploaded={onUploaded}
-          renderTrigger={({ click, busy }) => (
+          renderTrigger={({ click }) => (
             <button
               type="button"
               onClick={click}
-              disabled={busy}
-              className="flex w-full flex-col items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-7)] text-[color:var(--color-fg-soft)] active:bg-[var(--color-surface)] disabled:opacity-50"
+              className="flex w-full flex-col items-center justify-center gap-[var(--space-2)] rounded-[var(--radius-lg)] border-2 border-dashed border-[var(--color-border-light)] bg-[var(--color-surface-2)] px-[var(--space-5)] py-[var(--space-7)] text-[color:var(--color-fg-soft)] active:bg-[var(--color-surface)]"
             >
-              {busy ? <Spinner /> : <PlusIcon className="h-8 w-8" />}
-              <span className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg)]">
-                {busy ? '上传中…' : '从相册选择'}
-              </span>
-              <span className="text-[length:var(--text-xs)]">支持一次选择多张</span>
+              <PlusIcon className="h-8 w-8" />
+              <span className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg)]">从相册选择</span>
+              <span className="text-[length:var(--text-xs)]">支持一次选择多张,上传中也可继续添加</span>
             </button>
           )}
         />

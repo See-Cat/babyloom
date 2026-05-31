@@ -72,15 +72,15 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
             babyId={babyId}
             onUploaded={onUploaded}
             disabled={disabled}
-            renderTrigger={({ click, busy }) => (
+            renderTrigger={({ click }) => (
               <button
                 type="button"
                 onClick={click}
-                disabled={disabled || busy}
+                disabled={disabled}
                 aria-label="添加照片或视频"
                 className="flex h-full w-full flex-col items-center justify-center gap-1 rounded-[var(--radius-sm)] border-2 border-dashed border-[var(--color-border-light)] bg-[var(--color-surface-2)] text-[color:var(--color-fg-soft)] active:bg-[var(--color-surface)] disabled:opacity-50"
               >
-                {busy ? <Spinner /> : <PlusIcon className="h-7 w-7" />}
+                <PlusIcon className="h-7 w-7" />
                 <span className="text-[length:var(--text-xs)] font-bold">添加</span>
               </button>
             )}
