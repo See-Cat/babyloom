@@ -11,6 +11,7 @@ import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/perm
 import { babies, entries, entryMedia, entryMilestones, familyMembers, media, milestones, users } from '@/lib/server/db/schema';
 import type { MediaItem } from '@/lib/server/media/types';
 import { AppShell } from '@/components/mobile/AppShell';
+import { Avatar } from '@/components/ui/Avatar';
 import { TimelineCard } from '@/components/features/TimelineCard';
 import { TimelineHero } from '@/components/features/TimelineHero';
 import { Fab } from '@/components/ui/Fab';
@@ -129,6 +130,14 @@ export default async function TimelinePage({
     <AppShell
       title={`${selectedBaby.name}的成长`}
       subtitle={formatBabyAge(selectedBaby.birthday)}
+      leftSlot={
+        <Avatar
+          src={selectedBaby.avatarUrl ?? undefined}
+          name={selectedBaby.name}
+          colorKey={selectedBaby.id}
+          size="md"
+        />
+      }
     >
       {dayRange && sp.date && (
         <div className="mb-[var(--space-4)]">
