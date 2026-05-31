@@ -10,6 +10,7 @@ import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { parseBirthdayToMillis } from '@/lib/shared/format-time';
+import { useTimezone } from '@/components/system/TimezoneProvider';
 
 const formId = 'edit-entry-form';
 
@@ -38,6 +39,7 @@ interface EntryDto {
 export default function EditEntryPage() {
   const router = useRouter();
   const params = useParams<{ id: string }>();
+  const timeZone = useTimezone();
   const [entry, setEntry] = useState<EntryDto | null>(null);
   const [babyName, setBabyName] = useState('');
   const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
@@ -102,12 +104,12 @@ export default function EditEntryPage() {
         if (body?.name) setBabyName(body.name);
         setBabyAvatarUrl(body?.avatarUrl ?? null);
         if (typeof body?.birthday === 'string') {
-          const ms = parseBirthdayToMillis(body.birthday);
+          const ms = parseBirthdayToMillis(body.birthday, timeZone);
           if (ms !== null) setBabyBirthMs(ms);
         }
       }
     })();
-  }, [params.id]);
+  }, [params.id, timeZone]);
 
   function toggleMilestone(id: string) {
     setSelectedMilestoneIds((prev) => {

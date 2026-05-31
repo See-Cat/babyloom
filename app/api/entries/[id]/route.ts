@@ -4,6 +4,8 @@ import { resolve } from 'node:path';
 import { z } from 'zod';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/server/db/client';
+import { loadConfig } from '@/lib/server/config/load';
+import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 import {
   babies,
   entries,
@@ -34,7 +36,8 @@ async function loadEntryWithActiveBaby(id: string) {
       deletedBy: entries.deletedBy,
       createdAt: entries.createdAt,
       updatedAt: entries.updatedAt,
-      babyStatus: babies.status
+      babyStatus: babies.status,
+      babyBirthday: babies.birthday
     })
     .from(entries)
     .innerJoin(babies, eq(babies.id, entries.babyId))
@@ -146,6 +149,14 @@ export const PATCH = withAuthorizedResource({
 
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) return jsonBadRequest('validation');
+
+  if (parsed.data.occurredAt !== undefined) {
+    const timeZone = loadConfig({ dataDir }).app.timezone;
+    const birthFloor = parseBirthdayToMillis(row.babyBirthday, timeZone);
+    if (birthFloor !== null && parsed.data.occurredAt < birthFloor) {
+      return jsonBadRequest('occurredAt_before_birthday');
+    }
+  }
 
   const { db } = getDb({ dataDir });
   let validMilestones: { id: string }[] = [];

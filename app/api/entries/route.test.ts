@@ -80,4 +80,32 @@ describe('POST /api/entries authorization', () => {
     const rows = db.select().from(entries).all();
     expect(rows.some((entry) => entry.content === 'blocked create')).toBe(false);
   });
+
+  it('rejects occurredAt before the baby birthday (configured timezone)', async () => {
+    const ctx = await seedOwnerBabyEntries(dataDir);
+    vi.doMock('@/lib/server/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    const { POST } = await import('@/app/api/entries/route');
+
+    // Seed birthday is 2024-01-01 (Asia/Shanghai); 2020 is well before it.
+    const res = await POST(
+      postReq({ babyId: ctx.babyId, content: 'too early', occurredAt: Date.UTC(2020, 0, 1) })
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).detail).toBe('occurredAt_before_birthday');
+  });
+
+  it('accepts occurredAt after the baby birthday', async () => {
+    const ctx = await seedOwnerBabyEntries(dataDir);
+    vi.doMock('@/lib/server/permissions/session', () => ({
+      getSessionUserId: async () => ctx.ownerId
+    }));
+    const { POST } = await import('@/app/api/entries/route');
+
+    const res = await POST(
+      postReq({ babyId: ctx.babyId, content: 'in range', occurredAt: Date.UTC(2024, 5, 1) })
+    );
+    expect(res.status).toBe(201);
+  });
 });

@@ -3,6 +3,8 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { z } from 'zod';
 import { getDb } from '@/lib/server/db/client';
+import { loadConfig } from '@/lib/server/config/load';
+import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import {
   babies,
@@ -130,6 +132,14 @@ export const POST = withAuthorizedAction({
   const id = randomUUID();
   const now = Date.now();
   const occurredAt = parsed.data.occurredAt ?? now;
+
+  // An occurrence can't predate the baby's birthday (compared in the configured
+  // timezone, matching how the picker bounds and displays it).
+  const timeZone = loadConfig({ dataDir }).app.timezone;
+  const birthFloor = parseBirthdayToMillis(baby.birthday, timeZone);
+  if (birthFloor !== null && occurredAt < birthFloor) {
+    return jsonBadRequest('occurredAt_before_birthday');
+  }
   let validMilestones: { id: string }[] = [];
   if (parsed.data.milestoneIds && parsed.data.milestoneIds.length > 0) {
     const callerMember = db

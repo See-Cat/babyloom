@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
 import { getDb } from '@/lib/server/db/client';
+import { loadConfig } from '@/lib/server/config/load';
 import { familyMembers } from '@/lib/server/db/schema';
 import { groupMediaByMonth, listGalleryMedia } from '@/lib/server/db/queries/gallery';
 import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/permissions';
@@ -53,7 +54,8 @@ export default async function GalleryPage({
   const selectedBaby = familyBabies.find((baby) => baby.id === selectedBabyId) ?? familyBabies[0];
   const role: 'owner' | 'member' = member.role === 'owner' ? 'owner' : 'member';
   const canWrite = canWriteToBaby({ db, familyMemberId: member.id, role, babyId: selectedBabyId });
-  const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId }));
+  const timezone = loadConfig({ dataDir }).app.timezone;
+  const groups = groupMediaByMonth(listGalleryMedia({ db, babyId: selectedBabyId, timeZone: timezone }));
   const mediaCount = groups.reduce((count, group) => count + group.items.length, 0);
 
   return (

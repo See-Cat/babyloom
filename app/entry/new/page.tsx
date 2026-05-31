@@ -9,12 +9,14 @@ import { Button } from '@/components/ui/Button';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { parseBirthdayToMillis } from '@/lib/shared/format-time';
+import { useTimezone } from '@/components/system/TimezoneProvider';
 
 const formId = 'new-entry-form';
 
 function NewEntryForm() {
   const router = useRouter();
   const sp = useSearchParams();
+  const timeZone = useTimezone();
   const babyId = sp.get('babyId') ?? '';
   const prefillMediaId = sp.get('mediaId');
   const prefillMediaType: 'photo' | 'video' = sp.get('mediaType') === 'video' ? 'video' : 'photo';
@@ -63,11 +65,11 @@ function NewEntryForm() {
       if (body?.name) setBabyName(body.name);
       setBabyAvatarUrl(body?.avatarUrl ?? null);
       if (typeof body?.birthday === 'string') {
-        const ms = parseBirthdayToMillis(body.birthday);
+        const ms = parseBirthdayToMillis(body.birthday, timeZone);
         if (ms !== null) setBabyBirthMs(ms);
       }
     })();
-  }, [babyId]);
+  }, [babyId, timeZone]);
 
   function toggleMilestone(id: string) {
     setSelectedMilestoneIds((prev) => {

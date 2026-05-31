@@ -25,10 +25,12 @@ export interface GalleryMonthGroup<T extends { takenAt: number | null; createdAt
 
 export function listGalleryMedia({
   db,
-  babyId
+  babyId,
+  timeZone
 }: {
   db: BetterSQLite3Database<typeof schema>;
   babyId: string;
+  timeZone: string;
 }): GalleryMedia[] {
   const sortExpr = sql<number>`coalesce(${media.takenAt}, ${media.createdAt})`;
   const rows = db
@@ -52,7 +54,7 @@ export function listGalleryMedia({
     .orderBy(desc(sortExpr))
     .all();
 
-  const birthdayMs = rows[0] ? parseBirthdayToMillis(rows[0].birthday) : null;
+  const birthdayMs = rows[0] ? parseBirthdayToMillis(rows[0].birthday, timeZone) : null;
 
   const seen = new Set<string>();
   const deduped: GalleryMedia[] = [];

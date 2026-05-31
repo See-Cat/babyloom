@@ -41,6 +41,12 @@ function hm(parts: ZonedParts): string {
 // absolute instant (epoch ms). Used so a picked "occurred at" is saved as the
 // instant the configured timezone implies, matching how it's later displayed —
 // not the device-local instant. Iterates to settle the zone offset (incl. DST).
+//
+// DST note: for a nonexistent wall time (the spring-forward gap, which the default
+// Asia/Shanghai never has) this resolves deterministically to the post-gap instant
+// rather than throwing — i.e. the time is coerced forward, not rejected. See the
+// "America/New_York gap" test. The picker doesn't disable gap minutes; that only
+// matters under a DST timezone config and is intentionally not handled here.
 export function zonedWallTimeToMillis(parts: ZonedParts, timeZone: string): number {
   const wanted = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
   let utc = wanted;
@@ -106,17 +112,23 @@ export function msUntilNextZonedMidnight(nowMs: number, timeZone: string): numbe
   return (86_400 - secondsToday) * 1000 + 1_000; // land ~1s past midnight
 }
 
-export function parseBirthdayToMillis(birthday: string): number | null {
+// Interpret a birthday (YYYY-MM-DD[ HH:mm]) as a wall-clock value in the configured
+// timezone, returning the instant. Used as the lower bound for entry occurrence
+// times so the bound matches how occurrences are entered/displayed regardless of
+// the device timezone.
+export function parseBirthdayToMillis(birthday: string, timeZone: string): number | null {
   const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
   if (!match) return null;
-  const ms = new Date(
-    Number(match[1]),
-    Number(match[2]) - 1,
-    Number(match[3]),
-    match[4] ? Number(match[4]) : 0,
-    match[5] ? Number(match[5]) : 0
-  ).getTime();
-  return Number.isNaN(ms) ? null : ms;
+  return zonedWallTimeToMillis(
+    {
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+      hour: match[4] ? Number(match[4]) : 0,
+      minute: match[5] ? Number(match[5]) : 0
+    },
+    timeZone
+  );
 }
 
 export function birthdayDatePart(birthday: string): string {

@@ -4,6 +4,7 @@ import {
   formatRelativeDateTime,
   isValidTimeZone,
   msUntilNextZonedMidnight,
+  parseBirthdayToMillis,
   zonedParts,
   zonedWallTimeToMillis
 } from './format-time';
@@ -69,6 +70,27 @@ describe('zonedWallTimeToMillis', () => {
     const wall = { year: 2026, month: 1, day: 1, hour: 0, minute: 30 };
     const ms = zonedWallTimeToMillis(wall, 'Asia/Shanghai');
     expect(zonedParts(ms, 'Asia/Shanghai')).toEqual(wall);
+  });
+
+  it('coerces a DST spring-forward gap time forward (does not throw)', () => {
+    // 2026-03-08 02:30 America/New_York does not exist (02:00→03:00); resolves
+    // deterministically to 03:30 EDT = 07:30 UTC.
+    const ms = zonedWallTimeToMillis({ year: 2026, month: 3, day: 8, hour: 2, minute: 30 }, 'America/New_York');
+    expect(ms).toBe(Date.UTC(2026, 2, 8, 7, 30));
+    expect(zonedParts(ms, 'America/New_York')).toEqual({ year: 2026, month: 3, day: 8, hour: 3, minute: 30 });
+  });
+});
+
+describe('parseBirthdayToMillis', () => {
+  it('interprets the birthday date at midnight in the configured timezone', () => {
+    // 2025-04-01 00:00 Shanghai = 2025-03-31 16:00 UTC
+    expect(parseBirthdayToMillis('2025-04-01', 'Asia/Shanghai')).toBe(Date.UTC(2025, 2, 31, 16, 0));
+    // 2025-04-01 00:00 New York (EDT) = 2025-04-01 04:00 UTC
+    expect(parseBirthdayToMillis('2025-04-01', 'America/New_York')).toBe(Date.UTC(2025, 3, 1, 4, 0));
+  });
+
+  it('returns null for a malformed birthday', () => {
+    expect(parseBirthdayToMillis('nope', 'Asia/Shanghai')).toBeNull();
   });
 });
 
