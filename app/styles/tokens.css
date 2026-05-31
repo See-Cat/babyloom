@@ -48,6 +48,7 @@
   --color-toast-action-bg-warning: rgba(0, 0, 0, 0.12);
 
   --color-muted: var(--color-fg-soft);
+  --color-uploading: var(--color-avatar-blue);
   --color-accent: var(--color-primary);
   --color-accent-hover: var(--color-primary-hover);
   --color-accent-active: var(--color-primary-active);

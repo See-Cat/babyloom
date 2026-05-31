@@ -92,6 +92,33 @@ body {
   }
 }
 
+/* Uploading status dot: breathes from soft gray to blue while a file is in flight. */
+@keyframes dot-uploading {
+  0%,
+  100% {
+    background-color: var(--color-fg-soft);
+    transform: scale(0.8);
+    opacity: 0.65;
+  }
+
+  50% {
+    background-color: var(--color-uploading);
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.dot-uploading {
+  animation: dot-uploading 1.15s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot-uploading {
+    animation: none;
+    background-color: var(--color-uploading);
+  }
+}
+
 @keyframes hero-drift {
   from {
     transform: scale(1) translate(0, 0);

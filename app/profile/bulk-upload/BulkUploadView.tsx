@@ -101,7 +101,7 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
                       ? 'inline-block h-2 w-2 rounded-full bg-[var(--color-primary)]'
                       : m.status === 'failed'
                         ? 'inline-block h-2 w-2 rounded-full bg-[var(--color-error)]'
-                        : 'inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--color-fg-soft)]'
+                        : 'dot-uploading inline-block h-2 w-2 rounded-full'
                   }
                 />
                 <span className="truncate">{m.filename}</span>
