@@ -26,13 +26,15 @@ export function AppShell({ title, subtitle, leftSlot, rightSlot, children, class
   const titleBlockClass = align === 'center' ? 'min-w-0 flex-1 text-center' : 'min-w-0 flex-1 text-left';
 
   // Reveal a divider/shadow under the sticky header only once the page scrolls.
+  // No-op when the header isn't sticky (e.g. gallery) — don't listen to scroll.
   const [scrolled, setScrolled] = React.useState(false);
   React.useEffect(() => {
+    if (!stickyHeader) return;
     const onScroll = () => setScrolled(window.scrollY > 4);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+  }, [stickyHeader]);
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[color:var(--color-fg)]">

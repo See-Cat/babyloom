@@ -7,7 +7,7 @@ import { ThumbnailStrip } from '@/components/media/ThumbnailStrip';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
-import { useTimezone } from '@/components/system/TimezoneProvider';
+import { useTimezone, useRenderNow } from '@/components/system/TimezoneProvider';
 import { formatRelativeDateTime } from '@/lib/shared/format-time';
 import type { MediaItem } from '@/lib/server/media/types';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
@@ -35,6 +35,7 @@ export function TimelineCard({
 }: TimelineCardProps) {
   const router = useRouter();
   const timeZone = useTimezone();
+  const renderNow = useRenderNow();
   const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
   const href = `/entry/${entry.id}`;
 
@@ -63,7 +64,7 @@ export function TimelineCard({
           <div>
             <p className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">{authorName}</p>
             <p className="text-[length:var(--text-xs)] text-[color:var(--color-muted)]">
-              {formatRelativeDateTime(entry.occurredAt, timeZone)}
+              {formatRelativeDateTime(entry.occurredAt, timeZone, renderNow || undefined)}
             </p>
           </div>
         </div>

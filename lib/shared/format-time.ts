@@ -61,6 +61,18 @@ export function formatLongDateTime(value: number, timeZone: string): string {
   return `${p.year} 年 ${p.month} 月 ${p.day} 日 · ${hm(p)}`;
 }
 
+// Guard config-supplied timezones before they reach Intl during render: a
+// non-IANA value (e.g. "UTC+8", "GMT+8", a typo) makes Intl.DateTimeFormat throw
+// a RangeError, which would crash the whole render tree.
+export function isValidTimeZone(timeZone: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function parseBirthdayToMillis(birthday: string): number | null {
   const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
   if (!match) return null;

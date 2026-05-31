@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import './globals.css';
 import { loadConfig } from '@/lib/server/config/load';
+import { isValidTimeZone } from '@/lib/shared/format-time';
 import { ClientErrorBoundary } from '@/components/system/ClientErrorBoundary';
 import { TimezoneProvider } from '@/components/system/TimezoneProvider';
 import { ToastProvider } from '@/components/ui/ToastProvider';
@@ -26,12 +27,14 @@ export const dynamic = 'force-dynamic';
 
 function resolveTimezone(): string {
   // config.yaml may be absent during build introspection; fall back to the
-  // schema default rather than crashing the whole app tree.
+  // schema default rather than crashing the whole app tree. Also reject a
+  // non-IANA value (e.g. "UTC+8") that would make Intl throw during render.
   try {
     const dataDir = process.env.BABYLOOM_DATA_DIR
       ? resolve(process.env.BABYLOOM_DATA_DIR)
       : resolve(process.cwd(), 'data');
-    return loadConfig({ dataDir }).app.timezone;
+    const timeZone = loadConfig({ dataDir }).app.timezone;
+    return isValidTimeZone(timeZone) ? timeZone : 'Asia/Shanghai';
   } catch {
     return 'Asia/Shanghai';
   }
@@ -39,6 +42,7 @@ function resolveTimezone(): string {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const timeZone = resolveTimezone();
+  const now = Date.now();
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
@@ -49,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClientErrorBoundary>
-          <TimezoneProvider timeZone={timeZone}>
+          <TimezoneProvider timeZone={timeZone} now={now}>
             <ToastProvider>{children}</ToastProvider>
           </TimezoneProvider>
         </ClientErrorBoundary>
