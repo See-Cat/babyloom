@@ -9,25 +9,37 @@ const withSerwist = withSerwistInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  outputFileTracingIncludes: {
-    '/*': ['./lib/server/db/migrations/**/*']
-  },
-  // NOTE: 'file-type' is intentionally NOT listed here. It is pure ESM and its
-  // dep tree (strtok3, token-types, …) uses `exports` { node, default } maps.
-  // Next's output-file-tracing (nft) copies the `default` condition files but
-  // misses the `node`-condition entry (e.g. strtok3/lib/index.js), causing
-  // ERR_MODULE_NOT_FOUND in the standalone runtime. Bundling it via webpack
-  // resolves the correct condition at build time and sidesteps the tracer.
   serverExternalPackages: [
     'better-sqlite3',
     'bindings',
     'ffmpeg-static',
     'ffprobe-static',
+    'file-type',
     'fluent-ffmpeg',
     'formidable',
     'pino',
     'sharp'
   ],
+  // file-type stays external (bundling it pulls strtok3's `node:fs/promises`
+  // into a webpack chunk that fails to resolve at runtime). But Next's tracer
+  // (nft) resolves the `default` exports condition and misses the `node`-only
+  // entry files (e.g. strtok3/lib/index.js → ERR_MODULE_NOT_FOUND in
+  // standalone). Force-copy the whole file-type dependency closure so every
+  // condition's files are present regardless of which one nft picked.
+  outputFileTracingIncludes: {
+    '/*': [
+      './lib/server/db/migrations/**/*',
+      './node_modules/.pnpm/file-type@*/node_modules/file-type/**/*',
+      './node_modules/.pnpm/strtok3@*/node_modules/strtok3/**/*',
+      './node_modules/.pnpm/token-types@*/node_modules/token-types/**/*',
+      './node_modules/.pnpm/uint8array-extras@*/node_modules/uint8array-extras/**/*',
+      './node_modules/.pnpm/@tokenizer+inflate@*/node_modules/@tokenizer/inflate/**/*',
+      './node_modules/.pnpm/@tokenizer+token@*/node_modules/@tokenizer/token/**/*',
+      './node_modules/.pnpm/token-types@*/node_modules/@borewit/text-codec/**/*',
+      './node_modules/.pnpm/ieee754@*/node_modules/ieee754/**/*',
+      './node_modules/.pnpm/fflate@*/node_modules/fflate/**/*'
+    ]
+  },
   webpack: (config, { isServer, nextRuntime, webpack }) => {
     const isEdge = nextRuntime === 'edge';
 
