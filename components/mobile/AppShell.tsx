@@ -24,14 +24,24 @@ export function AppShell({ title, subtitle, leftSlot, rightSlot, children, class
   const showTabbar = !hideTabbar && !(pathname.startsWith('/login') || pathname.startsWith('/onboarding'));
   const titleBlockClass = align === 'center' ? 'min-w-0 flex-1 text-center' : 'min-w-0 flex-1 text-left';
 
+  // Reveal a divider/shadow under the sticky header only once the page scrolls.
+  const [scrolled, setScrolled] = React.useState(false);
+  React.useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)] text-[color:var(--color-fg)]">
       <OfflineBanner />
       {!hideHeader && (
         <header
           className={cn(
-            'sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))]',
-            transparentHeader ? 'bg-transparent' : 'bg-[var(--color-bg)]'
+            'sticky top-0 z-[var(--z-sticky)] flex min-h-14 items-center justify-between gap-[var(--space-3)] px-[var(--space-4)] pt-[calc(var(--space-5)+env(safe-area-inset-top))] border-b border-transparent transition-[box-shadow,border-color] duration-200',
+            transparentHeader ? 'bg-transparent' : 'bg-[var(--color-bg)]',
+            !transparentHeader && scrolled && 'border-[color:var(--color-border-light)] shadow-[var(--shadow-soft-sm)]'
           )}
         >
           {leftSlot && <div className="min-w-10">{leftSlot}</div>}
