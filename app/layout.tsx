@@ -1,6 +1,5 @@
-import { resolve } from 'node:path';
 import './globals.css';
-import { loadConfig } from '@/lib/server/config/load';
+import { resolveTimezone } from '@/lib/server/config/resolve-timezone';
 import { ClientErrorBoundary } from '@/components/system/ClientErrorBoundary';
 import { TimezoneProvider } from '@/components/system/TimezoneProvider';
 import { ToastProvider } from '@/components/ui/ToastProvider';
@@ -23,20 +22,6 @@ export const metadata = {
 // offline fallback (/offline) is precached by the service worker at install, so
 // it still works offline even though it is rendered dynamically.
 export const dynamic = 'force-dynamic';
-
-function resolveTimezone(): string {
-  // config.yaml may be absent during build introspection; fall back to the
-  // schema default rather than crashing the whole app tree. The timezone itself
-  // is validated in the config schema, so any value we read here is a usable IANA zone.
-  try {
-    const dataDir = process.env.BABYLOOM_DATA_DIR
-      ? resolve(process.env.BABYLOOM_DATA_DIR)
-      : resolve(process.cwd(), 'data');
-    return loadConfig({ dataDir }).app.timezone;
-  } catch {
-    return 'Asia/Shanghai';
-  }
-}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const timeZone = resolveTimezone();
