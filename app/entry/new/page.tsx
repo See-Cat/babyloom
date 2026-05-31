@@ -22,6 +22,7 @@ function NewEntryForm() {
   const prefillOccurredAtRaw = sp.get('occurredAt');
   const prefillOccurredAt = prefillOccurredAtRaw ? Number(prefillOccurredAtRaw) : null;
   const [babyName, setBabyName] = useState<string>('');
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const [babyBirthMs, setBabyBirthMs] = useState<number | undefined>(undefined);
   const [content, setContent] = useState('');
   const [occurredAt, setOccurredAt] = useState<number>(() =>
@@ -60,6 +61,7 @@ function NewEntryForm() {
       if (!res?.ok) return;
       const body = await res.json();
       if (body?.name) setBabyName(body.name);
+      setBabyAvatarUrl(body?.avatarUrl ?? null);
       if (typeof body?.birthday === 'string') {
         const ms = parseBirthdayToMillis(body.birthday);
         if (ms !== null) setBabyBirthMs(ms);
@@ -160,6 +162,7 @@ function NewEntryForm() {
         action={onSubmit}
         babyId={babyId}
         babyName={babyName || undefined}
+        babyAvatarUrl={babyAvatarUrl}
         content={content}
         milestones={milestones}
         selectedMilestoneIds={selectedMilestoneIds}

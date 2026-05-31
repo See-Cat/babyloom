@@ -17,6 +17,7 @@ export interface EntryComposerProps {
   formId?: string;
   babyId?: string;
   babyName?: string;
+  babyAvatarUrl?: string | null;
   babyAvatarColorKey?: string;
   content?: string;
   contentName?: string;
@@ -41,6 +42,7 @@ export function EntryComposer({
   action,
   babyId,
   babyName,
+  babyAvatarUrl,
   babyAvatarColorKey,
   content = '',
   contentName = 'content',
@@ -80,7 +82,7 @@ export function EntryComposer({
     <form id={formId} action={action} className="flex flex-col gap-[var(--space-4)]" onSubmit={onSubmit}>
       {babyName && (
         <div className="flex items-center gap-[var(--space-3)] px-[var(--space-1)]">
-          <Avatar name={babyName} size="md" colorKey={babyAvatarColorKey ?? babyId ?? babyName} />
+          <Avatar src={babyAvatarUrl ?? undefined} name={babyName} size="md" colorKey={babyAvatarColorKey ?? babyId ?? babyName} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg)]">{babyName}</p>
             <p className="truncate text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">记录给</p>

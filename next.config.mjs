@@ -12,12 +12,17 @@ const nextConfig = {
   outputFileTracingIncludes: {
     '/*': ['./lib/server/db/migrations/**/*']
   },
+  // NOTE: 'file-type' is intentionally NOT listed here. It is pure ESM and its
+  // dep tree (strtok3, token-types, …) uses `exports` { node, default } maps.
+  // Next's output-file-tracing (nft) copies the `default` condition files but
+  // misses the `node`-condition entry (e.g. strtok3/lib/index.js), causing
+  // ERR_MODULE_NOT_FOUND in the standalone runtime. Bundling it via webpack
+  // resolves the correct condition at build time and sidesteps the tracer.
   serverExternalPackages: [
     'better-sqlite3',
     'bindings',
     'ffmpeg-static',
     'ffprobe-static',
-    'file-type',
     'fluent-ffmpeg',
     'formidable',
     'pino',

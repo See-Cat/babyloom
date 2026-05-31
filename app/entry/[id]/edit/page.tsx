@@ -40,6 +40,7 @@ export default function EditEntryPage() {
   const params = useParams<{ id: string }>();
   const [entry, setEntry] = useState<EntryDto | null>(null);
   const [babyName, setBabyName] = useState('');
+  const [babyAvatarUrl, setBabyAvatarUrl] = useState<string | null>(null);
   const [babyBirthMs, setBabyBirthMs] = useState<number | undefined>(undefined);
   const [allMilestones, setAllMilestones] = useState<MilestoneDto[]>([]);
   const [content, setContent] = useState('');
@@ -98,6 +99,7 @@ export default function EditEntryPage() {
       if (babyRes?.ok) {
         const body = await babyRes.json();
         if (body?.name) setBabyName(body.name);
+        setBabyAvatarUrl(body?.avatarUrl ?? null);
         if (typeof body?.birthday === 'string') {
           const ms = parseBirthdayToMillis(body.birthday);
           if (ms !== null) setBabyBirthMs(ms);
@@ -208,6 +210,7 @@ export default function EditEntryPage() {
         formId={formId}
         babyId={entry.babyId}
         babyName={babyName || undefined}
+        babyAvatarUrl={babyAvatarUrl}
         content={content}
         milestones={allMilestones}
         selectedMilestoneIds={selectedMilestoneIds}
