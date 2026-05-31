@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Button } from '@/components/ui/Button';
 import { requireOnline } from '@/lib/client/require-online';
+import { reportClientError } from '@/lib/client/error-reporter';
 import { useToast } from '@/lib/client/hooks/useToast';
 
 export interface UploadedMedia {
@@ -82,7 +83,17 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
         await pollUntilReady(body.mediaId);
       }
       onUploaded({ uploadId, mediaId: body.mediaId, filename: file.name, status: 'ready', type });
-    } catch {
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      // Surface the real cause: this catch used to swallow it, so failures
+      // (esp. video transcoding) left no trace in logs or for the user.
+      reportClientError({
+        message: `media upload failed (${type}): ${reason}`,
+        stack: error instanceof Error ? error.stack : undefined,
+        url: typeof window !== 'undefined' ? window.location.href : undefined,
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined
+      });
+      toast.show({ message: `「${file.name}」上传失败:${reason}`, variant: 'error' });
       onUploaded({ uploadId, filename: file.name, status: 'failed', type });
     }
   }
