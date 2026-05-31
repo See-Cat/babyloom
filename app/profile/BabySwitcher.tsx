@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { CheckIcon, PencilIcon, PlusIcon } from '@/components/ui/icons';
+import { CheckIcon, PlusIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/lib/client/hooks/useToast';
 import { cn } from '@/lib/shared/cn';
@@ -18,7 +18,8 @@ export interface BabySwitcherBaby {
   ageLabel: string;
 }
 
-const DELETE_REVEAL_PX = 80;
+const ACTION_WIDTH = 80;
+const SWIPE_REVEAL_PX = ACTION_WIDTH * 2;
 const SWIPE_TRIGGER_PX = 12;
 
 export function BabySwitcher({
@@ -213,12 +214,12 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
 
   React.useEffect(() => {
     if (!swiped && !dragging) setOffset(0);
-    if (swiped && !dragging) setOffset(-DELETE_REVEAL_PX);
+    if (swiped && !dragging) setOffset(-SWIPE_REVEAL_PX);
   }, [swiped, dragging]);
 
   function onTouchStart(e: React.TouchEvent) {
     const t = e.touches[0];
-    const baseOffset = swiped ? -DELETE_REVEAL_PX : 0;
+    const baseOffset = swiped ? -SWIPE_REVEAL_PX : 0;
     startRef.current = { x: t.clientX, y: t.clientY, baseOffset, locked: null };
     motionRef.current = { lastX: t.clientX, lastT: performance.now(), vx: 0 };
     moved.current = false;
@@ -248,7 +249,7 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
 
     moved.current = true;
     setDragging(true);
-    const next = Math.min(0, Math.max(-DELETE_REVEAL_PX, startRef.current.baseOffset + dx));
+    const next = Math.min(0, Math.max(-SWIPE_REVEAL_PX, startRef.current.baseOffset + dx));
     setOffset(next);
   }
 
@@ -256,11 +257,11 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
     if (startRef.current?.locked === 'h') {
       const projected = offset + motionRef.current.vx * VELOCITY_PROJECTION_MS;
       const shouldOpen =
-        projected < -DELETE_REVEAL_PX / 2 ||
-        (projected < 0 && Math.abs(projected - -DELETE_REVEAL_PX) < Math.abs(projected - 0));
+        projected < -SWIPE_REVEAL_PX / 2 ||
+        (projected < 0 && Math.abs(projected - -SWIPE_REVEAL_PX) < Math.abs(projected - 0));
       if (shouldOpen) {
         onSwipeOpen();
-        setOffset(-DELETE_REVEAL_PX);
+        setOffset(-SWIPE_REVEAL_PX);
       } else {
         onSwipeClose();
         setOffset(0);
@@ -279,7 +280,7 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
     }
     if (swiped) {
       const target = e.target as Element;
-      if (!target.closest?.('[data-row-delete]')) {
+      if (!target.closest?.('[data-row-action]')) {
         e.preventDefault();
         e.stopPropagation();
         onSwipeClose();
@@ -306,42 +307,41 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
           transition: dragging ? 'none' : 'transform 220ms var(--ease)'
         }}
       >
-        <div
+        <button
+          type="button"
+          onClick={onSelect}
           className={cn(
-            'flex w-full shrink-0 items-center gap-[var(--space-2)] pr-[6px]',
+            'flex w-full shrink-0 items-center gap-[var(--space-3)] px-[6px] py-[10px] text-left',
             active ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-2)]'
           )}
         >
-          <button
-            type="button"
-            onClick={onSelect}
-            className="flex flex-1 items-center gap-[var(--space-3)] px-[6px] py-[10px] text-left"
-          >
-            <Avatar src={baby.image ?? undefined} name={baby.name} colorKey={baby.id} size="sm" />
-            <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
-              {baby.name}
-            </span>
-            <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
-              {baby.ageLabel}
-            </span>
-            {active && <CheckIcon className="h-4 w-4 text-[color:var(--color-primary-active)]" />}
-          </button>
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label={`编辑 ${baby.name}`}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--color-fg-soft)] active:bg-[var(--color-bg)]"
-          >
-            <PencilIcon className="h-4 w-4" />
-          </button>
-        </div>
+          <Avatar src={baby.image ?? undefined} name={baby.name} colorKey={baby.id} size="sm" />
+          <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+            {baby.name}
+          </span>
+          <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+            {baby.ageLabel}
+          </span>
+          {active && <CheckIcon className="h-4 w-4 text-[color:var(--color-primary-active)]" />}
+        </button>
         <button
           type="button"
-          data-row-delete
+          data-row-action
+          onClick={onEdit}
+          aria-label={`编辑 ${baby.name}`}
+          className="flex shrink-0 items-center justify-center bg-[color:var(--color-primary)] text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-inverse)]"
+          style={{ width: ACTION_WIDTH }}
+          tabIndex={swiped ? 0 : -1}
+        >
+          编辑
+        </button>
+        <button
+          type="button"
+          data-row-action
           onClick={onRequestDelete}
           aria-label={`删除 ${baby.name}`}
           className="flex shrink-0 items-center justify-center bg-[color:var(--color-error-active)] text-[length:var(--text-md)] font-bold text-white"
-          style={{ width: DELETE_REVEAL_PX }}
+          style={{ width: ACTION_WIDTH }}
           tabIndex={swiped ? 0 : -1}
         >
           删除

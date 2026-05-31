@@ -142,7 +142,7 @@ export function BabyEditSheet({ babyId, open, onOpenChange, onSaved }: BabyEditS
       {loading ? (
         <p className="py-[var(--space-6)] text-center text-[length:var(--text-sm)] text-[color:var(--color-fg-soft)]">加载中…</p>
       ) : (
-        <div className="flex flex-col gap-[var(--space-4)]">
+        <div className="flex flex-col gap-[var(--space-4)] pb-[var(--space-5)]">
           <div className="flex flex-col items-center gap-[var(--space-2)]">
             <button
               type="button"
