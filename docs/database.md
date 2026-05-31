@@ -54,6 +54,7 @@ erDiagram
 - `deletedAt IS NULL`：正常可见
 - `deletedAt IS NOT NULL`：在垃圾桶中
 - 清空垃圾桶时物理删除行（媒体表对应的文件也由 `lib/server/trash` 一并清理）
+- 记录（entry）软删除会**级联**其附带的媒体：仅当某媒体不再挂在任何 `active` 记录上时才一并进垃圾桶，恢复记录时一并恢复（见 `lib/server/trash/entry-media-cascade.ts`）。批量补传的独立媒体（无 entry 关联）不受影响。
 
 ## 时间戳约定
 

@@ -4,6 +4,7 @@ import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/server/db/client';
 import { babies, entries } from '@/lib/server/db/schema';
 import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
+import { cascadeRestoreEntryMedia } from '@/lib/server/trash/entry-media-cascade';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -43,9 +44,14 @@ export const POST = withAuthorizedResource({
   assertWritesAllowed();
 
   const { db } = getDb({ dataDir });
-  db.update(entries)
-    .set({ status: 'active', deletedAt: null, deletedBy: null, updatedAt: Date.now() })
-    .where(eq(entries.id, row.id))
-    .run();
+  const now = Date.now();
+  db.transaction((tx) => {
+    tx.update(entries)
+      .set({ status: 'active', deletedAt: null, deletedBy: null, updatedAt: now })
+      .where(eq(entries.id, row.id))
+      .run();
+    // Bring back the photos that were trashed together with this entry.
+    cascadeRestoreEntryMedia(tx, row.id, now);
+  });
   return Response.json({ restored: row.id });
 });

@@ -5,6 +5,7 @@ import { getDb } from '@/lib/server/db/client';
 import { babies, entries } from '@/lib/server/db/schema';
 import { withAuthorizedResource } from '@/lib/server/permissions/route-template';
 import { getSessionUserId } from '@/lib/server/permissions/session';
+import { cascadeTrashEntryMedia } from '@/lib/server/trash/entry-media-cascade';
 
 const dataDir = process.env.BABYLOOM_DATA_DIR
   ? resolve(process.env.BABYLOOM_DATA_DIR)
@@ -45,9 +46,14 @@ export const POST = withAuthorizedResource({
   const userId = await getSessionUserId(req);
   const { db } = getDb({ dataDir });
   const now = Date.now();
-  db.update(entries)
-    .set({ status: 'trashed', deletedAt: now, deletedBy: userId, updatedAt: now })
-    .where(eq(entries.id, row.id))
-    .run();
+  db.transaction((tx) => {
+    tx.update(entries)
+      .set({ status: 'trashed', deletedAt: now, deletedBy: userId, updatedAt: now })
+      .where(eq(entries.id, row.id))
+      .run();
+    // Photos attached only to this entry follow it into the trash so they
+    // leave the gallery; restoring the entry brings them back.
+    cascadeTrashEntryMedia(tx, row.id, userId, now);
+  });
   return Response.json({ trashed: row.id });
 });
