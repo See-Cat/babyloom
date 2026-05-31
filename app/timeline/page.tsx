@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { getAuth } from '@/lib/server/auth/server';
 import { loadConfig } from '@/lib/server/config/load';
+import { babyAge, formatBabyAgeShort } from '@/lib/shared/baby-age';
 import { getDb } from '@/lib/server/db/client';
 import { getDayUtcRange } from '@/lib/server/db/queries/calendar';
 import { canWriteToBaby, listReadableBabies } from '@/lib/server/db/queries/permissions';
@@ -129,7 +130,7 @@ export default async function TimelinePage({
   return (
     <AppShell
       title={`${selectedBaby.name}的成长`}
-      subtitle={formatBabyAge(selectedBaby.birthday)}
+      subtitle={formatBabyAge(selectedBaby.birthday, timezone, Date.now())}
       leftSlot={
         <Avatar
           src={selectedBaby.avatarUrl ?? undefined}
@@ -179,17 +180,8 @@ export default async function TimelinePage({
   );
 }
 
-function formatBabyAge(birthday: string) {
-  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(birth.getTime())) return '成长记录';
-  const now = new Date();
-  let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();
-  if (now.getUTCDate() < birth.getUTCDate()) months -= 1;
-  months = Math.max(0, months);
-  const years = Math.floor(months / 12);
-  const restMonths = months % 12;
-  const days = Math.max(1, Math.floor((Date.now() - birth.getTime()) / 86_400_000) + 1);
-
-  if (years > 0) return `${years}岁${restMonths}月 · 第 ${days} 天`;
-  return `${restMonths}个月 · 第 ${days} 天`;
+function formatBabyAge(birthday: string, timeZone: string, nowMs: number) {
+  const age = babyAge(birthday, nowMs, timeZone);
+  if (!age) return '成长记录';
+  return `${formatBabyAgeShort(age)} · 第 ${age.days} 天`;
 }

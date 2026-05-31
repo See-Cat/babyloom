@@ -5,7 +5,9 @@ import { redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import type { ReactNode } from 'react';
 import { getAuth } from '@/lib/server/auth/server';
+import { loadConfig } from '@/lib/server/config/load';
 import { getDb } from '@/lib/server/db/client';
+import { babyAge, formatBabyAgeShort } from '@/lib/shared/baby-age';
 import { listReadableBabies } from '@/lib/server/db/queries/permissions';
 import { babies, babyMemberPermissions, entries, familyMembers, media, milestones, users } from '@/lib/server/db/schema';
 import { AppShell } from '@/components/mobile/AppShell';
@@ -25,6 +27,8 @@ export default async function ProfilePage() {
   if (!session?.user?.id) redirect('/login');
 
   const { db } = getDb({ dataDir });
+  const timezone = loadConfig({ dataDir }).app.timezone;
+  const now = Date.now();
   const member = db
     .select()
     .from(familyMembers)
@@ -89,7 +93,7 @@ export default async function ProfilePage() {
     id: b.id,
     name: b.name,
     image: (b as any).avatarUrl ?? null,
-    ageLabel: formatBabyAge(b.birthday)
+    ageLabel: formatBabyAge(b.birthday, timezone, now)
   }));
 
   const countMeta = (count: number, unit: string) => (count > 0 ? `${count} ${unit}` : undefined);
@@ -144,7 +148,7 @@ export default async function ProfilePage() {
                     {activeBaby.name}
                   </p>
                   <p className="mt-[2px] truncate text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
-                    {formatActiveBabyMeta(activeBaby.birthday)}
+                    {formatActiveBabyMeta(activeBaby.birthday, timezone, now)}
                   </p>
                 </div>
                 {familyBabies.length > 1 ? (
@@ -323,25 +327,13 @@ const iconPaths: Record<ProfileIcon, ReactNode> = {
   )
 };
 
-function formatActiveBabyMeta(birthday: string) {
-  const age = formatBabyAge(birthday);
-  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(birth.getTime())) return age;
-  const today = new Date();
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-  const days = Math.max(1, Math.floor((todayUtc - birth.getTime()) / 86_400_000) + 1);
-  return `${age} · 第 ${days} 天`;
+function formatActiveBabyMeta(birthday: string, timeZone: string, nowMs: number) {
+  const age = babyAge(birthday, nowMs, timeZone);
+  if (!age) return '成长记录';
+  return `${formatBabyAgeShort(age)} · 第 ${age.days} 天`;
 }
 
-function formatBabyAge(birthday: string) {
-  const birth = new Date(`${birthday.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(birth.getTime())) return '成长记录';
-  const now = new Date();
-  let months = (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 + now.getUTCMonth() - birth.getUTCMonth();
-  if (now.getUTCDate() < birth.getUTCDate()) months -= 1;
-  months = Math.max(0, months);
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  if (years > 0) return `${years}岁${rest}月`;
-  return `${rest}个月`;
+function formatBabyAge(birthday: string, timeZone: string, nowMs: number) {
+  const age = babyAge(birthday, nowMs, timeZone);
+  return age ? formatBabyAgeShort(age) : '成长记录';
 }

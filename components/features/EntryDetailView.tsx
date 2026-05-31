@@ -11,7 +11,8 @@ import { Avatar } from '@/components/ui/Avatar';
 import { ChevronLeftIcon, DotsIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/client/hooks/useToast';
 import { useTimezone } from '@/components/system/TimezoneProvider';
-import { formatLongDateTime, zonedParts } from '@/lib/shared/format-time';
+import { formatLongDateTime } from '@/lib/shared/format-time';
+import { babyAge, formatBabyAgeShort } from '@/lib/shared/baby-age';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
 interface EntryDetailViewProps {
@@ -179,20 +180,6 @@ export function EntryDetailView({
 }
 
 function formatAge(birthday: string, atMs: number, timeZone: string) {
-  // Birthday is a calendar date; derive the occurrence's calendar date in the
-  // configured timezone so the age matches the date shown next to it (instead of
-  // drifting a day/month for entries in the UTC-vs-zone midnight window).
-  const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return '';
-  const birthYear = Number(match[1]);
-  const birthMonth = Number(match[2]);
-  const birthDay = Number(match[3]);
-  const at = zonedParts(atMs, timeZone);
-  let months = (at.year - birthYear) * 12 + (at.month - birthMonth);
-  if (at.day < birthDay) months -= 1;
-  months = Math.max(0, months);
-  const years = Math.floor(months / 12);
-  const rest = months % 12;
-  if (years > 0) return `${years}岁${rest}月`;
-  return `${rest}个月`;
+  const age = babyAge(birthday, atMs, timeZone);
+  return age ? formatBabyAgeShort(age) : '';
 }
