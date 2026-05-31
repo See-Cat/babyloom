@@ -106,7 +106,7 @@ pnpm docker:up
 ```bash
 # 1) 本机构建：用新版本号 tag，不要复用旧 tag（保留旧镜像以便回滚）。
 #    目标架构按 NAS 的 CPU 选 linux/amd64（Intel/AMD）或 linux/arm64（ARM 机型）。
-docker buildx build --platform linux/amd64 --provenance=false -t babyloom:1.1 --load .
+docker buildx build --platform linux/amd64 --provenance=false --build-arg APP_VERSION=1.1 -t babyloom:1.1 --load .
 
 # 2) docker save 出 OCI tar（新版 Docker 必然是 OCI 布局，下一步再转）。
 docker save babyloom:1.1 -o babyloom-1.1.tar
@@ -141,9 +141,11 @@ NAS 上（Container Station）：
 docker login
 pnpm docker:push
 # 等价于：
-# docker buildx build --platform linux/amd64 --provenance=false \
+# docker buildx build --platform linux/amd64 --provenance=false --build-arg APP_VERSION=<ver> \
 #   -t cccat5207/babyloom:<ver> -t cccat5207/babyloom:latest --push .
 ```
+
+> 版本号会注入镜像：`docker inspect cccat5207/babyloom:<ver>` 的 `Config.Env` 有 `APP_VERSION=<ver>`，`Config.Labels` 有 `org.opencontainers.image.version`。用 `latest` 拉取后可借此确认实际版本。
 
 NAS 上（Container Station）：
 

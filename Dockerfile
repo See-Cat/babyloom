@@ -22,8 +22,13 @@ RUN corepack enable && pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
+# App version, injected from package.json at build time (see docker:build/push).
+# Visible via `docker inspect` under Config.Env (APP_VERSION) and Config.Labels.
+ARG APP_VERSION=dev
 ENV NODE_ENV=production
 ENV BABYLOOM_DATA_DIR=/app/data
+ENV APP_VERSION=$APP_VERSION
+LABEL org.opencontainers.image.version=$APP_VERSION
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
