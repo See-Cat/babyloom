@@ -73,6 +73,24 @@ export function isValidTimeZone(timeZone: string): boolean {
   }
 }
 
+// Milliseconds from `nowMs` to the next midnight in `timeZone`, used to schedule a
+// relative-time refresh so "今天/昨天" stays correct across the day boundary without
+// a full reload. DST-naive (assumes 24h days); the caller reschedules after each
+// fire, so a rare ±1h drift on a DST day self-corrects.
+export function msUntilNextZonedMidnight(nowMs: number, timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(new Date(nowMs)).map((p) => [p.type, p.value]));
+  const hour = Number(parts.hour) === 24 ? 0 : Number(parts.hour);
+  const secondsToday = hour * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  return (86_400 - secondsToday) * 1000 + 1_000; // land ~1s past midnight
+}
+
 export function parseBirthdayToMillis(birthday: string): number | null {
   const match = birthday.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?$/);
   if (!match) return null;

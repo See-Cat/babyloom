@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { formatLongDateTime, formatRelativeDateTime, isValidTimeZone } from './format-time';
+import {
+  formatLongDateTime,
+  formatRelativeDateTime,
+  isValidTimeZone,
+  msUntilNextZonedMidnight
+} from './format-time';
 
 // 2026-05-31T10:00:00Z → Shanghai 18:00, New York (EDT) 06:00
 const MAY_31_10Z = Date.UTC(2026, 4, 31, 10, 0, 0);
@@ -43,5 +48,19 @@ describe('isValidTimeZone', () => {
     expect(isValidTimeZone('GMT+8')).toBe(false);
     expect(isValidTimeZone('Not/AZone')).toBe(false);
     expect(isValidTimeZone('')).toBe(false);
+  });
+});
+
+describe('msUntilNextZonedMidnight', () => {
+  it('counts from the current instant to the next midnight in the zone', () => {
+    // 2026-05-31T15:30:00Z = 23:30 Shanghai → 30min to midnight (+1s cushion)
+    const ms = msUntilNextZonedMidnight(Date.UTC(2026, 4, 31, 15, 30, 0), 'Asia/Shanghai');
+    expect(ms).toBe(30 * 60 * 1000 + 1000);
+  });
+
+  it('returns close to a full day just after midnight', () => {
+    // 2026-05-31T16:00:30Z = 00:00:30 Shanghai (Jun 1) → ~24h minus 30s
+    const ms = msUntilNextZonedMidnight(Date.UTC(2026, 4, 31, 16, 0, 30), 'Asia/Shanghai');
+    expect(ms).toBe((86_400 - 30) * 1000 + 1000);
   });
 });

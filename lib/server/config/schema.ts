@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isValidTimeZone } from '@/lib/shared/format-time';
 
 export const configSchema = z.object({
   owner: z.object({
@@ -16,7 +17,13 @@ export const configSchema = z.object({
   app: z.object({
     baseUrl: z.string().url().default('http://localhost:3000'),
     secret: z.string().min(32, 'app.secret must be at least 32 characters'),
-    timezone: z.string().min(1).default('Asia/Shanghai')
+    // Validated once here so every consumer (layout, calendar, timeline date
+    // filtering) gets a tz that won't make Intl throw at render time.
+    timezone: z
+      .string()
+      .min(1)
+      .default('Asia/Shanghai')
+      .refine(isValidTimeZone, { message: 'app.timezone must be a valid IANA timezone, e.g. Asia/Shanghai' })
   }),
   log: z
     .object({

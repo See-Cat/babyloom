@@ -105,6 +105,22 @@ app:
     expect(() => loadConfig({ dataDir })).toThrow(/app.secret/);
   });
 
+  it('rejects config with a non-IANA app.timezone', async () => {
+    writeFileSync(join(dataDir, 'config.yaml'), `
+owner:
+  username: alice
+  password: secret123
+  nickname: Alice
+family:
+  name: Alice Home
+app:
+  secret: local-test-secret-123456789012345
+  timezone: UTC+8
+`);
+    const { loadConfig } = await import('@/lib/server/config/load');
+    expect(() => loadConfig({ dataDir })).toThrow(/timezone/);
+  });
+
   it('throws a clear error if file does not exist', async () => {
     const { loadConfig } = await import('@/lib/server/config/load');
     expect(() => loadConfig({ dataDir })).toThrow(/config\.yaml not found/);
