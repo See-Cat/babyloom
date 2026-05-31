@@ -5,10 +5,11 @@ import { useRouter } from 'next/navigation';
 import { BottomSheet } from '@/components/mobile/BottomSheet';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
-import { CheckIcon, PlusIcon } from '@/components/ui/icons';
+import { CheckIcon, PencilIcon, PlusIcon } from '@/components/ui/icons';
 import { Modal } from '@/components/ui/Modal';
 import { useToast } from '@/lib/client/hooks/useToast';
 import { cn } from '@/lib/shared/cn';
+import { BabyEditSheet, type BabyEditSaved } from './BabyEditSheet';
 
 export interface BabySwitcherBaby {
   id: string;
@@ -36,6 +37,11 @@ export function BabySwitcher({
   const [swipedId, setSwipedId] = React.useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = React.useState<BabySwitcherBaby | null>(null);
   const [deleting, setDeleting] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
+  // Retain the last edited id through the modal's close animation so the
+  // always-mounted sheet still has a target while it animates out.
+  const lastEditIdRef = React.useRef<string | null>(null);
+  if (editingId) lastEditIdRef.current = editingId;
 
   React.useEffect(() => {
     setBabies(initialBabies);
@@ -62,6 +68,10 @@ export function BabySwitcher({
     }
     router.push(`/timeline?babyId=${babyId}`);
     router.refresh();
+  }
+
+  function handleSaved(next: BabyEditSaved) {
+    setBabies((prev) => prev.map((b) => (b.id === next.id ? { ...b, name: next.name, image: next.image } : b)));
   }
 
   function requestDelete(baby: BabySwitcherBaby) {
@@ -135,6 +145,7 @@ export function BabySwitcher({
               onSwipeOpen={() => setSwipedId(baby.id)}
               onSwipeClose={() => setSwipedId((id) => (id === baby.id ? null : id))}
               onSelect={() => selectBaby(baby.id)}
+              onEdit={() => setEditingId(baby.id)}
               onRequestDelete={() => requestDelete(baby)}
             />
           ))}
@@ -168,6 +179,14 @@ export function BabySwitcher({
           删除后该宝宝的记录、相册将一并隐藏。可在回收站中恢复。
         </p>
       </Modal>
+      <BabyEditSheet
+        babyId={lastEditIdRef.current ?? ''}
+        open={Boolean(editingId)}
+        onOpenChange={(next) => {
+          if (!next) setEditingId(null);
+        }}
+        onSaved={handleSaved}
+      />
     </>
   );
 }
@@ -179,12 +198,13 @@ interface BabyRowProps {
   onSwipeOpen: () => void;
   onSwipeClose: () => void;
   onSelect: () => void;
+  onEdit: () => void;
   onRequestDelete: () => void;
 }
 
 const VELOCITY_PROJECTION_MS = 50;
 
-function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, onRequestDelete }: BabyRowProps) {
+function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, onEdit, onRequestDelete }: BabyRowProps) {
   const startRef = React.useRef<{ x: number; y: number; baseOffset: number; locked: 'h' | 'v' | null } | null>(null);
   const motionRef = React.useRef({ lastX: 0, lastT: 0, vx: 0 });
   const [offset, setOffset] = React.useState(0);
@@ -286,23 +306,35 @@ function BabyRow({ baby, active, swiped, onSwipeOpen, onSwipeClose, onSelect, on
           transition: dragging ? 'none' : 'transform 220ms var(--ease)'
         }}
       >
-        <button
-          type="button"
-          onClick={onSelect}
+        <div
           className={cn(
-            'flex w-full shrink-0 items-center gap-[var(--space-3)] px-[6px] py-[10px] text-left',
+            'flex w-full shrink-0 items-center gap-[var(--space-2)] pr-[6px]',
             active ? 'bg-[var(--color-surface)]' : 'bg-[var(--color-surface-2)]'
           )}
         >
-          <Avatar src={baby.image ?? undefined} name={baby.name} colorKey={baby.id} size="sm" />
-          <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
-            {baby.name}
-          </span>
-          <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
-            {baby.ageLabel}
-          </span>
-          {active && <CheckIcon className="h-4 w-4 text-[color:var(--color-primary-active)]" />}
-        </button>
+          <button
+            type="button"
+            onClick={onSelect}
+            className="flex flex-1 items-center gap-[var(--space-3)] px-[6px] py-[10px] text-left"
+          >
+            <Avatar src={baby.image ?? undefined} name={baby.name} colorKey={baby.id} size="sm" />
+            <span className="flex-1 text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+              {baby.name}
+            </span>
+            <span className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
+              {baby.ageLabel}
+            </span>
+            {active && <CheckIcon className="h-4 w-4 text-[color:var(--color-primary-active)]" />}
+          </button>
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`编辑 ${baby.name}`}
+            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[color:var(--color-fg-soft)] active:bg-[var(--color-bg)]"
+          >
+            <PencilIcon className="h-4 w-4" />
+          </button>
+        </div>
         <button
           type="button"
           data-row-delete

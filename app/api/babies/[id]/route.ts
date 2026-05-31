@@ -33,11 +33,11 @@ export const GET = withAuthorizedResource({
   });
 });
 
+// Avatar is changed via /api/avatar (which writes avatarUrl + the file), never here.
 const patchSchema = z.object({
   name: z.string().min(1).max(50).optional(),
   birthday: z.string().regex(/^\d{4}-\d{2}-\d{2}(?: \d{2}:\d{2})?$/).optional(),
-  gender: z.enum(['boy', 'girl', 'other']).optional(),
-  avatarUrl: z.string().url().optional()
+  gender: z.enum(['boy', 'girl', 'other']).optional()
 });
 
 export const PATCH = withAuthorizedResource({

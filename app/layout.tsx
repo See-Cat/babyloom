@@ -4,7 +4,15 @@ import { ToastProvider } from '@/components/ui/ToastProvider';
 
 export const metadata = {
   title: 'Babyloom',
-  description: 'Family baby memories'
+  description: 'Family baby memories',
+  icons: {
+    icon: [
+      { url: '/icons/icon-source.svg', type: 'image/svg+xml' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512.png', sizes: '512x512', type: 'image/png' }
+    ],
+    apple: '/icons/icon-192.png'
+  }
 };
 
 // This app renders per request: cookie auth + local SQLite + runtime config.yaml

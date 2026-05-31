@@ -88,7 +88,7 @@ export default async function ProfilePage() {
   const switcherBabies: BabySwitcherBaby[] = familyBabies.map((b) => ({
     id: b.id,
     name: b.name,
-    image: (b as any).image ?? null,
+    image: (b as any).avatarUrl ?? null,
     ageLabel: formatBabyAge(b.birthday)
   }));
 
@@ -138,7 +138,7 @@ export default async function ProfilePage() {
                   borderColor: 'color-mix(in srgb, var(--color-primary) 30%, transparent)'
                 }}
               >
-                <Avatar src={(activeBaby as any).image ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="lg" />
+                <Avatar src={(activeBaby as any).avatarUrl ?? undefined} name={activeBaby.name} colorKey={activeBaby.id} size="lg" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
                     {activeBaby.name}
