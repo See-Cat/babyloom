@@ -136,6 +136,7 @@ export default async function TimelinePage({
           name={selectedBaby.name}
           colorKey={selectedBaby.id}
           size="md"
+          style={{ width: '50px', height: '50px', fontSize: '18px' }}
         />
       }
     >
