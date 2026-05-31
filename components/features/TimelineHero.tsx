@@ -6,6 +6,7 @@ import { MediaImage } from '@/components/media/MediaImage';
 import { MediaLightbox } from '@/components/media/MediaLightbox';
 import { Button } from '@/components/ui/Button';
 import { CameraIcon } from '@/components/ui/icons';
+import { useTimezone } from '@/components/system/TimezoneProvider';
 import { formatRelativeDateTime } from '@/lib/shared/format-time';
 import type { MediaItem } from '@/lib/server/media/types';
 
@@ -27,6 +28,7 @@ export interface TimelineHeroProps {
 
 export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems, mediaIds, canWrite = true }: TimelineHeroProps) {
   const items: MediaItem[] = mediaItems ?? (mediaIds ?? []).map((id) => ({ id, type: 'photo' }));
+  const timeZone = useTimezone();
   const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
 
   if (!entry) {
@@ -84,7 +86,7 @@ export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems,
             {entry.content || '查看记录'}
           </span>
           <span className="mt-[var(--space-1)] block text-[length:var(--text-xs)] font-semibold text-white/85">
-            {authorName} · {formatRelativeDateTime(entry.occurredAt)}
+            {authorName} · {formatRelativeDateTime(entry.occurredAt, timeZone)}
           </span>
         </Link>
         {lightboxAt !== null && (
@@ -98,7 +100,7 @@ export function TimelineHero({ babyId, entry, authorName = '家人', mediaItems,
     <Link href={`/entry/${entry.id}`} className="bl-timeline-hero bl-rise-hero block rounded-[var(--radius-hero)] bg-[var(--color-surface)] px-[var(--space-5)] py-[var(--space-5)]">
       <p className="line-clamp-3 whitespace-pre-wrap text-[length:var(--text-md)] font-bold leading-[var(--leading-base)] text-[color:var(--color-fg-strong)]">{entry.content}</p>
       <p className="mt-[var(--space-3)] text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">
-        {authorName} · {formatRelativeDateTime(entry.occurredAt)}
+        {authorName} · {formatRelativeDateTime(entry.occurredAt, timeZone)}
       </p>
     </Link>
   );

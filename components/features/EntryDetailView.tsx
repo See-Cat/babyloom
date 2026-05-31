@@ -10,6 +10,7 @@ import { AppShell } from '@/components/mobile/AppShell';
 import { Avatar } from '@/components/ui/Avatar';
 import { ChevronLeftIcon, DotsIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/client/hooks/useToast';
+import { useTimezone } from '@/components/system/TimezoneProvider';
 import { formatLongDateTime } from '@/lib/shared/format-time';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
 
@@ -41,6 +42,7 @@ export function EntryDetailView({
 }: EntryDetailViewProps) {
   const router = useRouter();
   const toast = useToast();
+  const timeZone = useTimezone();
   const [actionOpen, setActionOpen] = React.useState(false);
   const [lightboxAt, setLightboxAt] = React.useState<number | null>(null);
   const recordedAt = entry.createdAt ?? entry.occurredAt;
@@ -118,7 +120,7 @@ export function EntryDetailView({
       <div className="px-[var(--space-4)]">
         <div className="mb-[var(--space-3)] flex flex-wrap items-center gap-[var(--space-2)]">
           <p className="text-[length:var(--text-sm)] font-semibold text-[color:var(--color-fg-soft)]">
-            {formatLongDateTime(entry.occurredAt)}
+            {formatLongDateTime(entry.occurredAt, timeZone)}
           </p>
           {babyBirthday && (
             <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-primary-bg)] px-[var(--space-2)] py-[2px] text-[length:var(--text-xs)] font-bold text-[color:var(--color-primary-active)]">
@@ -154,7 +156,7 @@ export function EntryDetailView({
           />
           <div>
             <p className="text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">{authorName ?? '未知'}</p>
-            <p className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">{formatLongDateTime(recordedAt)} 记录</p>
+            <p className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-fg-soft)]">{formatLongDateTime(recordedAt, timeZone)} 记录</p>
           </div>
         </div>
       </div>

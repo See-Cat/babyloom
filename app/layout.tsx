@@ -1,5 +1,8 @@
+import { resolve } from 'node:path';
 import './globals.css';
+import { loadConfig } from '@/lib/server/config/load';
 import { ClientErrorBoundary } from '@/components/system/ClientErrorBoundary';
+import { TimezoneProvider } from '@/components/system/TimezoneProvider';
 import { ToastProvider } from '@/components/ui/ToastProvider';
 
 export const metadata = {
@@ -21,7 +24,21 @@ export const metadata = {
 // it still works offline even though it is rendered dynamically.
 export const dynamic = 'force-dynamic';
 
+function resolveTimezone(): string {
+  // config.yaml may be absent during build introspection; fall back to the
+  // schema default rather than crashing the whole app tree.
+  try {
+    const dataDir = process.env.BABYLOOM_DATA_DIR
+      ? resolve(process.env.BABYLOOM_DATA_DIR)
+      : resolve(process.cwd(), 'data');
+    return loadConfig({ dataDir }).app.timezone;
+  } catch {
+    return 'Asia/Shanghai';
+  }
+}
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const timeZone = resolveTimezone();
   return (
     <html lang="zh" suppressHydrationWarning>
       <head>
@@ -32,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body>
         <ClientErrorBoundary>
-          <ToastProvider>{children}</ToastProvider>
+          <TimezoneProvider timeZone={timeZone}>
+            <ToastProvider>{children}</ToastProvider>
+          </TimezoneProvider>
         </ClientErrorBoundary>
       </body>
     </html>

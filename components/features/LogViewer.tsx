@@ -3,11 +3,13 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { useTimezone } from '@/components/system/TimezoneProvider';
 import type { LogRow } from '@/lib/server/log/tail';
 
 export function LogViewer({ rows }: { rows: LogRow[] }) {
   const router = useRouter();
   const params = useSearchParams();
+  const timeZone = useTimezone();
 
   function setParam(key: string, value: string) {
     const next = new URLSearchParams(params.toString());
@@ -58,7 +60,7 @@ export function LogViewer({ rows }: { rows: LogRow[] }) {
           <tbody>
             {rows.map((row, i) => (
               <tr key={i} className={rowClass(row.level)}>
-                <td className="p-[var(--space-2)]">{formatTime(row.time)}</td>
+                <td className="p-[var(--space-2)]">{formatTime(row.time, timeZone)}</td>
                 <td className="p-[var(--space-2)]">{levelLabel(row.level)}</td>
                 <td className="p-[var(--space-2)]">{String(row.module ?? '-')}</td>
                 <td className="p-[var(--space-2)]">{String(row.msg ?? '')}</td>
@@ -98,6 +100,6 @@ function rowClass(level: LogRow['level']) {
   return '';
 }
 
-function formatTime(time: LogRow['time']) {
-  return typeof time === 'number' ? new Date(time).toLocaleString('zh-CN') : '';
+function formatTime(time: LogRow['time'], timeZone: string) {
+  return typeof time === 'number' ? new Date(time).toLocaleString('zh-CN', { timeZone }) : '';
 }

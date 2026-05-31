@@ -1,32 +1,64 @@
 const MS_PER_DAY = 86_400_000;
 
-function startOfLocalDay(date: Date) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+interface ZonedParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
 }
 
-function formatHm(ts: number) {
-  return new Date(ts).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+// Resolve a timestamp into calendar parts for an explicit IANA timezone. Using
+// Intl with a fixed `timeZone` makes the result independent of the ambient
+// timezone, so server (often UTC) and client (the viewer's device) agree — which
+// is what prevents the relative-time hydration mismatch (React error #418).
+function zonedParts(ms: number, timeZone: string): ZonedParts {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
+  const parts = Object.fromEntries(formatter.formatToParts(new Date(ms)).map((p) => [p.type, p.value]));
+  const hour = Number(parts.hour) === 24 ? 0 : Number(parts.hour);
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    hour,
+    minute: Number(parts.minute)
+  };
 }
 
-export function formatRelativeDateTime(value: number, now: number = Date.now()): string {
-  const startToday = startOfLocalDay(new Date(now));
-  const startTarget = startOfLocalDay(new Date(value));
-  const diffDays = Math.round((startToday - startTarget) / MS_PER_DAY);
-  const hm = formatHm(value);
-  if (diffDays === 0) return `今天 ${hm}`;
-  if (diffDays === 1) return `昨天 ${hm}`;
-  if (diffDays === 2) return `前天 ${hm}`;
-  if (diffDays > 2 && diffDays < 7) return `${diffDays} 天前 ${hm}`;
-  const d = new Date(value);
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  if (d.getFullYear() === new Date(now).getFullYear()) return `${month} 月 ${day} 日 ${hm}`;
-  return `${d.getFullYear()} 年 ${month} 月 ${day} 日 ${hm}`;
+function hm(parts: ZonedParts): string {
+  return `${String(parts.hour).padStart(2, '0')}:${String(parts.minute).padStart(2, '0')}`;
 }
 
-export function formatLongDateTime(value: number): string {
-  const d = new Date(value);
-  return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日 · ${formatHm(value)}`;
+// Midnight (in `timeZone`) of the given instant, expressed as a UTC ordinal so
+// two such values can be subtracted into a whole-day difference.
+function zonedDayOrdinal(parts: ZonedParts): number {
+  return Date.UTC(parts.year, parts.month - 1, parts.day);
+}
+
+export function formatRelativeDateTime(value: number, timeZone: string, now: number = Date.now()): string {
+  const target = zonedParts(value, timeZone);
+  const today = zonedParts(now, timeZone);
+  const diffDays = Math.round((zonedDayOrdinal(today) - zonedDayOrdinal(target)) / MS_PER_DAY);
+  const t = hm(target);
+  if (diffDays === 0) return `今天 ${t}`;
+  if (diffDays === 1) return `昨天 ${t}`;
+  if (diffDays === 2) return `前天 ${t}`;
+  if (diffDays > 2 && diffDays < 7) return `${diffDays} 天前 ${t}`;
+  if (target.year === today.year) return `${target.month} 月 ${target.day} 日 ${t}`;
+  return `${target.year} 年 ${target.month} 月 ${target.day} 日 ${t}`;
+}
+
+export function formatLongDateTime(value: number, timeZone: string): string {
+  const p = zonedParts(value, timeZone);
+  return `${p.year} 年 ${p.month} 月 ${p.day} 日 · ${hm(p)}`;
 }
 
 export function parseBirthdayToMillis(birthday: string): number | null {
