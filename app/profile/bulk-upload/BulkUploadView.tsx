@@ -30,9 +30,7 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
   }
 
   const readyCount = items.filter((m) => m.status === 'ready').length;
-  const pendingCount = items.filter((m) => m.status === 'pending').length;
   const failedCount = items.filter((m) => m.status === 'failed').length;
-  const doneCount = readyCount + failedCount;
 
   return (
     <AppShell
@@ -86,10 +84,10 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
         <Card className="mb-[var(--space-4)]">
           <div className="flex items-baseline justify-between">
             <p className="m-0 text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-strong)]">
-              已上传 {readyCount} 张
-              {pendingCount > 0 && (
-                <span className="ml-[var(--space-2)] font-semibold text-[color:var(--color-fg-soft)]">
-                  · {pendingCount} 张处理中
+              共 {items.length} 张 / 已上传 {readyCount} 张
+              {failedCount > 0 && (
+                <span className="ml-[var(--space-2)] font-semibold text-[color:var(--color-error-active)]">
+                  · {failedCount} 张失败
                 </span>
               )}
             </p>
@@ -116,16 +114,6 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
             ))}
           </ul>
         </Card>
-      )}
-
-      {pendingCount > 0 && (
-        <div
-          aria-live="polite"
-          className="fixed right-[var(--space-4)] bottom-[calc(6rem+env(safe-area-inset-bottom))] z-[var(--z-sticky)] inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-pill)] bg-[var(--color-fg-strong)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] font-bold text-[color:var(--color-fg-inverse)] shadow-[var(--shadow-soft-md)]"
-        >
-          <Spinner />
-          上传中 {doneCount}/{items.length}
-        </div>
       )}
 
       {readyCount > 0 && (
