@@ -1,12 +1,11 @@
-import ffmpegPath from 'ffmpeg-static';
 import ffmpeg from 'fluent-ffmpeg';
-import ffprobePath from 'ffprobe-static';
 import { unlink } from 'fs/promises';
 import { join } from 'node:path';
 import sharp from 'sharp';
+import { FFMPEG_PATH, FFPROBE_PATH } from './ffmpeg-paths';
 
-ffmpeg.setFfmpegPath(ffmpegPath as string);
-ffmpeg.setFfprobePath(ffprobePath.path);
+ffmpeg.setFfmpegPath(FFMPEG_PATH);
+ffmpeg.setFfprobePath(FFPROBE_PATH);
 
 const LARGE_W = 1024;
 const THUMB_W = 320;

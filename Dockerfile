@@ -30,6 +30,14 @@ ENV BABYLOOM_DATA_DIR=/app/data
 ENV APP_VERSION=$APP_VERSION
 LABEL org.opencontainers.image.version=$APP_VERSION
 
+# The prebuilt ffmpeg-static/ffprobe-static binaries are glibc-linked and aren't
+# bundled into the Next standalone output, so video probe/derive fails on Alpine.
+# Use the musl-native system ffmpeg (includes ffprobe) instead; the media code
+# reads these paths via FFMPEG_PATH/FFPROBE_PATH.
+RUN apk add --no-cache ffmpeg
+ENV FFMPEG_PATH=/usr/bin/ffmpeg
+ENV FFPROBE_PATH=/usr/bin/ffprobe
+
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public

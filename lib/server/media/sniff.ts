@@ -1,9 +1,9 @@
 import { fileTypeFromFile } from 'file-type';
 import ffmpeg from 'fluent-ffmpeg';
-import ffprobePath from 'ffprobe-static';
 import sharp from 'sharp';
+import { FFPROBE_PATH } from './ffmpeg-paths';
 
-ffmpeg.setFfprobePath(ffprobePath.path);
+ffmpeg.setFfprobePath(FFPROBE_PATH);
 
 export class MediaUnsupportedError extends Error {
   code = 'unsupported_media' as const;
