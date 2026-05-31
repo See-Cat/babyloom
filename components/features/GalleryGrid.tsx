@@ -40,7 +40,15 @@ export function GalleryGrid({
   if (groups.length === 0) {
     return (
       <div className="flex min-h-[52vh] flex-col items-center justify-center gap-[var(--space-2)] px-[var(--space-7)] text-center">
-        <div className="mb-[var(--space-2)] text-[48px] leading-none" aria-hidden="true">📸</div>
+        <img
+          src="/icons/gallery-empty-camera.webp"
+          alt=""
+          aria-hidden="true"
+          width={96}
+          height={96}
+          draggable={false}
+          className="mb-[var(--space-2)] h-24 w-24 object-contain"
+        />
         <p className="m-0 text-[length:var(--text-lg)] font-bold text-[color:var(--color-fg-strong)]">还没有照片</p>
         <p className="m-0 mb-[var(--space-3)] text-[length:var(--text-base)] font-medium leading-[var(--leading-base)] text-[color:var(--color-fg-soft)]">
           在记录里上传图片或视频,这里就会出现

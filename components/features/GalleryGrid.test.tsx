@@ -44,7 +44,10 @@ describe('GalleryGrid', () => {
     expect(html).toContain('新建一条记录');
     expect(html).toContain('/entry/new?babyId=baby-1');
     expect(html).not.toContain('bl-card');
-    expect(html).toContain('📸');
+    expect(html).toContain('src="/icons/gallery-empty-camera.webp"');
+    expect(html).toContain('width="96"');
+    expect(html).toContain('height="96"');
+    expect(html).not.toContain('📸');
   });
 });
 
