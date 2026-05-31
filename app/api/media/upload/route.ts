@@ -1,7 +1,6 @@
 import formidable from 'formidable';
 import { mkdir } from 'fs/promises';
 import { IncomingMessage } from 'node:http';
-import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { Readable } from 'node:stream';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
@@ -103,7 +102,10 @@ interface ParsedMultipart {
 }
 
 async function parseMultipart(req: Request): Promise<ParsedMultipart> {
-  const tmp = join(tmpdir(), 'babyloom-upload');
+  // Keep the multipart landing dir on the SAME device as the data dir. The
+  // pipeline renames this file into media/_staging, and fs.rename across
+  // devices (e.g. container /tmp vs a bind-mounted data volume) throws EXDEV.
+  const tmp = join(dataDir, 'media', '_tmp');
   await mkdir(tmp, { recursive: true });
   const form = formidable({
     uploadDir: tmp,
