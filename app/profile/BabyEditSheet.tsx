@@ -2,13 +2,12 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Avatar } from '@/components/ui/Avatar';
+import { AvatarUpload } from '@/components/ui/AvatarUpload';
 import { Button } from '@/components/ui/Button';
 import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { CameraIcon } from '@/components/ui/icons';
 import { useToast } from '@/lib/client/hooks/useToast';
 
 export interface BabyEditSaved {
@@ -27,7 +26,6 @@ interface BabyEditSheetProps {
 export function BabyEditSheet({ babyId, open, onOpenChange, onSaved }: BabyEditSheetProps) {
   const router = useRouter();
   const toast = useToast();
-  const fileRef = React.useRef<HTMLInputElement>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [form, setForm] = React.useState({ name: '', birthday: '', gender: 'girl' });
@@ -144,42 +142,19 @@ export function BabyEditSheet({ babyId, open, onOpenChange, onSaved }: BabyEditS
       ) : (
         <div className="flex flex-col gap-[var(--space-4)] pb-[var(--space-5)]">
           <div className="flex flex-col items-center gap-[var(--space-2)]">
-            <button
-              type="button"
-              aria-label="选择头像"
-              onClick={() => fileRef.current?.click()}
-              className="relative inline-flex h-[88px] w-[88px] items-center justify-center rounded-full focus-visible:outline-[3px] focus-visible:outline-[color:var(--color-focus)]"
-            >
-              <Avatar src={shownAvatar ?? undefined} name={form.name || '宝宝'} colorKey={babyId} size="xl" />
-              <span
-                aria-hidden="true"
-                className="absolute -bottom-[2px] -right-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] ring-[3px] ring-[var(--color-bg)]"
-              >
-                <CameraIcon className="h-3.5 w-3.5" />
-              </span>
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              onChange={(event) => {
-                setAvatarFile(event.currentTarget.files?.[0] ?? null);
+            <AvatarUpload
+              name={form.name || '宝宝'}
+              colorKey={babyId}
+              src={shownAvatar}
+              onPick={(file) => {
+                setAvatarFile(file);
                 setRemoveAvatar(false);
               }}
+              onRemove={() => {
+                if (avatarFile) setAvatarFile(null);
+                else setRemoveAvatar(true);
+              }}
             />
-            {shownAvatar && (
-              <button
-                type="button"
-                onClick={() => {
-                  setAvatarFile(null);
-                  setRemoveAvatar(true);
-                }}
-                className="text-[length:var(--text-xs)] font-semibold text-[color:var(--color-error-active)]"
-              >
-                移除头像
-              </button>
-            )}
           </div>
           <Input
             name="name"

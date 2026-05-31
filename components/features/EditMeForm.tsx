@@ -2,11 +2,10 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Avatar } from '@/components/ui/Avatar';
+import { AvatarUpload } from '@/components/ui/AvatarUpload';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
-import { XIcon } from '@/components/ui/icons';
 import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/client/hooks/useToast';
 
@@ -25,7 +24,6 @@ export interface EditMeFormProps {
 export function EditMeForm({ initial, username, target, updateMyName }: EditMeFormProps) {
   const toast = useToast();
   const router = useRouter();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const [name, setName] = React.useState(initial.name);
   const [nameError, setNameError] = React.useState<string | null>(null);
@@ -41,7 +39,6 @@ export function EditMeForm({ initial, username, target, updateMyName }: EditMeFo
   }, [previewUrl]);
 
   const displayUrl = pendingFile ? previewUrl : pendingDelete ? null : initial.image;
-  const hasDisplayedAvatar = Boolean(displayUrl);
   const dirty = name.trim() !== initial.name || pendingFile !== null || pendingDelete;
 
   function pickFile(file: File | null) {
@@ -117,33 +114,13 @@ export function EditMeForm({ initial, username, target, updateMyName }: EditMeFo
     <Card as="section">
       <form aria-label="我的资料" onSubmit={onSave} className="grid gap-[var(--space-4)]">
         <div className="flex flex-col items-center gap-[var(--space-2)]">
-          <div className="relative">
-            <Avatar src={displayUrl ?? undefined} name={initial.name} size="xl" />
-            {hasDisplayedAvatar && (
-              <button
-                type="button"
-                aria-label="删除头像"
-                onClick={onRemoveAvatar}
-                className="absolute -right-1 -top-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-bg)] text-[color:var(--color-muted)] ring-1 ring-black/10 transition hover:text-[color:var(--color-fg)] active:scale-95"
-              >
-                <XIcon className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(event) => pickFile(event.currentTarget.files?.[0] ?? null)}
+          <AvatarUpload
+            name={initial.name}
+            src={displayUrl}
+            onPick={(file) => pickFile(file)}
+            onRemove={onRemoveAvatar}
+            onBeforePick={() => requireOnline(toast)}
           />
-          <button
-            type="button"
-            onClick={() => requireOnline(toast) && fileInputRef.current?.click()}
-            className="text-[length:var(--text-sm)] font-semibold text-[color:var(--color-accent)] underline-offset-2 hover:underline"
-          >
-            更换头像
-          </button>
         </div>
 
         <div className="grid gap-[var(--space-3)]">

@@ -23,7 +23,7 @@ describe('EditMeForm', () => {
 
     expect(html).toContain('name="name"');
     expect(html).toContain('name="username"');
-    expect(html).toContain('更换头像');
+    expect(html).toContain('aria-label="选择头像"');
     expect(html).not.toContain('修改密码');
   });
 });

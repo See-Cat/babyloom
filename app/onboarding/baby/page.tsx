@@ -1,18 +1,17 @@
 'use client';
 
-import { Suspense, useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Avatar } from '@/components/ui/Avatar';
+import { AvatarUpload } from '@/components/ui/AvatarUpload';
 import { Button } from '@/components/ui/Button';
 import { DatePicker, nowDatePickerValue } from '@/components/ui/DatePicker';
 import { Input } from '@/components/ui/Input';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
-import { CameraIcon, ChevronLeftIcon } from '@/components/ui/icons';
+import { ChevronLeftIcon } from '@/components/ui/icons';
 
 function OnboardingBabyForm() {
   const router = useRouter();
   const canGoBack = useSearchParams().get('back') === '1';
-  const fileRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [baby, setBaby] = useState({ name: '', birthday: '', gender: 'girl' });
@@ -82,31 +81,12 @@ function OnboardingBabyForm() {
           <p className="text-[length:var(--text-base)] text-[color:var(--color-fg-soft)]">先添加一个宝宝,就可以开始记录啦</p>
         </div>
         <div className="mb-[var(--space-4)] flex flex-col items-center gap-[var(--space-2)]">
-          <button
-            type="button"
-            aria-label="选择头像"
-            onClick={() => fileRef.current?.click()}
-            className="relative inline-flex h-[88px] w-[88px] items-center justify-center rounded-full focus-visible:outline-[3px] focus-visible:outline-[color:var(--color-focus)]"
-          >
-            <Avatar
-              src={previewUrl ?? undefined}
-              name={baby.name || '宝宝'}
-              colorKey={baby.name || 'baby-onboarding'}
-              size="xl"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-[2px] -right-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] ring-[3px] ring-[var(--color-bg)]"
-            >
-              <CameraIcon className="h-3.5 w-3.5" />
-            </span>
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            onChange={(event) => setAvatarFile(event.currentTarget.files?.[0] ?? null)}
+          <AvatarUpload
+            name={baby.name || '宝宝'}
+            colorKey={baby.name || 'baby-onboarding'}
+            src={previewUrl}
+            onPick={setAvatarFile}
+            onRemove={() => setAvatarFile(null)}
           />
           <p className="text-center text-[length:var(--text-xs)] font-medium text-[color:var(--color-fg-soft)]">头像可选 · 不上传时自动用名字首字</p>
         </div>

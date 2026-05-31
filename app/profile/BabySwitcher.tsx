@@ -62,11 +62,12 @@ export function BabySwitcher({
 
   function selectBaby(babyId: string) {
     setOpen(false);
-    if (babyId !== activeBabyId) {
-      try {
-        document.cookie = `bl_baby=${babyId}; path=/; max-age=${60 * 60 * 24 * 365}`;
-      } catch {}
-    }
+    // Tapping the already-active baby just closes the sheet — no navigation,
+    // so it doesn't flash/reload the timeline.
+    if (babyId === activeBabyId) return;
+    try {
+      document.cookie = `bl_baby=${babyId}; path=/; max-age=${60 * 60 * 24 * 365}`;
+    } catch {}
     router.push(`/timeline?babyId=${babyId}`);
     router.refresh();
   }
