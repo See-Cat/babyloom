@@ -1,7 +1,7 @@
 'use client';
 
 import { MediaImage } from '@/components/media/MediaImage';
-import { UploadButton, type UploadedMedia } from '@/components/media/UploadButton';
+import { UploadButton, cancelUpload, type UploadedMedia } from '@/components/media/UploadButton';
 import { XIcon, PlusIcon } from '@/components/ui/icons';
 import { Spinner } from '@/components/ui/Spinner';
 
@@ -15,6 +15,18 @@ export interface MediaUploaderProps {
 
 export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploadedMedia }: MediaUploaderProps) {
   const readyCount = uploadedMedia.filter((m) => m.status === 'ready').length;
+
+  // Removable: settled items (ready/failed) and still-queued uploads (cancellable
+  // before a request is sent). Not removable: items mid-upload/processing.
+  function isRemovable(media: UploadedMedia): boolean {
+    if (media.status === 'ready' || media.status === 'failed') return true;
+    return media.status === 'pending' && media.phase === 'queued';
+  }
+
+  function handleRemove(media: UploadedMedia): void {
+    if (media.status === 'pending' && media.phase === 'queued') cancelUpload(media.uploadId);
+    onRemove(media.uploadId);
+  }
 
   return (
     <div>
@@ -56,15 +68,17 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
                 </span>
               </div>
             )}
-            <button
-              type="button"
-              onClick={() => onRemove(media.uploadId)}
-              aria-label="移除"
-              className="absolute right-1.5 top-1.5 inline-flex items-center justify-center rounded-full bg-black/50 text-white"
-              style={{ width: 22, height: 22 }}
-            >
-              <XIcon className="h-3.5 w-3.5" />
-            </button>
+            {isRemovable(media) && (
+              <button
+                type="button"
+                onClick={() => handleRemove(media)}
+                aria-label="移除"
+                className="absolute right-1.5 top-1.5 inline-flex items-center justify-center rounded-full bg-black/50 text-white"
+                style={{ width: 22, height: 22 }}
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
           </li>
         ))}
         <li className="aspect-square">

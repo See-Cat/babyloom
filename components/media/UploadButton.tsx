@@ -13,6 +13,12 @@ export interface UploadedMedia {
   mediaId?: string;
   filename: string;
   status: 'pending' | 'ready' | 'failed';
+  /**
+   * Sub-state while `status === 'pending'`:
+   *  - 'queued'    waiting for a concurrency slot — safe to cancel (no request sent yet)
+   *  - 'uploading' request in flight / server processing — cannot be cancelled
+   */
+  phase?: 'queued' | 'uploading';
   type?: 'photo' | 'video';
 }
 
@@ -45,6 +51,17 @@ function releaseUploadSlot(): void {
   }
 }
 
+// ── Upload cancellation ─────────────────────────────────────────────
+// Module-global, matches the semaphore scope. Only QUEUED uploads (no request
+// sent yet) can be cancelled: the waiter checks this set after acquiring a slot
+// and skips the upload. Uploads already in flight are not cancellable.
+const cancelledIds = new Set<string>();
+
+/** Cancel a still-queued upload. No-op once the request has started. */
+export function cancelUpload(uploadId: string): void {
+  cancelledIds.add(uploadId);
+}
+
 export interface UploadButtonProps {
   babyId: string;
   onUploaded: (media: UploadedMedia) => void;
@@ -62,12 +79,8 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
   const [activeBatches, setActiveBatches] = React.useState(0);
   const busy = activeBatches > 0;
 
-  async function uploadOne(file: File) {
-    const uploadId = crypto.randomUUID();
-    const type: 'photo' | 'video' = file.type.startsWith('video/') ? 'video' : 'photo';
+  async function uploadOne(file: File, uploadId: string, type: 'photo' | 'video') {
     warnIfHevc(file, toast);
-    // Emit a placeholder immediately so the UI shows this file as "in progress".
-    onUploaded({ uploadId, filename: file.name, status: 'pending', type });
     try {
       const form = new FormData();
       form.append('babyId', babyId);
@@ -95,6 +108,8 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
       });
       toast.show({ message: `「${file.name}」上传失败:${reason}`, variant: 'error' });
       onUploaded({ uploadId, filename: file.name, status: 'failed', type });
+    } finally {
+      cancelledIds.delete(uploadId);
     }
   }
 
@@ -102,13 +117,30 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
     if (!requireOnline(toast)) return;
     const list = Array.from(files);
     if (inputRef.current) inputRef.current.value = ''; // allow re-selecting while this batch runs
+
+    const prepared = list.map((file) => {
+      const uploadId = crypto.randomUUID();
+      const type: 'photo' | 'video' = file.type.startsWith('video/') ? 'video' : 'photo';
+      // Show every selected file immediately as queued, so the user sees the
+      // full count rather than only the first UPLOAD_CONCURRENCY in flight.
+      onUploaded({ uploadId, filename: file.name, status: 'pending', phase: 'queued', type });
+      return { file, uploadId, type };
+    });
+
     setActiveBatches((n) => n + 1);
     try {
       await Promise.all(
-        list.map(async (file) => {
+        prepared.map(async (item) => {
           await acquireUploadSlot();
+          if (cancelledIds.has(item.uploadId)) {
+            cancelledIds.delete(item.uploadId);
+            releaseUploadSlot();
+            return;
+          }
+          // Slot acquired: transition queued → uploading (no longer cancellable).
+          onUploaded({ uploadId: item.uploadId, filename: item.file.name, status: 'pending', phase: 'uploading', type: item.type });
           try {
-            await uploadOne(file);
+            await uploadOne(item.file, item.uploadId, item.type);
           } finally {
             releaseUploadSlot();
           }

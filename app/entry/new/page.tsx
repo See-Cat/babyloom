@@ -10,6 +10,8 @@ import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 import { useTimezone } from '@/components/system/TimezoneProvider';
+import { trashOrphanMedia } from '@/lib/client/trash-orphan-media';
+import { applyUploadedMedia } from '@/lib/client/uploaded-media';
 
 const formId = 'new-entry-form';
 
@@ -81,18 +83,32 @@ function NewEntryForm() {
   }
 
   function onUploaded(media: UploadedMedia) {
-    setUploadedMedia((prev) => {
-      const index = prev.findIndex((item) => item.uploadId === media.uploadId);
-      if (index === -1) return [...prev, media];
-      const next = prev.slice();
-      next[index] = media;
-      return next;
-    });
+    setUploadedMedia((prev) => applyUploadedMedia(prev, media));
   }
 
   function onBack() {
     if (dirty) setLeaveOpen(true);
     else router.back();
+  }
+
+  // A ready media is an orphan unless it is the prefill media (an existing
+  // gallery photo opened via "write a note for this photo"), which must be kept.
+  function isOrphan(media: UploadedMedia): boolean {
+    return media.status === 'ready' && Boolean(media.mediaId) && media.mediaId !== prefillMediaId;
+  }
+
+  async function onRemoveMedia(uploadId: string) {
+    const item = uploadedMedia.find((m) => m.uploadId === uploadId);
+    setUploadedMedia((prev) => prev.filter((m) => m.uploadId !== uploadId));
+    if (item && isOrphan(item)) await trashOrphanMedia(item.mediaId!);
+  }
+
+  // Abandoning the draft: trash every freshly uploaded (unsubmitted) media so it
+  // does not linger in the gallery. Best-effort; never blocks leaving.
+  async function discardAndLeave() {
+    const orphans = uploadedMedia.filter(isOrphan);
+    await Promise.all(orphans.map((m) => trashOrphanMedia(m.mediaId!)));
+    router.back();
   }
 
   async function onSubmit(formData: FormData) {
@@ -179,14 +195,14 @@ function NewEntryForm() {
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}
-        onRemoveMedia={(uploadId) => setUploadedMedia((prev) => prev.filter((item) => item.uploadId !== uploadId))}
+        onRemoveMedia={onRemoveMedia}
       />
       <ActionSheet
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
         title="还有未保存的内容"
         options={[
-          { label: '放弃当前记录', destructive: true, onSelect: () => router.back() },
+          { label: '放弃当前记录', destructive: true, onSelect: () => void discardAndLeave() },
           { label: '继续编辑', onSelect: () => undefined }
         ]}
       />

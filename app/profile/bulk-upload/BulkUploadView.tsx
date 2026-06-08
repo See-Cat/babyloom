@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { AppShell } from '@/components/mobile/AppShell';
 import { UploadButton, type UploadedMedia } from '@/components/media/UploadButton';
+import { applyUploadedMedia } from '@/lib/client/uploaded-media';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
@@ -19,13 +20,7 @@ export function BulkUploadView({ babyId, babyName }: BulkUploadViewProps) {
   const [items, setItems] = React.useState<UploadedMedia[]>([]);
 
   function onUploaded(media: UploadedMedia) {
-    setItems((prev) => {
-      const i = prev.findIndex((m) => m.uploadId === media.uploadId);
-      if (i === -1) return [...prev, media];
-      const next = prev.slice();
-      next[i] = media;
-      return next;
-    });
+    setItems((prev) => applyUploadedMedia(prev, media));
   }
 
   const readyCount = items.filter((m) => m.status === 'ready').length;

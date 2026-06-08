@@ -11,6 +11,8 @@ import { ChevronLeftIcon } from '@/components/ui/icons';
 import type { UploadedMedia } from '@/components/media/UploadButton';
 import { parseBirthdayToMillis } from '@/lib/shared/format-time';
 import { useTimezone } from '@/components/system/TimezoneProvider';
+import { trashOrphanMedia } from '@/lib/client/trash-orphan-media';
+import { applyUploadedMedia } from '@/lib/client/uploaded-media';
 
 const formId = 'edit-entry-form';
 
@@ -69,6 +71,27 @@ export default function EditEntryPage() {
     else router.back();
   }
 
+  // A ready media is an orphan only if it was uploaded in THIS edit session
+  // (not in originalMediaIds). Removing a pre-existing media just detaches it on
+  // submit (kept in the gallery); only this-session uploads get trashed.
+  function isOrphan(media: UploadedMedia): boolean {
+    return media.status === 'ready' && Boolean(media.mediaId) && !originalMediaIds.has(media.mediaId!);
+  }
+
+  async function onRemoveMedia(uploadId: string) {
+    const item = uploadedMedia.find((m) => m.uploadId === uploadId);
+    setUploadedMedia((prev) => prev.filter((m) => m.uploadId !== uploadId));
+    if (item && isOrphan(item)) await trashOrphanMedia(item.mediaId!);
+  }
+
+  // Abandoning edits: trash media uploaded this session but never saved.
+  // Best-effort; never blocks leaving.
+  async function discardAndLeave() {
+    const orphans = uploadedMedia.filter(isOrphan);
+    await Promise.all(orphans.map((m) => trashOrphanMedia(m.mediaId!)));
+    router.back();
+  }
+
   useEffect(() => {
     (async () => {
       const [eRes, mRes] = await Promise.all([
@@ -121,13 +144,7 @@ export default function EditEntryPage() {
   }
 
   function onUploaded(media: UploadedMedia) {
-    setUploadedMedia((prev) => {
-      const index = prev.findIndex((item) => item.uploadId === media.uploadId);
-      if (index === -1) return [...prev, media];
-      const next = prev.slice();
-      next[index] = media;
-      return next;
-    });
+    setUploadedMedia((prev) => applyUploadedMedia(prev, media));
   }
 
   async function onSubmit() {
@@ -227,7 +244,7 @@ export default function EditEntryPage() {
         onContentChange={setContent}
         onToggleMilestone={toggleMilestone}
         onUploaded={onUploaded}
-        onRemoveMedia={(uploadId) => setUploadedMedia((prev) => prev.filter((item) => item.uploadId !== uploadId))}
+        onRemoveMedia={onRemoveMedia}
         onSubmitClick={onSubmit}
       />
       <ActionSheet
@@ -235,7 +252,7 @@ export default function EditEntryPage() {
         onOpenChange={setLeaveOpen}
         title="还有未保存的修改"
         options={[
-          { label: '放弃修改', destructive: true, onSelect: () => router.back() },
+          { label: '放弃修改', destructive: true, onSelect: () => void discardAndLeave() },
           { label: '继续编辑', onSelect: () => undefined }
         ]}
       />

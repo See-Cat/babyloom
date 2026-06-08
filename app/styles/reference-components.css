@@ -760,6 +760,7 @@ label.field {
 .modal .row {
   display: flex;
   gap: 10px;
+  margin-top: 18px;
 }
 
 .modal .row .btn {
