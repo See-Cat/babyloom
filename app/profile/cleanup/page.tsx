@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { resolve } from 'node:path';
 import { AppShell } from '@/components/mobile/AppShell';
-import { Card } from '@/components/ui/Card';
 import { ChevronLeftIcon } from '@/components/ui/icons';
 import { getAuth } from '@/lib/server/auth/server';
 import { loadConfig } from '@/lib/server/config/load';
@@ -52,20 +51,18 @@ export default async function ProfileCleanupPage() {
         </Link>
       }
     >
-      <Card>
-        <MediaCleanupClient
-          initial={{
-            enabled: settings.enabled,
-            thresholdHours: settings.thresholdHours,
-            lastRunAt: settings.lastRunAt,
-            lastRunDeleted: settings.lastRunDeleted,
-            minThresholdHours: MIN_THRESHOLD_HOURS,
-            maxThresholdHours: MAX_THRESHOLD_HOURS,
-            eligibleCount
-          }}
-          timeZone={timeZone}
-        />
-      </Card>
+      <MediaCleanupClient
+        initial={{
+          enabled: settings.enabled,
+          thresholdHours: settings.thresholdHours,
+          lastRunAt: settings.lastRunAt,
+          lastRunDeleted: settings.lastRunDeleted,
+          minThresholdHours: MIN_THRESHOLD_HOURS,
+          maxThresholdHours: MAX_THRESHOLD_HOURS,
+          eligibleCount
+        }}
+        timeZone={timeZone}
+      />
     </AppShell>
   );
 }

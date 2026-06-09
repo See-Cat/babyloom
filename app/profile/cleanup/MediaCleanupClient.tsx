@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Switch } from '@/components/ui/Switch';
 import { ToastContext } from '@/components/ui/ToastProvider';
@@ -139,57 +140,61 @@ export function MediaCleanupClient({ initial, timeZone }: MediaCleanupClientProp
 
   return (
     <div className="grid gap-[var(--space-4)]">
-      <div className="flex items-center gap-[var(--space-3)]">
-        <div className="min-w-0 flex-1">
-          <p className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
-            自动清理
-          </p>
-          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-muted)]">
-            清理长期未保存到记录的草稿照片(移入回收站,可恢复)。
-          </p>
+      <Card className="grid gap-[var(--space-5)]">
+        <div className="flex items-center gap-[var(--space-3)]">
+          <div className="min-w-0 flex-1">
+            <p className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
+              自动清理
+            </p>
+            <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] leading-[var(--leading-base)] text-[color:var(--color-muted)]">
+              清理长期未保存到记录的草稿照片(移入回收站,可恢复)。
+            </p>
+          </div>
+          <Switch
+            checked={enabled}
+            disabled={togglingEnabled}
+            onCheckedChange={toggleEnabled}
+            aria-label="自动清理开关"
+          />
         </div>
-        <Switch
-          checked={enabled}
-          disabled={togglingEnabled}
-          onCheckedChange={toggleEnabled}
-          aria-label="自动清理开关"
-        />
-      </div>
 
-      <div className="grid gap-[var(--space-2)]">
-        <Input
-          type="number"
-          inputMode="numeric"
-          label="草稿保留时长(小时)"
-          min={minThresholdHours}
-          max={maxThresholdHours}
-          value={thresholdInput}
-          error={thresholdError}
-          onChange={(e) => setThresholdInput(e.target.value)}
-        />
-        <Button
-          variant="default"
-          disabled={!thresholdValid || !thresholdDirty || savingThreshold}
-          loading={savingThreshold}
-          onClick={saveThreshold}
-        >
-          保存时长
+        <div className="grid gap-[var(--space-5)]">
+          <Input
+            type="number"
+            inputMode="numeric"
+            label="草稿保留时长(小时)"
+            min={minThresholdHours}
+            max={maxThresholdHours}
+            value={thresholdInput}
+            error={thresholdError}
+            onChange={(e) => setThresholdInput(e.target.value)}
+          />
+          <Button
+            variant="default"
+            disabled={!thresholdValid || !thresholdDirty || savingThreshold}
+            loading={savingThreshold}
+            onClick={saveThreshold}
+          >
+            保存时长
+          </Button>
+        </div>
+      </Card>
+
+      <Card className="grid gap-[var(--space-5)]">
+        <dl className="grid grid-cols-3 gap-[var(--space-3)] text-center">
+          <StatItem label="待清理" value={String(eligibleCount)} />
+          <StatItem label="上次清理" value={String(lastRunDeleted)} />
+          <StatItem
+            label="上次运行"
+            value={lastRunAt ? formatLongDateTime(lastRunAt, timeZone) : '从未'}
+            small
+          />
+        </dl>
+
+        <Button fullWidth loading={running} onClick={runNow}>
+          {running ? '正在清理...' : '立即清理'}
         </Button>
-      </div>
-
-      <dl className="grid grid-cols-3 gap-[var(--space-3)] text-center">
-        <StatItem label="待清理" value={String(eligibleCount)} />
-        <StatItem label="上次清理" value={String(lastRunDeleted)} />
-        <StatItem
-          label="上次运行"
-          value={lastRunAt ? formatLongDateTime(lastRunAt, timeZone) : '从未'}
-          small
-        />
-      </dl>
-
-      <Button fullWidth loading={running} onClick={runNow}>
-        {running ? '正在清理...' : '立即清理'}
-      </Button>
+      </Card>
     </div>
   );
 }
