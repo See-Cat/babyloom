@@ -68,6 +68,10 @@ export const POST = withAuthorizedAction({ action: 'media:write' })(async (req, 
       userId,
       babyId: baby.id,
       entryId: entry?.id ?? null,
+      // Default to 'standalone' (kept indefinitely): only an explicit
+      // 'entry_draft' marker opts media into the orphan-cleanup backstop, so a
+      // missing/unknown field can never cause legit gallery photos to be purged.
+      origin: parsed.origin === 'entry_draft' ? 'entry_draft' : 'standalone',
       clientUploadId: parsed.clientUploadId,
       filenameRaw: parsed.file.originalFilename || 'upload',
       uploadedFilePath: parsed.file.filepath
@@ -97,6 +101,7 @@ export const POST = withAuthorizedAction({ action: 'media:write' })(async (req, 
 interface ParsedMultipart {
   babyId?: string;
   entryId?: string;
+  origin?: string;
   clientUploadId?: string;
   file?: formidable.File;
 }
@@ -130,6 +135,7 @@ async function parseMultipart(req: Request): Promise<ParsedMultipart> {
       resolve({
         babyId: get('babyId'),
         entryId: get('entryId'),
+        origin: get('origin'),
         clientUploadId: get('clientUploadId'),
         file: Array.isArray(fileValue) ? fileValue[0] : fileValue
       });

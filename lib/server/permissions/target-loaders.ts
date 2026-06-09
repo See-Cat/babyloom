@@ -81,6 +81,7 @@ export async function loadAndAssertTarget<R = unknown>(
           filename: media.filename,
           takenAt: media.takenAt,
           status: media.status,
+          origin: media.origin,
           createdAt: media.createdAt,
           updatedAt: media.updatedAt,
           deletedAt: media.deletedAt,

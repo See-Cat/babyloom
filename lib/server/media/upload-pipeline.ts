@@ -31,6 +31,12 @@ export interface UploadInput {
   userId: string;
   babyId: string;
   entryId: string | null;
+  /**
+   * Provenance for orphan cleanup. 'entry_draft' media is auto-trashed by the
+   * reconcile worker if it never gets attached; 'standalone' (bulk upload) is
+   * kept indefinitely. See {@link runReconcileOnce}.
+   */
+  origin: 'standalone' | 'entry_draft';
   clientUploadId: string;
   filenameRaw: string;
   uploadedFilePath: string;
@@ -68,6 +74,7 @@ export async function runUploadPipeline(input: UploadInput): Promise<UploadOutco
       babyId: input.babyId,
       uploadedBy: input.userId,
       clientUploadId: input.clientUploadId,
+      origin: input.origin,
       status: 'pending',
       filename: sanitizeFilenameDisplay(input.filenameRaw),
       createdAt: nowMs,
@@ -140,6 +147,27 @@ export async function runUploadPipeline(input: UploadInput): Promise<UploadOutco
           .onConflictDoNothing()
           .run();
       }
+      // The returned dupe must be at least as durable as what the caller asked
+      // for. A direct entry attach OR a standalone (gallery) upload both mean
+      // "keep this photo", so graduate a dupe that merely inherited 'entry_draft'
+      // provenance from an abandoned composer upload — otherwise reconcile would
+      // trash a photo the user just successfully (re)uploaded to the gallery.
+      if (input.entryId || input.origin === 'standalone') {
+        tx.update(media)
+          .set({ origin: 'standalone', updatedAt: Date.now() })
+          .where(and(eq(media.id, dupe.id), eq(media.origin, 'entry_draft')))
+          .run();
+      } else {
+        // Plain composer re-upload (entry_draft, no entryId yet) that dedupes onto
+        // a still-draft row: restart its cleanup clock so this behaves like a fresh
+        // upload. Otherwise reconcile could reap the just-(re)uploaded media — by
+        // its OLD createdAt — out from under the open composer before it is saved.
+        const nowMs = Date.now();
+        tx.update(media)
+          .set({ createdAt: nowMs, updatedAt: nowMs })
+          .where(and(eq(media.id, dupe.id), eq(media.origin, 'entry_draft')))
+          .run();
+      }
     });
     return { kind: 'deduped', mediaId: dupe.id };
   }
@@ -201,6 +229,11 @@ export async function runUploadPipeline(input: UploadInput): Promise<UploadOutco
             attachedAt: Date.now()
           })
           .onConflictDoNothing()
+          .run();
+        // Directly-attached media is a saved gallery photo, never a draft orphan.
+        tx.update(media)
+          .set({ origin: 'standalone' })
+          .where(and(eq(media.id, mediaId), eq(media.origin, 'entry_draft')))
           .run();
       }
     });

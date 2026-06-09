@@ -5,10 +5,55 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, test } from 'vitest';
 import { getDb, resetDbForTesting } from '@/lib/server/db/client';
 import { runMigrations } from '@/lib/server/db/migrate';
-import { babies, families, media, users } from '@/lib/server/db/schema';
+import { babies, entries, entryMedia, families, media, users } from '@/lib/server/db/schema';
 import { runReconcileOnce } from '@/lib/server/media/reconcile';
 
+const HOUR_MS = 60 * 60 * 1000;
+
 let dataDir: string;
+
+function insertMedia(args: {
+  id: string;
+  babyId: string;
+  origin: 'standalone' | 'entry_draft';
+  status: string;
+  createdAt: number;
+}): void {
+  const { db } = getDb({ dataDir });
+  db.insert(media)
+    .values({
+      id: args.id,
+      babyId: args.babyId,
+      uploadedBy: 'u1',
+      clientUploadId: `c-${args.id}`,
+      origin: args.origin,
+      status: args.status,
+      filename: 'x',
+      createdAt: args.createdAt,
+      updatedAt: args.createdAt
+    })
+    .run();
+}
+
+function attachMedia(entryId: string, mediaId: string, babyId: string): void {
+  const { db } = getDb({ dataDir });
+  const now = Date.now();
+  db.insert(entries)
+    .values({
+      id: entryId,
+      babyId,
+      authorId: 'u1',
+      content: 'hi',
+      occurredAt: now,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now
+    })
+    .run();
+  db.insert(entryMedia)
+    .values({ entryId, mediaId, attachedBy: 'u1', attachedAt: now })
+    .run();
+}
 
 function seedBaby(babyId: string) {
   const { db } = getDb({ dataDir });
@@ -98,6 +143,48 @@ describe('reconcile', () => {
     writeFileSync(join(staging, 'raw.bin'), 'x');
     await runReconcileOnce({ dataDir, nowMs: Date.now() });
     expect(existsSync(staging)).toBe(false);
+  });
+
+  test('trashes an entry-draft orphan older than 24h with no entry_media', async () => {
+    seedBaby('b1');
+    const { db } = getDb({ dataDir });
+    const now = Date.now();
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 25 * HOUR_MS });
+    await runReconcileOnce({ dataDir, nowMs: now });
+    const after = db.select().from(media).where(eq(media.id, 'orphan')).get();
+    expect(after?.status).toBe('trashed');
+    expect(after?.deletedAt).toBe(now);
+  });
+
+  test('keeps a standalone (bulk-uploaded) orphan even when old and unattached', async () => {
+    seedBaby('b1');
+    const { db } = getDb({ dataDir });
+    const now = Date.now();
+    insertMedia({ id: 'bulk', babyId: 'b1', origin: 'standalone', status: 'ready', createdAt: now - 100 * HOUR_MS });
+    await runReconcileOnce({ dataDir, nowMs: now });
+    const after = db.select({ status: media.status }).from(media).where(eq(media.id, 'bulk')).get();
+    expect(after?.status).toBe('ready');
+  });
+
+  test('keeps an entry-draft media that is attached to an entry', async () => {
+    seedBaby('b1');
+    const { db } = getDb({ dataDir });
+    const now = Date.now();
+    insertMedia({ id: 'attached', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 25 * HOUR_MS });
+    attachMedia('e1', 'attached', 'b1');
+    await runReconcileOnce({ dataDir, nowMs: now });
+    const after = db.select({ status: media.status }).from(media).where(eq(media.id, 'attached')).get();
+    expect(after?.status).toBe('ready');
+  });
+
+  test('keeps a recent (<24h) entry-draft orphan', async () => {
+    seedBaby('b1');
+    const { db } = getDb({ dataDir });
+    const now = Date.now();
+    insertMedia({ id: 'recent', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 1 * HOUR_MS });
+    await runReconcileOnce({ dataDir, nowMs: now });
+    const after = db.select({ status: media.status }).from(media).where(eq(media.id, 'recent')).get();
+    expect(after?.status).toBe('ready');
   });
 
   test('keeps staging dirs whose mediaId still has a non-terminal row', async () => {

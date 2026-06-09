@@ -55,6 +55,7 @@ erDiagram
 - `deletedAt IS NOT NULL`：在垃圾桶中
 - 清空垃圾桶时物理删除行（媒体表对应的文件也由 `lib/server/trash` 一并清理）
 - 记录（entry）软删除会**级联**其附带的媒体：仅当某媒体不再挂在任何 `active` 记录上时才一并进垃圾桶，恢复记录时一并恢复（见 `lib/server/trash/entry-media-cascade.ts`）。批量补传的独立媒体（无 entry 关联）不受影响。
+- 媒体的 `origin` 字段区分来源：`'standalone'`（默认，永久画廊照片——批量补传的历史照片，或已存入某条记录的 composer 上传）与 `'entry_draft'`（composer 上传但**尚未存入任何记录**）。成功 attach 进记录、或从垃圾桶手动恢复时都会把 `entry_draft` 提升为 `standalone`（见 `app/api/entries/[id]/media/[mediaId]/attach`、`app/api/media/[id]/restore`），因此事后 detach（设计上保留在画廊）或恢复一张被兜底清理的孤儿都不会被再次误判为孤儿。后台 reconcile worker（`lib/server/media/reconcile.ts`）只把创建超过 24h、仍 `status='ready'` 且未挂任何 entry 的 `entry_draft` 媒体软删除，兜底用户中途弃稿/断网/部分 attach 失败遗留的孤儿；`standalone` 永不被自动清理。兜底按上传时间(`createdAt`)判定，无法感知「草稿仍开着」；若一张草稿存活超过阈值被误删，用户真正提交时 attach 会把这张**系统软删(`deletedBy IS NULL`)、同一上传者**的 `entry_draft` 媒体原地恢复(`ready` + 关联 + 提升 `standalone`)，避免「entry 已存、图却进了垃圾桶」。用户主动删除的媒体(`deletedBy` 非空)不会被这样复活。
 
 ## 时间戳约定
 

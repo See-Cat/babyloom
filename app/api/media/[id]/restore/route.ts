@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { resolve } from 'node:path';
 import { assertWritesAllowed } from '@/lib/server/backup/write-barrier';
 import { getDb } from '@/lib/server/db/client';
@@ -19,6 +19,7 @@ async function loadMediaForRestore(id: string) {
       babyId: media.babyId,
       uploadedBy: media.uploadedBy,
       status: media.status,
+      contentHash: media.contentHash,
       deletedBy: media.deletedBy,
       babyStatus: babies.status
     })
@@ -45,8 +46,36 @@ export const POST = withAuthorizedResource({
   assertWritesAllowed();
 
   const { db } = getDb({ dataDir });
+
+  // Restoring sets status='ready', but the same content may already live in the
+  // gallery as a ready row (e.g. the user re-uploaded the file after the backstop
+  // trashed this draft). That would violate the partial unique index
+  // (babyId, contentHash WHERE status='ready') and throw a raw 500. Detect it and
+  // return a controlled 409 instead — the trash UI surfaces a friendly message.
+  if (row.contentHash != null) {
+    const readyDup =
+      // PARENT-CHAIN-EXEMPT: dedupe lookup scoped to the already-authorized media's babyId.
+      db
+      .select({ id: media.id })
+      .from(media)
+      .where(
+        and(
+          eq(media.babyId, row.babyId),
+          eq(media.contentHash, row.contentHash),
+          eq(media.status, 'ready'),
+          ne(media.id, row.id)
+        )
+      )
+      .get();
+    if (readyDup) return Response.json({ error: 'duplicate_ready' }, { status: 409 });
+  }
+
+  // Manual restore is an explicit "keep it" signal, so graduate the row to
+  // 'standalone'. Otherwise a restored entry_draft orphan would still match the
+  // reconcile backstop (ready + entry_draft + unattached + old createdAt) and get
+  // re-trashed on the next run, making restore non-durable.
   db.update(media)
-    .set({ status: 'ready', deletedAt: null, deletedBy: null, updatedAt: Date.now() })
+    .set({ status: 'ready', origin: 'standalone', deletedAt: null, deletedBy: null, updatedAt: Date.now() })
     .where(eq(media.id, row.id))
     .run();
   return Response.json({ restored: row.id });

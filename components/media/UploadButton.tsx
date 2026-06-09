@@ -68,10 +68,16 @@ export interface UploadButtonProps {
   disabled?: boolean;
   multiple?: boolean;
   className?: string;
+  /**
+   * Provenance sent to the server. Defaults to 'standalone' (a gallery photo
+   * kept indefinitely). Entry-draft uploaders pass 'entry_draft' so an
+   * abandoned, never-attached upload gets auto-trashed by the reconcile worker.
+   */
+  origin?: 'standalone' | 'entry_draft';
   renderTrigger?: (args: { click: () => void; busy: boolean }) => React.ReactNode;
 }
 
-export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className, renderTrigger }: UploadButtonProps) {
+export function UploadButton({ babyId, onUploaded, disabled, multiple = true, className, origin = 'standalone', renderTrigger }: UploadButtonProps) {
   const toast = useToast();
   const inputRef = React.useRef<HTMLInputElement>(null);
   // Count overlapping batches so "busy" stays true while any are in flight,
@@ -85,6 +91,7 @@ export function UploadButton({ babyId, onUploaded, disabled, multiple = true, cl
       const form = new FormData();
       form.append('babyId', babyId);
       form.append('clientUploadId', uploadId);
+      form.append('origin', origin);
       form.append('file', file);
       const res = await fetch('/api/media/upload', { method: 'POST', body: form });
       if (!res.ok) {

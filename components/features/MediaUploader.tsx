@@ -84,6 +84,7 @@ export function MediaUploader({ babyId, disabled, onRemove, onUploaded, uploaded
         <li className="aspect-square">
           <UploadButton
             babyId={babyId}
+            origin="entry_draft"
             onUploaded={onUploaded}
             disabled={disabled}
             renderTrigger={({ click }) => (

@@ -211,6 +211,14 @@ export const media = sqliteTable(
     filename: text('filename').notNull(),
     takenAt: integer('taken_at'),
     status: text('status').notNull(),
+    // Provenance for orphan cleanup. 'standalone' (default) = a permanent
+    // gallery photo (bulk-uploaded history, OR a composer upload that has been
+    // saved to an entry — see the attach route, which promotes it); never
+    // auto-trashed. 'entry_draft' = a composer upload not yet saved to any
+    // entry; if it stays unattached past the cutoff the reconcile worker
+    // trashes it. The marker is promoted on attach, so a later detach (which
+    // keeps the photo in the gallery) can't make it look like an orphan again.
+    origin: text('origin').notNull().default('standalone'),
     createdAt: integer('created_at').notNull(),
     updatedAt: integer('updated_at').notNull(),
     deletedAt: integer('deleted_at'),
