@@ -22,7 +22,8 @@ export const ACTIONS = [
   'family:manage',
   'milestone:manage',
   'system:logs',
-  'system:backup'
+  'system:backup',
+  'system:settings'
 ] as const;
 
 export type Action = (typeof ACTIONS)[number];

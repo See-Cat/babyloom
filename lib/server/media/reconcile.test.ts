@@ -2,11 +2,18 @@ import { eq } from 'drizzle-orm';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { getDb, resetDbForTesting } from '@/lib/server/db/client';
 import { runMigrations } from '@/lib/server/db/migrate';
 import { babies, entries, entryMedia, families, media, users } from '@/lib/server/db/schema';
 import { runReconcileOnce } from '@/lib/server/media/reconcile';
+import { setBackupInProgress } from '@/lib/server/backup/write-barrier';
+import * as cleanupModule from '@/lib/server/settings/cleanup';
+import {
+  getCleanupSettings,
+  recordCleanupRun,
+  updateCleanupSettings
+} from '@/lib/server/settings/cleanup';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -206,5 +213,209 @@ describe('reconcile', () => {
     mkdirSync(staging, { recursive: true });
     await runReconcileOnce({ dataDir, nowMs: Date.now() });
     expect(existsSync(staging)).toBe(true);
+  });
+});
+
+describe('reconcile settings integration', () => {
+  function statusOf(id: string): string | undefined {
+    const { db } = getDb({ dataDir });
+    return db.select({ status: media.status }).from(media).where(eq(media.id, id)).get()?.status;
+  }
+
+  test('with cleanup disabled, an old orphan is NOT trashed but hygiene still runs', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, enabled: false, nowMs: now });
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+    insertMedia({ id: 'stuck', babyId: 'b1', origin: 'standalone', status: 'pending', createdAt: now - 2 * HOUR_MS });
+    const staging = join(dataDir, 'media', '_staging', 'gone');
+    mkdirSync(staging, { recursive: true });
+
+    await runReconcileOnce({ dataDir, nowMs: now });
+
+    expect(statusOf('orphan')).toBe('ready'); // cleanup skipped
+    expect(statusOf('stuck')).toBe('failed'); // hygiene still runs
+    expect(existsSync(staging)).toBe(false); // staging GC still runs
+  });
+
+  test('with cleanup enabled, an old orphan is trashed', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, enabled: true, nowMs: now });
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now });
+
+    expect(statusOf('orphan')).toBe('trashed');
+  });
+
+  test('uses the configured threshold: 72h keeps a 30h-old orphan', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, thresholdHours: 72, nowMs: now });
+    insertMedia({ id: 'young', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 30 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now });
+
+    expect(statusOf('young')).toBe('ready');
+  });
+
+  test('uses the configured threshold: 24h trashes an older orphan', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, thresholdHours: 24, nowMs: now });
+    insertMedia({ id: 'old', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 30 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now });
+
+    expect(statusOf('old')).toBe('trashed');
+  });
+
+  test('records lastRunAt + lastRunDeleted after a run that performs cleanup', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'o1', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+    insertMedia({ id: 'o2', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now });
+
+    const s = getCleanupSettings({ dataDir });
+    expect(s.lastRunAt).toBe(now);
+    expect(s.lastRunDeleted).toBe(2);
+  });
+
+  test('manual mode trashes eligible orphans even when the DB enabled flag is OFF', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, enabled: false, nowMs: now });
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'manual' });
+
+    expect(statusOf('orphan')).toBe('trashed');
+  });
+
+  test('scheduled mode with the DB enabled flag OFF does not trash', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    updateCleanupSettings({ dataDir, enabled: false, nowMs: now });
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'scheduled' });
+
+    expect(statusOf('orphan')).toBe('ready');
+  });
+
+  // The owner's "立即清理" (manual) is scoped to the orphan-draft cleanup the panel
+  // describes; the internal hygiene (stuck-pending recovery + staging GC) is a
+  // background concern that runs only on the scheduled tick. This keeps a manual
+  // run from touching another member's still-processing upload + its staging dir.
+  test('manual mode does NOT run hygiene: a >1h processing upload and its staging are left intact', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'inflight', babyId: 'b1', origin: 'entry_draft', status: 'processing', createdAt: now - 2 * HOUR_MS });
+    const staging = join(dataDir, 'media', '_staging', 'inflight');
+    mkdirSync(staging, { recursive: true });
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'manual' });
+
+    expect(statusOf('inflight')).toBe('processing'); // not recovered to failed
+    expect(existsSync(staging)).toBe(true); // staging not purged
+    expect(statusOf('orphan')).toBe('trashed'); // orphan cleanup still runs
+  });
+
+  test('scheduled mode still runs hygiene on the same fixture', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'inflight', babyId: 'b1', origin: 'entry_draft', status: 'processing', createdAt: now - 2 * HOUR_MS });
+    const staging = join(dataDir, 'media', '_staging', 'inflight');
+    mkdirSync(staging, { recursive: true });
+
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'scheduled' });
+
+    expect(statusOf('inflight')).toBe('failed'); // stuck-pending recovery
+    expect(existsSync(staging)).toBe(false); // staging GC purges the now-failed row
+  });
+
+  // "Trash N media" and "record that we trashed N" must be atomic — otherwise a
+  // run-stat write failure after the soft-delete leaves media trashed with stats
+  // that never reflect it, and a retry overwrites the count with 0.
+  test('orphan trashing rolls back if the run-stat write fails', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    const spy = vi.spyOn(cleanupModule, 'recordCleanupRun').mockImplementation(() => {
+      throw new Error('simulated stats write failure');
+    });
+    try {
+      await expect(runReconcileOnce({ dataDir, nowMs: now })).rejects.toThrow();
+      expect(statusOf('orphan')).toBe('ready'); // soft-delete rolled back, not committed
+      expect(getCleanupSettings({ dataDir }).lastRunAt).toBeNull(); // no partial stat write
+    } finally {
+      spy.mockRestore();
+    }
+  });
+});
+
+describe('reconcile primitive-level hard guards', () => {
+  afterEach(() => {
+    setBackupInProgress(false);
+    delete process.env.BABYLOOM_DISABLE_MEDIA_RECONCILE;
+  });
+
+  function statusOf(id: string): string | undefined {
+    const { db } = getDb({ dataDir });
+    return db.select({ status: media.status }).from(media).where(eq(media.id, id)).get()?.status;
+  }
+
+  test('during a backup: no DB writes and no staging removals', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+    insertMedia({ id: 'stuck', babyId: 'b1', origin: 'standalone', status: 'pending', createdAt: now - 2 * HOUR_MS });
+    recordCleanupRun({ dataDir, runAtMs: 111, deletedCount: 9 });
+    const staging = join(dataDir, 'media', '_staging', 'gone');
+    mkdirSync(staging, { recursive: true });
+
+    setBackupInProgress(true);
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'manual' });
+
+    expect(statusOf('orphan')).toBe('ready'); // no orphan cleanup
+    expect(statusOf('stuck')).toBe('pending'); // no hygiene write
+    expect(existsSync(staging)).toBe(true); // no staging removal
+    const s = getCleanupSettings({ dataDir });
+    expect(s.lastRunAt).toBe(111); // run-stat untouched
+    expect(s.lastRunDeleted).toBe(9);
+  });
+
+  test('with the env kill-switch set: no-op even in manual mode', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+    const staging = join(dataDir, 'media', '_staging', 'gone');
+    mkdirSync(staging, { recursive: true });
+
+    process.env.BABYLOOM_DISABLE_MEDIA_RECONCILE = '1';
+    await runReconcileOnce({ dataDir, nowMs: now, mode: 'manual' });
+
+    expect(statusOf('orphan')).toBe('ready');
+    expect(existsSync(staging)).toBe(true);
+    expect(getCleanupSettings({ dataDir }).lastRunAt).toBeNull();
+  });
+
+  test('a later run behaves normally once the guards clear', async () => {
+    seedBaby('b1');
+    const now = Date.now();
+    insertMedia({ id: 'orphan', babyId: 'b1', origin: 'entry_draft', status: 'ready', createdAt: now - 50 * HOUR_MS });
+
+    setBackupInProgress(true);
+    await runReconcileOnce({ dataDir, nowMs: now });
+    expect(statusOf('orphan')).toBe('ready');
+
+    setBackupInProgress(false);
+    await runReconcileOnce({ dataDir, nowMs: now });
+    expect(statusOf('orphan')).toBe('trashed');
   });
 });

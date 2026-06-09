@@ -101,9 +101,9 @@ pnpm typecheck    # TypeScript 类型检查
 pnpm test         # Vitest 单元/集成测试
 pnpm test:e2e     # Playwright 端到端测试
 pnpm build:icons  # 重新生成 PWA 图标
-pnpm db:generate  # 根据 schema 生成 Drizzle migration
-pnpm db:migrate   # 执行数据库迁移
 ```
+
+> 注意：`db:generate` / `db:migrate` 脚本仍指向已失效的旧路径 `lib/db/`，当前无法直接使用；迁移改为在 `lib/server/db/migrations/` 手写、并由应用启动时自动应用。详见 [docs/database.md](docs/database.md#迁移工作流)。
 
 ## Docker 部署
 

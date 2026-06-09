@@ -106,10 +106,17 @@ The reconcile worker SHALL record, after each run that performs orphan cleanup, 
 
 The system SHALL let the owner trigger a single cleanup pass on demand. A manual run SHALL execute regardless of the stored enabled flag (it is an explicit owner action) and SHALL update the run statistics. A manual run SHALL still respect the higher-tier guards: the env kill-switch (see "Environment kill-switch precedence") and the backup write barrier (see "Mutating endpoints honor the backup write barrier").
 
+A manual run SHALL be scoped to the orphan-draft cleanup ONLY — the action the owner panel advertises. The internal hygiene (recovering stuck `pending`/`processing` media to `failed`, and garbage-collecting staging directories) is background work reserved for the scheduled worker and SHALL NOT run during a manual run, so the owner-triggered button cannot recover or purge another member's still-in-progress upload and its staging files.
+
 #### Scenario: Owner runs cleanup on demand while the DB flag is off
 
 - **WHEN** the stored enabled flag is off (but the env kill-switch is not set and no backup is in progress) and the owner triggers a manual run
 - **THEN** the system performs one cleanup pass and updates the run statistics
+
+#### Scenario: Manual run does not touch in-progress uploads
+
+- **WHEN** a media row has been `processing` for longer than the stuck-pending cutoff (and has a staging directory) and the owner triggers a manual run
+- **THEN** the manual run trashes eligible orphan drafts but leaves that `processing` media unchanged and its staging directory intact (stuck-pending recovery and staging GC run only on the scheduled tick)
 
 ### Requirement: Eligible-orphan preview
 

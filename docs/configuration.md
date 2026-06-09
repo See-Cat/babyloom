@@ -67,6 +67,7 @@ chmod 600 data/config.yaml
 | `BABYLOOM_DATA_DIR` | 项目根 `data/` | 数据目录（包含 `config.yaml`、`db/`、`media/`、`logs/`） |
 | `NODE_ENV` | 由 Next.js 决定 | 标准 Next.js 行为 |
 | `PORT` | `3000` | Next.js 监听端口 |
+| `BABYLOOM_DISABLE_MEDIA_RECONCILE` | 未设置 | 设为 `1` 时**硬关闭**孤儿媒体清理：worker 不启动，且所有清理入口（含 owner 的「立即清理」）一律空操作。这是运维级总开关，**优先级高于** owner 在 UI 里的运行时开关（见下）。 |
 
 ## 安全清单
 
@@ -82,5 +83,8 @@ chmod 600 data/config.yaml
 |---|---|
 | owner.* / family.name | 重启进程 |
 | app.* / log.* / media.* | 重启进程 |
+| 媒体清理开关 / 阈值（owner 在 `/profile/cleanup` 修改） | **立即生效，无需重启**（运行时设置，存于数据库 `app_settings`） |
 
 容器部署可直接 `pnpm docker:up` 重新拉起，或 `docker compose restart`。
+
+> 媒体清理的优先级从高到低：环境变量 `BABYLOOM_DISABLE_MEDIA_RECONCILE`（运维硬关闭，覆盖一切）→ owner 在 UI 的运行时开关 → 「立即清理」（手动运行无视运行时开关，但仍受环境变量与备份写屏障约束）。默认值（开启 / 24h 阈值）与历史硬编码行为一致，升级无感。清理只软删除到回收站，可恢复，不暴露任何硬删除选项。

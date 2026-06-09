@@ -234,6 +234,20 @@ export const media = sqliteTable(
   })
 );
 
+// Single-row runtime app settings (the project's first DB-backed, UI-editable
+// configuration). The row uses a constant primary key so there is at most one.
+// It has two independent writers — owner config (enabled/threshold) and the
+// reconcile worker (run-stats) — and on an upgraded install no row exists yet,
+// so all writes go through a column-isolated upsert (see lib/server/settings/).
+export const appSettings = sqliteTable('app_settings', {
+  id: text('id').primaryKey(),
+  mediaCleanupEnabled: integer('media_cleanup_enabled').notNull().default(1),
+  mediaCleanupThresholdHours: integer('media_cleanup_threshold_hours').notNull().default(24),
+  mediaCleanupLastRunAt: integer('media_cleanup_last_run_at'),
+  mediaCleanupLastRunDeleted: integer('media_cleanup_last_run_deleted').notNull().default(0),
+  updatedAt: integer('updated_at').notNull()
+});
+
 export const entryMedia = sqliteTable(
   'entry_media',
   {

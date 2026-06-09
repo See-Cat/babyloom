@@ -24,7 +24,8 @@ export const OWNER_ONLY_ACTIONS = new Set<Action>([
   'family:manage',
   'milestone:manage',
   'system:logs',
-  'system:backup'
+  'system:backup',
+  'system:settings'
 ]);
 
 // Map an Action to the (canRead | canWrite | canDelete) bit it needs against baby_member_permissions.

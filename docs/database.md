@@ -23,6 +23,7 @@ Babyloom 使用 SQLite + [Drizzle ORM](https://orm.drizzle.team/)。schema 定�
 | `entryMilestones` | entry ↔ milestone 关联 |
 | `media` | 媒体（图片 / 视频） + 变体与封面记录 |
 | `entryMedia` | entry ↔ media 关联 |
+| `app_settings` | 单行运行时设置（owner 可在 UI 修改、无需重启）；目前承载媒体清理的开关 / 阈值 / 运行统计 |
 
 字段类型、约束、索引以 schema 文件为准。
 
@@ -55,7 +56,7 @@ erDiagram
 - `deletedAt IS NOT NULL`：在垃圾桶中
 - 清空垃圾桶时物理删除行（媒体表对应的文件也由 `lib/server/trash` 一并清理）
 - 记录（entry）软删除会**级联**其附带的媒体：仅当某媒体不再挂在任何 `active` 记录上时才一并进垃圾桶，恢复记录时一并恢复（见 `lib/server/trash/entry-media-cascade.ts`）。批量补传的独立媒体（无 entry 关联）不受影响。
-- 媒体的 `origin` 字段区分来源：`'standalone'`（默认，永久画廊照片——批量补传的历史照片，或已存入某条记录的 composer 上传）与 `'entry_draft'`（composer 上传但**尚未存入任何记录**）。成功 attach 进记录、或从垃圾桶手动恢复时都会把 `entry_draft` 提升为 `standalone`（见 `app/api/entries/[id]/media/[mediaId]/attach`、`app/api/media/[id]/restore`），因此事后 detach（设计上保留在画廊）或恢复一张被兜底清理的孤儿都不会被再次误判为孤儿。后台 reconcile worker（`lib/server/media/reconcile.ts`）只把创建超过 24h、仍 `status='ready'` 且未挂任何 entry 的 `entry_draft` 媒体软删除，兜底用户中途弃稿/断网/部分 attach 失败遗留的孤儿；`standalone` 永不被自动清理。兜底按上传时间(`createdAt`)判定，无法感知「草稿仍开着」；若一张草稿存活超过阈值被误删，用户真正提交时 attach 会把这张**系统软删(`deletedBy IS NULL`)、同一上传者**的 `entry_draft` 媒体原地恢复(`ready` + 关联 + 提升 `standalone`)，避免「entry 已存、图却进了垃圾桶」。用户主动删除的媒体(`deletedBy` 非空)不会被这样复活。
+- 媒体的 `origin` 字段区分来源：`'standalone'`（默认，永久画廊照片——批量补传的历史照片，或已存入某条记录的 composer 上传）与 `'entry_draft'`（composer 上传但**尚未存入任何记录**）。成功 attach 进记录、或从垃圾桶手动恢复时都会把 `entry_draft` 提升为 `standalone`（见 `app/api/entries/[id]/media/[mediaId]/attach`、`app/api/media/[id]/restore`），因此事后 detach（设计上保留在画廊）或恢复一张被兜底清理的孤儿都不会被再次误判为孤儿。后台 reconcile worker（`lib/server/media/reconcile.ts`）只把创建超过阈值、仍 `status='ready'` 且未挂任何 entry 的 `entry_draft` 媒体软删除，兜底用户中途弃稿/断网/部分 attach 失败遗留的孤儿；`standalone` 永不被自动清理。该清理的开关与阈值由 owner 在运行时设置（`app_settings`，见下文「运行时设置」）控制，默认开启、阈值 24h（与历史硬编码行为一致）。兜底按上传时间(`createdAt`)判定，无法感知「草稿仍开着」；若一张草稿存活超过阈值被误删，用户真正提交时 attach 会把这张**系统软删(`deletedBy IS NULL`)、同一上传者**的 `entry_draft` 媒体原地恢复(`ready` + 关联 + 提升 `standalone`)，避免「entry 已存、图却进了垃圾桶」。用户主动删除的媒体(`deletedBy` 非空)不会被这样复活。
 
 ## 时间戳约定
 
@@ -65,17 +66,19 @@ erDiagram
 
 ## 迁移工作流
 
+> ⚠️ 注意：`drizzle.config.ts` 与 `package.json` 的 `db:generate` / `db:migrate` 脚本仍指向**已失效的旧路径** `lib/db/`（`schema: './lib/db/schema.ts'`、`tsx lib/db/migrate.ts`），而真实文件早已搬到 `lib/server/db/`。因此这两个 CLI 命令**当前无法直接使用**。在修好这些配置之前，迁移按下面的方式**手写**。
+
 修改 `lib/server/db/schema.ts` 之后：
 
-```bash
-pnpm db:generate    # 由 schema diff 生成新的 SQL 迁移文件
-pnpm db:migrate     # 应用迁移到当前数据库
-```
+1. 在 `lib/server/db/migrations/` 手写新的 SQL 迁移文件（编号接续上一条，如 `0005_xxx.sql`），并在 `lib/server/db/migrations/meta/_journal.json` 追加对应条目——照搬最近一条迁移的写法即可。
+2. 无需手动执行迁移：应用启动时会通过 `lib/server/db/migrate.ts` 自动应用所有待执行的迁移（见 [architecture.md](./architecture.md#启动初始化)），开发与生产都如此。
 
-应用启动时也会自动应用待执行的迁移（见 [architecture.md](./architecture.md#启动初始化)），所以生产环境不需要手动执行 `db:migrate`。
-
-提交时同时提交 `lib/server/db/schema.ts` 和新生成的 migration SQL。
+提交时同时提交 `lib/server/db/schema.ts`、新增的 migration SQL 与 `_journal.json` 改动。
 
 ## 配置文件 vs 数据库
 
 owner 的用户名 / 密码 / 昵称由 `data/config.yaml` 持有，应用启动时把它"打入"数据库的 `user` 表。要修改 owner 凭据，**改 yaml 后重启**，不要直接改数据库。家庭名称 (`family.name`) 同理。其它实体（成员、宝宝、记录等）都是普通业务数据，只在数据库中维护。
+
+## 运行时设置（app_settings）
+
+`app_settings` 是本项目第一张**运行时、UI 可改**的配置表：用固定主键的单行存储，owner 在 `/profile/cleanup` 修改后**立即生效、无需重启**（与需要改文件+重启的 `config.yaml` 互补）。读写集中在 `lib/server/settings/cleanup.ts`：读取在行缺失时回退到安全默认（开启 / 24h），写入走单条**列隔离** upsert（`INSERT ... ON CONFLICT(id) DO UPDATE SET <仅本写入方的列>`），因为同一行有两个独立写入方——owner 配置（开关 / 阈值）与 worker 运行统计（上次运行时间 / 删除数）——且升级安装时该行尚不存在，任一方都可能是首个写入方，列隔离避免互相覆盖。阈值在写入时校验范围（6–720h）。字段以 schema 为准。

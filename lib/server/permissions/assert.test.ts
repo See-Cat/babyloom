@@ -251,6 +251,19 @@ describe('assertPermission §5.4 matrix', () => {
     ).resolves.toBeUndefined();
   });
 
+  it('system:settings is owner-only — owner allowed, member denied', async () => {
+    const { assertPermission } = await import('@/lib/server/permissions/assert');
+    await expect(
+      assertPermission(ctx.ownerId, 'system:settings', undefined, { dataDir })
+    ).resolves.toBeUndefined();
+    await expect(
+      assertPermission(ctx.editorId, 'system:settings', undefined, { dataDir })
+    ).rejects.toThrow(/owner_only/);
+    await expect(
+      assertPermission(ctx.viewerId, 'system:settings', undefined, { dataDir })
+    ).rejects.toThrow(/owner_only/);
+  });
+
   it('non-family user is denied for any action', async () => {
     const { assertPermission } = await import('@/lib/server/permissions/assert');
     const strangerId = randomUUID();

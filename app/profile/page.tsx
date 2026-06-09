@@ -105,6 +105,7 @@ export default async function ProfilePage() {
   if (canUseTrash) otherLinks.push({ href: '/profile/trash', label: '回收站', icon: 'trash', meta: countMeta(trashCount, '条') });
   if (canBulkUpload) otherLinks.push({ href: '/profile/bulk-upload', label: '批量补传历史照片', icon: 'upload' });
   if (isOwner) otherLinks.push({ href: '/profile/data', label: '数据导出 / 备份', icon: 'download' });
+  if (isOwner) otherLinks.push({ href: '/profile/cleanup', label: '媒体清理', icon: 'shield' });
 
   return (
     <AppShell title="我的" rightSlot={<InstallChip />}>

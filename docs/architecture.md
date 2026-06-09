@@ -104,6 +104,12 @@ owner 在 `/profile/data` 触发后，`lib/server/backup` 将 SQLite 快照（`s
 
 宝宝、记录、媒体的删除都是软删除：标记删除时间但保留记录。垃圾桶视图列出软删除项，支持恢复或清空。清空时才物理删除媒体文件与数据库行。删除记录会级联其专属媒体（仅挂在该记录上的照片一并进垃圾桶 / 恢复），见 [database.md](./database.md)。
 
+### 孤儿媒体清理（owner 可控）
+
+后台 reconcile worker（`lib/server/media/reconcile.ts`，由 `instrumentation.node.ts` 按 24h 周期启动）做三件事：恢复卡住的 `pending`/`processing` 媒体、回收 `_staging/` 目录、以及软删除超期未保存的 `entry_draft` 孤儿草稿。前两者是内部卫生，是**后台职责、只在定时 tick 运行**（不受 owner 开关影响）；孤儿清理则由 owner 在 `/profile/cleanup` 控制——开关与阈值是**运行时设置**（数据库 `app_settings`，见 [database.md](./database.md#运行时设置app_settings)），改完立即生效。
+
+`runReconcileOnce({ mode })` 是唯一的清理原语，所有入口（周期 tick、owner「立即清理」、未来任何调用方）都经过它，因此两道最高优先级护栏在原语顶部统一强制、不靠调用方自觉：备份写屏障（`isBackupInProgress()` 时整跳过该 tick）与环境变量 `BABYLOOM_DISABLE_MEDIA_RECONCILE`（设为 `1` 时空操作）。优先级与默认值见 [configuration.md](./configuration.md#修改后的生效方式)。owner 的「立即清理」走 `mode: 'manual'`，**只做孤儿草稿清理这一项**（面板宣称的动作）——它绕过 owner 开关但**不触发**内部卫生，因此用户手点不会把别人**仍在处理中**的上传连同其 staging 目录一并回收（卫生只留给定时 tick）。owner 专用 API 在 `app/api/settings/media-cleanup/`（读 / 写设置、立即运行、待清理数预览），均走 `system:settings` owner-only 鉴权；写入端点额外受备份写屏障约束。清理始终软删除到回收站，可恢复。
+
 ## 离线策略
 
 Serwist 生成的 service worker（构建输出到 `public/sw.js`）提供：
