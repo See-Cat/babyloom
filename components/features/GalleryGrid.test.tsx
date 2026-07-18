@@ -30,6 +30,8 @@ describe('GalleryGrid', () => {
     expect(html).toContain('2026 年 5 月');
     expect(html).toContain('2 张');
     expect(html).toContain('sticky top-0');
+    expect(html).toContain('z-[calc(var(--z-tabbar)-1)]');
+    expect(html).not.toContain('z-[var(--z-sticky)]');
     // Tiles always open the in-page viewer regardless of entry attachment;
     // the link to /entry/[id] now lives inside the viewer ("查看这条记录").
     expect(html).not.toContain('href="/entry/entry-1"');
