@@ -58,9 +58,9 @@ export function CalendarDayPreview({
       </div>
 
       {entries.length > 0 ? (
-        <ul className="grid gap-[var(--space-3)]">
+        <ul className="grid min-w-0 gap-[var(--space-3)]">
           {entries.map((entry, index) => (
-            <li key={entry.id}>
+            <li key={entry.id} className="min-w-0">
               <TimelineCard
                 entry={{ id: entry.id, content: entry.content, occurredAt: entry.occurredAt }}
                 authorName={entry.authorName ?? '家人'}
