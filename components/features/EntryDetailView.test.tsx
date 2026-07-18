@@ -27,6 +27,7 @@ describe('EntryDetailView', () => {
           babyBirthday="2025-02-01"
           authorName="妈妈"
           authorImage={null}
+          authorAvatarColor="blue"
           milestoneNames={['第一次站立']}
           mediaItems={[{ id: 'media-1', type: 'photo' }]}
           canEdit
@@ -39,6 +40,7 @@ describe('EntryDetailView', () => {
     expect(html).toContain('今天第一次自己扶着沙发站起来。');
     expect(html).toContain('第一次站立');
     expect(html).toContain('妈妈');
+    expect(html).toContain('data-color="blue"');
     expect(html).not.toContain('<h1');
   });
 });

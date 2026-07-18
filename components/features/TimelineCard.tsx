@@ -11,6 +11,7 @@ import { useTimezone, useRenderNow } from '@/components/system/TimezoneProvider'
 import { formatRelativeDateTime } from '@/lib/shared/format-time';
 import type { MediaItem } from '@/lib/server/media/types';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 export interface TimelineCardProps {
   entry: {
@@ -20,6 +21,7 @@ export interface TimelineCardProps {
   };
   authorName?: string | null;
   authorImage?: string | null;
+  authorAvatarColor?: AvatarColor | null;
   mediaItems?: MediaItem[];
   milestoneNames?: string[];
   animationDelayMs?: number;
@@ -29,6 +31,7 @@ export function TimelineCard({
   entry,
   authorName = '未知',
   authorImage,
+  authorAvatarColor,
   mediaItems = [],
   milestoneNames = [],
   animationDelayMs
@@ -59,6 +62,7 @@ export function TimelineCard({
             src={authorImage ?? undefined}
             name={authorName ?? '未知'}
             alt={authorName ?? '未知'}
+            color={authorAvatarColor ?? undefined}
             size="sm"
           />
           <div>

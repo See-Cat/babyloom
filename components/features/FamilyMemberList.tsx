@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Avatar } from '@/components/ui/Avatar';
 import { cn } from '@/lib/shared/cn';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 export interface FamilyMemberBabyPermission {
   babyId: string;
@@ -17,6 +18,7 @@ export interface FamilyMemberListItem {
   userId: string;
   username: string;
   nickname: string;
+  avatarColor: AvatarColor | null;
   role: 'owner' | 'member';
   babyPermissions: FamilyMemberBabyPermission[];
 }
@@ -47,7 +49,11 @@ export function FamilyMemberList({
           <li key={member.memberId}>
             <Card>
               <div className="flex items-start gap-[var(--space-3)]">
-                <Avatar name={member.nickname} size="lg" className="bg-[var(--color-avatar-blue)]" />
+                <Avatar
+                  name={member.nickname}
+                  color={member.avatarColor ?? undefined}
+                  size="lg"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-bold text-[color:var(--color-fg-strong)]">{member.nickname}</p>
                   <p className="truncate text-[length:var(--text-xs)] text-[color:var(--color-muted)]">

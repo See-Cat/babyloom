@@ -1,6 +1,7 @@
 import * as React from 'react';
 import type { HTMLAttributes } from 'react';
 import { cn } from '@/lib/shared/cn';
+import { AVATAR_COLORS, type AvatarColor } from '@/lib/shared/avatar-colors';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -10,6 +11,7 @@ export interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
   name: string;
   size?: AvatarSize;
   colorKey?: string;
+  color?: AvatarColor;
 }
 
 export interface AvatarGroupProps extends HTMLAttributes<HTMLDivElement> {
@@ -26,20 +28,9 @@ const sizeClass: Record<AvatarSize, string> = {
   xl: 'ava-xl'
 };
 
-const palette = [
-  'pink',
-  'blue',
-  'yellow',
-  'mint',
-  'peach',
-  'teal',
-  'purple',
-  'green'
-];
-
-export function Avatar({ src, alt, name, size = 'md', colorKey, className, style, ...rest }: AvatarProps) {
+export function Avatar({ src, alt, name, size = 'md', colorKey, color, className, style, ...rest }: AvatarProps) {
   const fallback = initialFor(name);
-  const avatarColor = palette[hashString(colorKey ?? name) % palette.length];
+  const avatarColor = color ?? AVATAR_COLORS[hashString(colorKey ?? name) % AVATAR_COLORS.length];
 
   return (
     <span

@@ -24,6 +24,7 @@ describe('CalendarDayPreview', () => {
             occurredAt: Date.UTC(2026, 4, 24, 8, 30),
             authorName: '妈妈',
             authorImage: null,
+            authorAvatarColor: 'blue',
             mediaItems: []
           }
         ]}
@@ -37,6 +38,7 @@ describe('CalendarDayPreview', () => {
     expect(html).toContain('星期日');
     expect(html).toContain('今天');
     expect(html).toContain('1 条记录');
+    expect(html).toContain('data-color="blue"');
   });
 
   it('renders empty-day state with sprout emoji and add-record CTA', () => {

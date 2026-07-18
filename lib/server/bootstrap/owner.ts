@@ -4,6 +4,7 @@ import { getDb } from '@/lib/server/db/client';
 import { users, accounts, families, familyMembers } from '@/lib/server/db/schema';
 import { loadConfig } from '@/lib/server/config/load';
 import { seedDefaultMilestones } from './default-milestones';
+import { assignMissingFamilyAvatarColors } from '@/lib/server/members/avatar-color';
 
 export interface BootstrapOwnerOptions {
   dataDir: string;
@@ -154,6 +155,8 @@ export async function bootstrapOwner(opts: BootstrapOwnerOptions): Promise<void>
       .where(eq(familyMembers.id, existingMember[0].id))
       .run();
   }
+
+  assignMissingFamilyAvatarColors(db, familyId);
 
   seedDefaultMilestones(db, familyId);
 }

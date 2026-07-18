@@ -14,6 +14,7 @@ import { useTimezone } from '@/components/system/TimezoneProvider';
 import { formatLongDateTime } from '@/lib/shared/format-time';
 import { babyAge, formatBabyAgeShort } from '@/lib/shared/baby-age';
 import { milestoneTagStyle } from '@/lib/shared/milestone-tint';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 interface EntryDetailViewProps {
   entry: {
@@ -27,6 +28,7 @@ interface EntryDetailViewProps {
   babyBirthday?: string | null;
   authorName?: string | null;
   authorImage?: string | null;
+  authorAvatarColor?: AvatarColor | null;
   milestoneNames: string[];
   mediaItems: MediaItem[];
   canEdit: boolean;
@@ -37,6 +39,7 @@ export function EntryDetailView({
   babyBirthday,
   authorName,
   authorImage,
+  authorAvatarColor,
   milestoneNames,
   mediaItems,
   canEdit
@@ -153,6 +156,7 @@ export function EntryDetailView({
             src={authorImage ?? undefined}
             name={authorName ?? '未知'}
             alt={authorName ?? '未知'}
+            color={authorAvatarColor ?? undefined}
             size="sm"
           />
           <div>

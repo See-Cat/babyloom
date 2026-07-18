@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { ChevronLeftIcon, PlusIcon } from '@/components/ui/icons';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 interface InitialBaby {
   id: string;
@@ -34,6 +35,7 @@ interface ApiMember {
   userId: string;
   username: string;
   nickname: string;
+  avatarColor: AvatarColor | null;
   role: 'owner' | 'member';
   joinedAt: number;
   babyPermissions: FamilyMemberBabyPermission[];
@@ -185,6 +187,7 @@ export default function MembersAdminPage({
     userId: m.userId,
     username: m.username,
     nickname: m.nickname,
+    avatarColor: m.avatarColor,
     role: m.role,
     babyPermissions: m.babyPermissions
   }));
