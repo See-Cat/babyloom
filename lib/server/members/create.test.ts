@@ -74,6 +74,49 @@ describe('createMember', () => {
     expect(m?.familyId).toBe(familyId);
   });
 
+  it('uses every avatar color once before reusing a color in the same family', async () => {
+    const { createMember } = await import('@/lib/server/members/create');
+    const { getDb } = await import('@/lib/server/db/client');
+    const { raw } = getDb({ dataDir });
+    const palette = ['pink', 'blue', 'yellow', 'mint', 'peach', 'teal', 'purple', 'green'];
+
+    for (let index = 1; index <= 7; index += 1) {
+      await createMember({
+        dataDir,
+        familyId,
+        username: `member-${index}`,
+        password: 'member-password',
+        nickname: `Member ${index}`,
+        role: 'member'
+      });
+    }
+
+    const firstEight = raw
+      .prepare(`
+        SELECT u.avatar_color AS avatarColor
+        FROM user u
+        INNER JOIN family_members fm ON fm.user_id = u.id
+        WHERE fm.family_id = ?
+      `)
+      .all(familyId) as { avatarColor: string | null }[];
+    expect(firstEight).toHaveLength(8);
+    expect(new Set(firstEight.map((row) => row.avatarColor)).size).toBe(8);
+    expect(firstEight.every((row) => row.avatarColor && palette.includes(row.avatarColor))).toBe(true);
+
+    await createMember({
+      dataDir,
+      familyId,
+      username: 'member-8',
+      password: 'member-password',
+      nickname: 'Member 8',
+      role: 'member'
+    });
+    const ninth = raw
+      .prepare('SELECT avatar_color AS avatarColor FROM user WHERE username = ?')
+      .get('member-8') as { avatarColor: string | null };
+    expect(palette).toContain(ninth.avatarColor);
+  });
+
   it('rejects duplicate username', async () => {
     const { createMember } = await import('@/lib/server/members/create');
     await createMember({

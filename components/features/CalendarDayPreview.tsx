@@ -4,6 +4,7 @@ import { TimelineCard } from '@/components/features/TimelineCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { PlusIcon } from '@/components/ui/icons';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 import type { MediaItem } from '@/lib/server/media/types';
 
 export interface CalendarPreviewEntry {
@@ -12,6 +13,7 @@ export interface CalendarPreviewEntry {
   occurredAt: number;
   authorName: string | null;
   authorImage: string | null;
+  authorAvatarColor: AvatarColor | null;
   mediaItems: MediaItem[];
   milestoneNames?: string[];
 }
@@ -65,6 +67,7 @@ export function CalendarDayPreview({
                 entry={{ id: entry.id, content: entry.content, occurredAt: entry.occurredAt }}
                 authorName={entry.authorName ?? '家人'}
                 authorImage={entry.authorImage}
+                authorAvatarColor={entry.authorAvatarColor}
                 mediaItems={entry.mediaItems}
                 milestoneNames={entry.milestoneNames ?? []}
                 animationDelayMs={index * 50}

@@ -53,6 +53,9 @@ describe('POST /api/family-members', () => {
     const list = await listRes.json();
     const created = list.members.find((m: any) => m.memberId === body.memberId);
     expect(created.babyPermissions).toEqual([]);
+    expect(['pink', 'blue', 'yellow', 'mint', 'peach', 'teal', 'purple', 'green']).toContain(
+      created.avatarColor
+    );
   });
 
   it('atomic baby associations on create: 201 with permissions persisted', async () => {
@@ -191,4 +194,3 @@ describe('POST /api/family-members', () => {
     expect(owner.babyPermissions).toEqual([]);
   });
 });
-

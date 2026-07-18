@@ -166,6 +166,7 @@ export default async function TimelinePage({
                 entry={row.entries}
                 authorName={row.user.name}
                 authorImage={row.user.image}
+                authorAvatarColor={row.user.avatarColor}
                 mediaItems={mediaItemsByEntry.get(row.entries.id) ?? []}
                 milestoneNames={milestoneNamesByEntry.get(row.entries.id) ?? []}
                 animationDelayMs={100 + index * 60}

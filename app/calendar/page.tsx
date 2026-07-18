@@ -74,7 +74,8 @@ export default async function CalendarPage({
       content: entries.content,
       occurredAt: entries.occurredAt,
       authorName: users.name,
-      authorImage: users.image
+      authorImage: users.image,
+      authorAvatarColor: users.avatarColor
     })
     .from(entries)
     .innerJoin(babies, eq(babies.id, entries.babyId))
@@ -134,6 +135,7 @@ export default async function CalendarPage({
     occurredAt: row.occurredAt,
     authorName: row.authorName,
     authorImage: row.authorImage ?? null,
+    authorAvatarColor: row.authorAvatarColor ?? null,
     mediaItems: mediaItemsByEntry.get(row.id) ?? [],
     milestoneNames: milestoneNamesByEntry.get(row.id) ?? []
   }));

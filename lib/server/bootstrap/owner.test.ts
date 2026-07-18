@@ -44,6 +44,9 @@ log:
     expect(userRows[0].role).toBe('owner');
     expect(userRows[0].name).toBe('Alice');
     expect(userRows[0].email).toBe('alice@local.babyloom');
+    expect(['pink', 'blue', 'yellow', 'mint', 'peach', 'teal', 'purple', 'green']).toContain(
+      (userRows[0] as typeof userRows[number] & { avatarColor?: string }).avatarColor
+    );
 
     const accountRows = db
       .select()
@@ -60,13 +63,17 @@ log:
   it('is idempotent — second call does not create duplicate', async () => {
     const { bootstrapOwner } = await import('@/lib/server/bootstrap/owner');
     await bootstrapOwner({ dataDir });
-    await bootstrapOwner({ dataDir });
 
     const { getDb } = await import('@/lib/server/db/client');
     const { db } = getDb({ dataDir });
     const { users, accounts } = await import('@/lib/server/db/schema');
+    const originalColor = (db.select().from(users).all()[0] as { avatarColor?: string }).avatarColor;
+
+    await bootstrapOwner({ dataDir });
+
     expect(db.select().from(users).all()).toHaveLength(1);
     expect(db.select().from(accounts).all()).toHaveLength(1);
+    expect((db.select().from(users).all()[0] as { avatarColor?: string }).avatarColor).toBe(originalColor);
   });
 
   it('updates the owner password if config.yaml changed', async () => {

@@ -38,6 +38,7 @@ export const GET = withAuthorizedAction({ action: 'member:manage' })(async (_req
       userId: users.id,
       username: users.username,
       nickname: users.name,
+      avatarColor: users.avatarColor,
       role: familyMembers.role,
       joinedAt: familyMembers.joinedAt
     })

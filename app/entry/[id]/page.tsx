@@ -101,6 +101,7 @@ export default async function EntryDetailPage({
       babyBirthday={baby?.birthday}
       authorName={author?.name}
       authorImage={author?.image}
+      authorAvatarColor={author?.avatarColor}
       milestoneNames={attached.map((m) => m.name)}
       mediaItems={mediaItems}
       canEdit={canEdit}

@@ -38,7 +38,11 @@ export default async function MePage() {
       }
     >
       <EditMeForm
-        initial={{ name: me.name, image: me.image ?? null }}
+        initial={{
+          name: me.name,
+          image: me.image ?? null,
+          avatarColor: me.avatarColor ?? null
+        }}
         username={me.username}
         target="me"
         updateMyName={updateMyName}
