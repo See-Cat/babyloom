@@ -44,6 +44,7 @@ it('allows media-heavy record grid items to shrink within the viewport', () => {
           occurredAt: Date.UTC(2026, 4, 24, 8, 30),
           authorName: '爸爸',
           authorImage: null,
+          authorAvatarColor: null,
           mediaItems: Array.from({ length: 8 }, (_, index) => ({
             id: `media-${index}`,
             type: 'photo' as const,
