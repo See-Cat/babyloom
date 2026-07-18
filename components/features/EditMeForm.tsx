@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { requireOnline } from '@/lib/client/require-online';
 import { useToast } from '@/lib/client/hooks/useToast';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 export type FormActionResult = { ok: true; message: string } | { ok: false; message: string };
 
@@ -15,6 +16,7 @@ export interface EditMeFormProps {
   initial: {
     name: string;
     image: string | null;
+    avatarColor: AvatarColor | null;
   };
   username: string;
   target: 'me' | `baby:${string}`;
@@ -117,6 +119,7 @@ export function EditMeForm({ initial, username, target, updateMyName }: EditMeFo
           <AvatarUpload
             name={initial.name}
             src={displayUrl}
+            color={initial.avatarColor ?? undefined}
             onPick={(file) => pickFile(file)}
             onRemove={onRemoveAvatar}
             onBeforePick={() => requireOnline(toast)}

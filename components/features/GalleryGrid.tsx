@@ -72,7 +72,7 @@ export function GalleryGrid({
       <div className="grid gap-[var(--space-5)]">
         {groups.map((group) => (
           <section key={group.ym} aria-labelledby={`gallery-${group.ym}`}>
-            <div className="sticky top-0 z-[var(--z-sticky)] flex items-baseline gap-[var(--space-2)] bg-[var(--color-bg)] px-[var(--space-1)] pb-[var(--space-2)] pt-[var(--space-3)]">
+            <div className="sticky top-0 z-[calc(var(--z-tabbar)-1)] flex items-baseline gap-[var(--space-2)] bg-[var(--color-bg)] px-[var(--space-1)] pb-[var(--space-2)] pt-[var(--space-3)]">
               <h2 id={`gallery-${group.ym}`} className="text-[length:var(--text-md)] font-bold text-[color:var(--color-fg-strong)]">
                 {group.label}
               </h2>

@@ -111,7 +111,12 @@ export default async function ProfilePage() {
     <AppShell title="我的" rightSlot={<InstallChip />}>
       <Card className="mb-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">
-          <Avatar src={me?.image ?? undefined} name={me?.name ?? '我'} size="lg" />
+          <Avatar
+            src={me?.image ?? undefined}
+            name={me?.name ?? '我'}
+            color={me?.avatarColor ?? undefined}
+            size="lg"
+          />
           <div className="min-w-0 flex-1">
             <h2 className="truncate text-[length:var(--text-xl)] font-bold text-[color:var(--color-fg-strong)]">{me?.name}</h2>
             <div className="mt-[var(--space-1)] flex items-center gap-[var(--space-2)]">

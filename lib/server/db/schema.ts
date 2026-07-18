@@ -7,6 +7,7 @@ import {
   uniqueIndex,
   primaryKey
 } from 'drizzle-orm/sqlite-core';
+import { AVATAR_COLORS } from '@/lib/shared/avatar-colors';
 
 // User table — shape required by better-auth, plus our extensions (username, role).
 export const users = sqliteTable('user', {
@@ -15,6 +16,7 @@ export const users = sqliteTable('user', {
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull().default(false),
   image: text('image'),
+  avatarColor: text('avatar_color', { enum: AVATAR_COLORS }),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   // Extensions

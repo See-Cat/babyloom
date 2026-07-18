@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Avatar } from './Avatar';
 import { CameraIcon, XIcon } from './icons';
+import type { AvatarColor } from '@/lib/shared/avatar-colors';
 
 export interface AvatarUploadProps {
   /** Name used for the initials fallback when no image is shown. */
@@ -10,6 +11,7 @@ export interface AvatarUploadProps {
   /** Currently displayed avatar (a preview object URL or a saved URL). */
   src?: string | null;
   colorKey?: string;
+  color?: AvatarColor;
   disabled?: boolean;
   /** Called with the chosen file. Never called on a cancelled file dialog. */
   onPick: (file: File) => void;
@@ -19,7 +21,7 @@ export interface AvatarUploadProps {
   onBeforePick?: () => boolean;
 }
 
-export function AvatarUpload({ name, src, colorKey, disabled, onPick, onRemove, onBeforePick }: AvatarUploadProps) {
+export function AvatarUpload({ name, src, colorKey, color, disabled, onPick, onRemove, onBeforePick }: AvatarUploadProps) {
   const fileRef = React.useRef<HTMLInputElement>(null);
   const hasAvatar = Boolean(src);
 
@@ -38,7 +40,7 @@ export function AvatarUpload({ name, src, colorKey, disabled, onPick, onRemove, 
         onClick={openPicker}
         className="relative inline-flex h-[88px] w-[88px] items-center justify-center rounded-full focus-visible:outline-[3px] focus-visible:outline-[color:var(--color-focus)] disabled:opacity-60"
       >
-        <Avatar src={src ?? undefined} name={name || '头像'} colorKey={colorKey} size="xl" />
+        <Avatar src={src ?? undefined} name={name || '头像'} colorKey={colorKey} color={color} size="xl" />
         <span
           aria-hidden="true"
           className="absolute -bottom-[2px] -right-[2px] inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--color-primary)] text-[color:var(--color-fg-inverse)] ring-[3px] ring-[var(--color-bg)]"

@@ -47,4 +47,11 @@ describe('Avatar', () => {
     expect(html).toContain('ava-xl');
     expect(html).toContain('ava-');
   });
+
+  it('uses an explicitly assigned account color instead of the fallback hash', () => {
+    const html = renderToStaticMarkup(<Avatar name="爸爸" color="blue" />);
+
+    expect(html).toContain('ava-blue');
+    expect(html).toContain('data-color="blue"');
+  });
 });

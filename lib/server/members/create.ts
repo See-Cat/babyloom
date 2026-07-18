@@ -4,6 +4,7 @@ import { getDb } from '@/lib/server/db/client';
 import { accounts, babies, babyMemberPermissions, familyMembers, users } from '@/lib/server/db/schema';
 import { hashPassword, ownerInternalEmail } from '@/lib/server/bootstrap/owner';
 import { permissionToBits } from '@/lib/server/db/queries/permissions';
+import { pickAvatarColor } from '@/lib/server/members/avatar-color';
 
 export interface CreateMemberOpts {
   dataDir: string;
@@ -52,6 +53,15 @@ export async function createMember(opts: CreateMemberOpts): Promise<CreateMember
   const passwordHash = hashPassword(opts.password);
 
   db.transaction((tx) => {
+    const usedAvatarColors = tx
+      .select({ avatarColor: users.avatarColor })
+      .from(familyMembers)
+      .innerJoin(users, eq(users.id, familyMembers.userId))
+      .where(eq(familyMembers.familyId, opts.familyId))
+      .all()
+      .map((row) => row.avatarColor);
+    const avatarColor = pickAvatarColor(usedAvatarColors);
+
     tx.insert(users)
       .values({
         id: userId,
@@ -60,6 +70,7 @@ export async function createMember(opts: CreateMemberOpts): Promise<CreateMember
         emailVerified: true,
         username: opts.username,
         role: opts.role,
+        avatarColor,
         createdAt: now,
         updatedAt: now
       })

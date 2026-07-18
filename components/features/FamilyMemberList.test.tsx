@@ -11,6 +11,7 @@ function member(overrides: Partial<FamilyMemberListItem> = {}): FamilyMemberList
     userId: 'u1',
     username: 'grandpa',
     nickname: 'Grandpa',
+    avatarColor: 'blue',
     role: 'member',
     babyPermissions: [],
     ...overrides
@@ -39,6 +40,19 @@ describe('FamilyMemberList', () => {
     expect(html).toContain('Sis');
     expect(html).toContain('可编辑');
     expect(html).toContain('仅查看');
+  });
+
+  it('renders the member default avatar with its assigned account color', () => {
+    const html = renderToStaticMarkup(
+      <FamilyMemberList
+        members={[member({ nickname: '爸爸', avatarColor: 'blue' })]}
+        onMemberAction={noop}
+        onAssociationClick={noop}
+        onAddAssociation={noop}
+      />
+    );
+
+    expect(html).toContain('data-color="blue"');
   });
 
   it('shows "+ 关联宝宝" button for members with zero associations', () => {

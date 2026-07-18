@@ -13,7 +13,7 @@ describe('EditMeForm', () => {
     const html = renderToStaticMarkup(
       <ToastContext.Provider value={{ show: vi.fn(), dismiss: vi.fn() }}>
         <EditMeForm
-          initial={{ name: 'Owner', image: null }}
+          initial={{ name: 'Owner', image: null, avatarColor: 'blue' }}
           username="owner"
           target="me"
           updateMyName={vi.fn()}
@@ -24,6 +24,7 @@ describe('EditMeForm', () => {
     expect(html).toContain('name="name"');
     expect(html).toContain('name="username"');
     expect(html).toContain('aria-label="选择头像"');
+    expect(html).toContain('data-color="blue"');
     expect(html).not.toContain('修改密码');
   });
 });
