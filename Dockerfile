@@ -16,9 +16,19 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store pnpm install --frozen-lo
 
 FROM node:22-alpine AS builder
 WORKDIR /app
+# pnpm 11 runs a deps-status check before any command (incl. `pnpm build`).
+# node_modules copied from the `deps` stage has broken hard-links to the
+# cache-mounted store, so the check wants to purge & reinstall — which aborts
+# without a TTY (ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY).
+# - CI=true => pnpm treats confirmModulesPurge as false (no prompt needed)
+# - verify-deps-before-run=false => skip the check entirely; the deps stage
+#   already produced a valid node_modules for this lockfile, re-verifying is
+#   pointless and would trigger a network reinstall here.
+ENV CI=true
+RUN corepack enable && pnpm config set verify-deps-before-run false
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN corepack enable && pnpm build
+RUN pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
