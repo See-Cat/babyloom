@@ -20,6 +20,7 @@ components-full.png
 .claude/
 .omo/
 .pnpm-store/
+.zcode/
 public/sw*
 public/swe-worker*
 
