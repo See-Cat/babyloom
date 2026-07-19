@@ -13,6 +13,7 @@
     "db:migrate": "tsx lib/db/migrate.ts",
     "docker:build": "docker build --build-arg APP_VERSION=$npm_package_version -t babyloom:local .",
     "docker:push": "docker buildx build --platform linux/amd64 --provenance=false --build-arg APP_VERSION=$npm_package_version -t cccat5207/babyloom:$npm_package_version -t cccat5207/babyloom:latest --push .",
+    "docker:release": "tsx scripts/docker-release.ts",
     "docker:up": "docker compose up -d",
     "docker:logs": "docker compose logs -f app",
     "test": "vitest run",
