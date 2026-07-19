@@ -1,11 +1,38 @@
+# VCS / build artifacts
 .git
 .next
 node_modules
+*.tsbuildinfo
+*.log
+*.tar
+
+# Runtime data (mounted as volume at runtime, never in image)
 data
 test-data
 .env*
-docs
-*.log
+
+# Tooling caches & internal docs (not needed to build the image)
+.claude
+.codex
+.dev-docs
+.omo
+.sisyphus
+.pnpm-store
+openspec
+.github
+nginx
+scripts
+tests
 playwright-report
 test-results
-*.tar
+docs
+
+# Repo guidance files (no value inside the image)
+CLAUDE.md
+AGENTS.md
+README.md
+
+# OS / editor noise
+**/.DS_Store
+.vscode
+.idea
