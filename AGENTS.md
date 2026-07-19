@@ -21,18 +21,28 @@ Package manager is **pnpm**. Node 22.
 ```bash
 pnpm dev                    # local dev server (http://localhost:3000)
 pnpm build                  # production build (Next.js standalone)
+pnpm start                  # start the production server (requires build first)
 pnpm lint                   # ESLint over app/ components/ lib/
 pnpm typecheck              # tsc --noEmit
+pnpm build:icons            # regenerate PWA icons
 pnpm test                   # Vitest run (unit/integration, node env)
 pnpm test:watch             # Vitest watch
 pnpm test:e2e               # Playwright e2e
-pnpm build:icons            # regenerate PWA icons
+
+# docker (see docs/deployment.md for the deploy flow)
+pnpm docker:build           # build babyloom:local
+pnpm docker:up              # docker compose up -d
+pnpm docker:logs            # docker compose logs -f app
+pnpm docker:release         # [recommended] interactive version picker -> auto commit/tag -> push image
+pnpm docker:push            # push image directly when the version is already known (docker:release's underlying step)
 
 # single tests
 pnpm vitest run path/to/file.test.ts          # one file
 pnpm vitest run -t "test name substring"       # by name
 pnpm playwright test tests/e2e/pwa.spec.ts     # one e2e file
 ```
+
+Migrations are authored by hand as SQL files under `lib/server/db/migrations/` and applied automatically at startup via `lib/server/db/migrate.ts` — there is no `db:*` npm script and no `drizzle-kit` step. See the "Gotcha" section below for the workflow.
 
 Tests are colocated as `*.test.ts(x)` next to source; e2e specs are in `tests/e2e/`. Vitest setup is `tests/setup.ts`. Many backend tests spin up a temp data dir (`mkdtemp` + `BABYLOOM_DATA_DIR`), so they exercise the real SQLite + migration path rather than mocks.
 
@@ -65,6 +75,6 @@ Two-tier: a single **owner** (from config) with full rights over everything and 
 - **Soft delete** — babies/entries/media use a `deletedAt` timestamp; trash bin (`lib/server/trash/`) restores or purges (purge physically removes rows and media files).
 - **PWA** — Serwist builds the service worker from `app/sw.ts` to `public/sw.js`. `public/sw.js` is a build artifact; never hand-edit it.
 
-## Gotcha: stale drizzle-kit paths
+## Gotcha: migrations are hand-written SQL
 
-`drizzle.config.ts` and the `db:migrate` npm script point at `lib/db/` (`schema: './lib/db/schema.ts'`, `tsx lib/db/migrate.ts`), but the real files moved to **`lib/server/db/`** (`schema.ts`, `migrations/`, `migrate.ts`). So `pnpm db:generate` / `pnpm db:migrate` as configured target a nonexistent path and will not work as-is. Runtime migrations still apply automatically at startup via `lib/server/db/migrate.ts`. When touching schema/migrations, work against `lib/server/db/` and be aware these CLI configs need fixing.
+There is no `drizzle-kit generate` step and no `drizzle.config.ts` — schema migrations are **hand-written SQL** under `lib/server/db/migrations/` (numbered `000X_xxx.sql`, with a matching entry appended to `meta/_journal.json`). The runtime migrator `lib/server/db/migrate.ts` applies any pending files automatically at startup, both in dev and production. When you change `lib/server/db/schema.ts`, write the corresponding SQL migration by hand rather than expecting a generator.

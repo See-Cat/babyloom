@@ -72,7 +72,7 @@ erDiagram
 
 ## 迁移工作流
 
-> ⚠️ 注意：`drizzle.config.ts` 与 `package.json` 的 `db:generate` / `db:migrate` 脚本仍指向**已失效的旧路径** `lib/db/`（`schema: './lib/db/schema.ts'`、`tsx lib/db/migrate.ts`），而真实文件早已搬到 `lib/server/db/`。因此这两个 CLI 命令**当前无法直接使用**。在修好这些配置之前，迁移按下面的方式**手写**。
+> 本项目不用 `drizzle-kit generate` 自动生成迁移——没有 `drizzle.config.ts`、没有 `db:*` npm script。schema 迁移是**手写 SQL**。运行时迁移器 `lib/server/db/migrate.ts` 在启动时自动应用待执行的迁移文件，开发与生产都如此。
 
 修改 `lib/server/db/schema.ts` 之后：
 

@@ -139,6 +139,12 @@ NAS 上（Container Station）：
 # 本机：登录后构建并直接推送（一步到位，不需要 docker save / skopeo）。
 # 镜像名固定为 cccat5207/babyloom；tag 取 package.json 的 version。
 docker login
+
+# 推荐：交互式选版本（patch / minor / major / 自定义），二次确认后自动
+# 跑 `pnpm version <ver>`（改 package.json + git commit + 打 v<tag>）再推送。
+pnpm docker:release
+
+# 已知要发的版本号、跳过选择时直接用底层命令：
 pnpm docker:push
 # 等价于：
 # docker buildx build --platform linux/amd64 --provenance=false --build-arg APP_VERSION=<ver> \

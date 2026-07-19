@@ -90,35 +90,51 @@ data/
 
 应用启动时会读取 `config.yaml`，打开 SQLite 数据库，并应用待执行的数据库迁移。owner 密码以配置文件为准；修改 `data/config.yaml` 后重启应用即可重置 owner 密码。
 
-## 常用脚本
+## 命令速查
+
+包管理器是 pnpm，Node 22。命令 SSoT 在这里；具体场景（部署、迁移细节）见对应 docs。
+
+**开发**
 
 ```bash
-pnpm dev          # 本地开发
+pnpm dev          # 本地开发（http://localhost:3000）
 pnpm build        # 生产构建，输出 Next.js standalone
-pnpm start        # 启动生产服务
+pnpm start        # 启动生产服务（需先 build）
 pnpm lint         # ESLint
-pnpm typecheck    # TypeScript 类型检查
-pnpm test         # Vitest 单元/集成测试
-pnpm test:e2e     # Playwright 端到端测试
+pnpm typecheck    # tsc --noEmit
 pnpm build:icons  # 重新生成 PWA 图标
 ```
 
-> 注意：`db:generate` / `db:migrate` 脚本仍指向已失效的旧路径 `lib/db/`，当前无法直接使用；迁移改为在 `lib/server/db/migrations/` 手写、并由应用启动时自动应用。详见 [docs/database.md](docs/database.md#迁移工作流)。
+**测试**
+
+```bash
+pnpm test                       # Vitest 单元/集成
+pnpm test:watch                 # Vitest watch
+pnpm test:e2e                   # Playwright 端到端
+pnpm vitest run path/to/file.test.ts          # 跑单个文件
+pnpm vitest run -t "name"                      # 按名字跑
+pnpm playwright test tests/e2e/pwa.spec.ts     # 跑单个 e2e
+```
+
+**Docker**
+
+```bash
+pnpm docker:build    # 本地构建 babyloom:local
+pnpm docker:up       # docker compose 起栈
+pnpm docker:logs     # 跟随日志
+pnpm docker:release  # 【推荐】交互式选版本 → 自动 commit/tag → 推送镜像
+pnpm docker:push     # 已知版本号时直接推送（docker:release 的底层）
+```
+
+部署流程见 [docs/deployment.md](./docs/deployment.md)。
+
+**数据库**
+
+迁移在 `lib/server/db/migrations/` 手写 SQL，应用启动时自动应用——无需手动执行迁移命令。工作流详见 [docs/database.md](docs/database.md#迁移工作流)。
 
 ## Docker 部署
 
-构建并启动：
-
-```bash
-pnpm docker:build
-pnpm docker:up
-```
-
-查看日志：
-
-```bash
-pnpm docker:logs
-```
+构建并启动用 `pnpm docker:build && pnpm docker:up`，跟随日志用 `pnpm docker:logs`（命令说明见上方「命令速查」）。
 
 `docker-compose.yml` 会把本地 `./data` 挂载到容器 `/app/data`，Nginx 默认监听宿主机 80 端口并转发到应用容器。
 
